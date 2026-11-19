@@ -37,10 +37,13 @@ El instalador no usa `sudo` y solo escribe en tu carpeta personal:
 | `~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/` | la extensión |
 | `~/.local/share/agent-notch/` | los servicios de velocidad y brillo, los adaptadores de agentes, el desinstalador y los fijados del portapapeles |
 | `~/.local/share/dbus-1/services/dev.agentnotch.*.service` | para que D-Bus arranque esos servicios solo cuando se usan (se cierran solos) |
+| `~/.config/systemd/user/agent-notch-update.*` | el aviso diario de versión nueva |
 
 Instala la última *release*; si no hay ninguna, la rama `main`. Para elegir versión: `curl … | AGENT_NOTCH_REF=v1 bash`.
 
-**Actualizar:** vuelve a ejecutar el mismo comando y entra de nuevo en la sesión.
+**Actualizar:** una vez al día se comprueba si hay una versión nueva y, si la hay, sale una notificación con **Actualizar** (o haz clic en ella). También puedes volver a ejecutar el mismo comando. Después, cierra sesión y vuelve a entrar.
+
+El aviso es un temporizador de systemd del usuario que hace una sola consulta a GitHub al día, fuera de GNOME Shell. Para desactivarlo: `systemctl --user disable --now agent-notch-update.timer`, o instala con `curl … | AGENT_NOTCH_NO_UPDATE_CHECK=1 bash`.
 
 Desde un repo clonado, `scripts/install.sh` instala esa copia en vez de descargarla.
 
@@ -100,6 +103,7 @@ extension/agent-notch@daniel.local/   la extensión (island.js, panel.js, module
 adapters/                             traducen los eventos de los agentes al formato de la isla (en desarrollo)
 services/speedtest/                   test de velocidad, servicio D-Bus aparte
 services/brightness/                  brillo por DDC/CI, servicio D-Bus aparte
+services/updater/                     aviso diario de versión nueva
 scripts/                              install.sh, uninstall.sh y herramientas de desarrollo (simulate.py: sesiones falsas)
 ```
 

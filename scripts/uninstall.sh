@@ -45,6 +45,17 @@ main() {
             say "No pude quitar el hook de Claude Code: revisa ~/.claude/settings.json"
     fi
 
+    # Aviso de versión nueva (systemd del usuario).
+    local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    if [ -f "$UNIT_DIR/agent-notch-update.timer" ]; then
+        systemctl --user disable --now agent-notch-update.timer >/dev/null 2>&1 || true
+        systemctl --user stop agent-notch-update.service >/dev/null 2>&1 || true
+        rm -f "$UNIT_DIR/agent-notch-update.timer" "$UNIT_DIR/agent-notch-update.service"
+        systemctl --user daemon-reload >/dev/null 2>&1 || true
+        say "Quitado el aviso de versión nueva."
+    fi
+    rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/agent-notch"
+
     rm -f "$DBUS_DIR/dev.agentnotch.SpeedTest.service" \
           "$DBUS_DIR/dev.agentnotch.Brightness.service"
     say "Quitados los servicios D-Bus."
