@@ -83,9 +83,10 @@ journalctl -f -o cat /usr/bin/gnome-shell | grep agent-notch
 
 ```
 extension/agent-notch@daniel.local/   la extensión (island.js, panel.js, modules/…)
+adapters/                             traducen los eventos de los agentes al formato de la isla (en desarrollo)
 services/speedtest/                   test de velocidad, servicio D-Bus aparte
 services/brightness/                  brillo por DDC/CI, servicio D-Bus aparte
-scripts/                              install.sh, uninstall.sh y herramientas de desarrollo
+scripts/                              install.sh, uninstall.sh y herramientas de desarrollo (simulate.py: sesiones falsas)
 ```
 
 ## Licencia

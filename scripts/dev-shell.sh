@@ -13,6 +13,9 @@ set -euo pipefail
 
 UUID="agent-notch@daniel.local"
 BUS_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev-bus"
+# Bus de archivos propio (sesiones de agentes): lo que escribe
+# scripts/simulate.py no sale en la isla del escritorio real.
+DEV_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev"
 
 "$(dirname "$0")/dev-link.sh"
 
@@ -21,7 +24,7 @@ BUS_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev-bus"
 dbus-run-session bash -c "
     echo \"\$DBUS_SESSION_BUS_ADDRESS\" > '$BUS_FILE'
     trap \"rm -f '$BUS_FILE'\" EXIT
-    AGENT_NOTCH_DDC_ANY=1 gnome-shell --devkit --wayland &
+    AGENT_NOTCH_DDC_ANY=1 AGENT_NOTCH_DIR='$DEV_DIR' gnome-shell --devkit --wayland &
     SHELL_PID=\$!
     for _ in \$(seq 1 30); do
         sleep 1
