@@ -194,14 +194,21 @@ def cmd_list(args):
 
 def cmd_clear(args):
     files = sim_files()
+    killed = []
     for path in files:
         pid = state.read_json(path).get("pid")
         if isinstance(pid, int) and pid != os.getpid() and is_our_child(pid):
             try:
                 os.kill(pid, signal.SIGTERM)
+                killed.append(pid)
             except OSError:
                 pass
         state.remove(path)
+    # Esperar a que terminen: al salir borran su archivo, y si después se
+    # lanza otro multi, borrarían los nuevos que se llamen igual.
+    deadline = time.time() + 2
+    while time.time() < deadline and any(os.path.exists("/proc/%d" % p) for p in killed):
+        time.sleep(0.02)
     print("Borradas %d sesiones simuladas." % len(files))
 
 

@@ -156,3 +156,79 @@ export function sameSummary(a, b) {
     return a === b ||
         (a !== null && b !== null && a.state === b.state && a.title === b.title && a.detail === b.detail);
 }
+
+// --- Vista expandida (paso 6) --------------------------------------------
+
+export const STALE_S = 30 * 60;
+
+/** Texto corto de cada estado, para las filas sin `accion`. */
+export function stateText(state) {
+    return STATE_TEXT[state] ?? state;
+}
+
+/**
+ * ¿Está muerta? (docs/03, con un matiz decidido el 19-11-2026)
+ *   - Con `pid`: muerta solo si ese proceso ya no existe. Un Claude Code
+ *     abierto y esperando una hora sigue vivo: no se quita.
+ *   - Sin `pid`: muerta si lleva más de 30 min sin novedades y no está
+ *     pidiendo atención.
+ * `pidAlive(pid)` lo da quien llama (en GNOME: existe /proc/<pid>).
+ */
+export function isDead(session, now, pidAlive) {
+    if (session.pid !== null)
+        return !pidAlive(session.pid);
+    return session.estado !== 'atencion' && now - session.actualizado > STALE_S;
+}
+
+/** Sesiones para la lista: primero las de estado más prioritario, luego las más recientes. */
+export function sortSessions(sessions, now) {
+    return [...sessions].sort((a, b) =>
+        rank(shownState(a, now)) - rank(shownState(b, now)) ||
+        b.actualizado - a.actualizado);
+}
+
+/** Tiempo desde que empezó la sesión: «<1 min», «12 min», «1 h 05». */
+export function formatAge(seconds) {
+    const m = Math.floor(Math.max(0, seconds) / 60);
+    if (m < 1)
+        return '<1 min';
+    if (m < 60)
+        return `${m} min`;
+    return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
+}
+
+/** PID del padre a partir del contenido de /proc/<pid>/stat, o null. */
+export function parentPid(statText) {
+    // «pid (comm) estado ppid …»: comm puede llevar espacios y paréntesis,
+    // así que se corta tras el ÚLTIMO «)».
+    const rest = statText.slice(statText.lastIndexOf(')') + 1).trim().split(/\s+/);
+    const ppid = Number(rest[1]);
+    return Number.isInteger(ppid) && ppid > 0 ? ppid : null;
+}
+
+/**
+ * Ventana de la terminal de una sesión, o null si no se sabe con certeza.
+ *
+ *   ancestors: PIDs desde el agente hacia arriba (el agente, su shell, la
+ *              terminal…), el más cercano primero.
+ *   windows:   [{pid, title, window}] de las ventanas normales abiertas.
+ *
+ * Se busca el ancestro más cercano que tenga ventanas. Si tiene una, es
+ * esa. Si tiene varias (GNOME Terminal y Ptyxis usan un solo proceso para
+ * todas), solo vale si exactamente una lleva el nombre del proyecto en el
+ * título; si no, null: mejor no hacer nada que traer la ventana equivocada.
+ */
+export function pickWindow(ancestors, windows, project) {
+    for (const pid of ancestors) {
+        const mine = windows.filter(w => w.pid === pid);
+        if (mine.length === 0)
+            continue;
+        if (mine.length === 1)
+            return mine[0].window;
+        const byTitle = project && project !== '?'
+            ? mine.filter(w => (w.title ?? '').includes(project))
+            : [];
+        return byTitle.length === 1 ? byTitle[0].window : null;
+    }
+    return null;
+}

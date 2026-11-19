@@ -839,3 +839,63 @@
 .agent-notch-agents.estado-atencion .agent-notch-agents-detail {
   color: #fbbf24;
 }
+
+/* Vista expandida (paso 6): una fila por sesión. Clic → su terminal. */
+.agent-notch-agents-list {
+  spacing: 2px;
+  min-width: 360px;
+}
+
+.agent-notch-agents-row {
+  border-radius: 10px;
+  padding: 5px 8px;
+}
+
+.agent-notch-agents-row:hover,
+.agent-notch-agents-row:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-agents-row:active {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.agent-notch-agents-row-box {
+  spacing: 8px;
+}
+
+.agent-notch-agents-row.estado-pensando   .agent-notch-dot { background-color: #a78bfa; }
+.agent-notch-agents-row.estado-trabajando .agent-notch-dot { background-color: #60a5fa; }
+.agent-notch-agents-row.estado-atencion   .agent-notch-dot { background-color: #fbbf24; }
+.agent-notch-agents-row.estado-terminado  .agent-notch-dot { background-color: #34d399; }
+.agent-notch-agents-row.estado-error      .agent-notch-dot { background-color: #f87171; }
+
+.agent-notch-agents-row-project {
+  max-width: 120px;
+  font-weight: bold;
+}
+
+.agent-notch-agents-row-action {
+  font-family: monospace;
+  font-size: 9pt;
+  color: #cfcfcf;
+}
+
+.agent-notch-agents-row.estado-atencion .agent-notch-agents-row-action {
+  color: #fbbf24;
+}
+
+.agent-notch-agents-row.estado-inactivo .agent-notch-agents-row-action {
+  color: #8a8a8a;
+}
+
+.agent-notch-agents-row-age {
+  font-size: 9pt;
+  color: #8a8a8a;
+}
+
+.agent-notch-agents-more {
+  padding: 2px 8px;
+  font-size: 9pt;
+  color: #8a8a8a;
+}

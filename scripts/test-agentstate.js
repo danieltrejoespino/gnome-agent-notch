@@ -4,7 +4,8 @@
 import System from 'system';
 
 import {
-    isSessionFile, nextChangeIn, parseSession, sameSummary, shownState, summarize,
+    formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
+    sameSummary, shownState, sortSessions, summarize,
 } from '../extension/agent-notch@daniel.local/modules/agentstate.js';
 
 let failed = 0;
@@ -97,6 +98,43 @@ eq(sameSummary(a, {...a}), true, 'iguales');
 eq(sameSummary(a, {...a, detail: 'z'}), false, 'distinto detalle');
 eq(sameSummary(null, null), true, 'null y null');
 eq(sameSummary(a, null), false, 'algo y null');
+
+// --- sesiones muertas (paso 6) -------------------------------------------
+const alive = new Set([1234]);
+const pidAlive = p => alive.has(p);
+eq(isDead(sess({}), NOW, pidAlive), false, 'pid vivo');
+eq(isDead(sess({pid: 999}), NOW, pidAlive), true, 'pid muerto');
+eq(isDead(sess({actualizado: NOW - 7200, estado: 'inactivo'}), NOW, pidAlive), false, 'pid vivo y 2 h esperando: sigue');
+eq(isDead(sess({pid: null, actualizado: NOW - 31 * 60}), NOW, pidAlive), true, 'sin pid y 31 min');
+eq(isDead(sess({pid: null, actualizado: NOW - 29 * 60}), NOW, pidAlive), false, 'sin pid y 29 min');
+eq(isDead(sess({pid: null, estado: 'atencion', actualizado: NOW - 7200}), NOW, pidAlive), false, 'sin pid pero atención');
+
+// --- orden y tiempos -------------------------------------------------------
+eq(sortSessions([
+    sess({sesion: 'a', estado: 'inactivo'}),
+    sess({sesion: 'b', estado: 'atencion'}),
+    sess({sesion: 'c', estado: 'trabajando', actualizado: NOW - 50}),
+    sess({sesion: 'd', estado: 'trabajando', actualizado: NOW - 5}),
+    sess({sesion: 'e', estado: 'terminado', actualizado: NOW - 60}),
+], NOW).map(s => s.sesion), ['b', 'd', 'c', 'a', 'e'], 'orden de la lista (terminado viejo = inactivo)');
+eq([0, 59, 60, 12 * 60 + 5, 3600, 3600 + 5 * 60, -5].map(formatAge),
+    ['<1 min', '<1 min', '1 min', '12 min', '1 h 00', '1 h 05', '<1 min'], 'formatAge');
+
+// --- /proc/<pid>/stat ------------------------------------------------------
+eq(parentPid('4321 (claude) S 4300 4321 4300 0 -1'), 4300, 'ppid simple');
+eq(parentPid('77 (mi (raro) prog) R 12 77 77'), 12, 'comm con espacios y paréntesis');
+eq(parentPid('basura'), null, 'stat roto');
+
+// --- ventana de la terminal ------------------------------------------------
+const W = (pid, title, id) => ({pid, title, window: id});
+// claude 300 → bash 200 → terminal 100
+eq(pickWindow([300, 200, 100], [W(100, 'mi-app — Kitty', 'k'), W(50, 'Firefox', 'f')], 'mi-app'), 'k', 'una ventana de la terminal');
+eq(pickWindow([300, 200, 100], [W(100, 'usuario@pc: ~/blog', 'a'), W(100, 'usuario@pc: ~/mi-app', 'b')], 'mi-app'), 'b', 'varias: decide el título');
+eq(pickWindow([300, 200, 100], [W(100, 'Terminal', 'a'), W(100, 'Terminal', 'b')], 'mi-app'), null, 'varias sin pista: nada');
+eq(pickWindow([300, 200, 100], [W(100, 'mi-app 1', 'a'), W(100, 'mi-app 2', 'b')], 'mi-app'), null, 'varias con el mismo proyecto: nada');
+eq(pickWindow([300, 200, 100], [W(200, 'x', 'cerca'), W(100, 'mi-app', 'lejos')], 'mi-app'), 'cerca', 'gana el ancestro más cercano');
+eq(pickWindow([300, 200, 100], [W(50, 'mi-app', 'otra')], 'mi-app'), null, 'ventana de otro proceso: nada');
+eq(pickWindow([300], [W(1, 'a', 'x'), W(1, 'b', 'y')], '?'), null, 'sin proyecto');
 
 print(`${passed} pruebas OK, ${failed} fallos`);
 if (failed)
