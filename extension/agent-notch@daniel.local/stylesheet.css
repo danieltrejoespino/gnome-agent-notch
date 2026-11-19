@@ -1,0 +1,801 @@
+/* ── Isla ─────────────────────────────────────────── */
+
+/* La forma (hombros cóncavos, vidrio, borde) la dibuja island.js con Cairo
+   a partir de estas propiedades -agent-notch-*. Sin sombras ni desenfoque
+   (docs/13-rediseno.md). El padding lateral incluye el ancho del hombro. */
+.agent-notch-island {
+  -agent-notch-fill: rgba(30, 30, 36, 0.78);
+  -agent-notch-highlight: rgba(255, 255, 255, 0.07);
+  -agent-notch-border: rgba(255, 255, 255, 0.16);
+  -agent-notch-border-width: 1px;
+  -agent-notch-shoulder: 10px;
+  -agent-notch-radius: 14px;
+  -agent-notch-glow-height: 36px;   /* brillo de color del banner */
+  -agent-notch-glow-opacity: 0.45;
+  min-width: 200px;
+  color: #f5f5f5;
+  font-size: 10pt;
+}
+
+.agent-notch-island:hover {
+  -agent-notch-border: rgba(255, 255, 255, 0.28);
+}
+
+/* Sin ningún módulo activo: píldora pequeña y vacía. */
+.agent-notch-island.minimal {
+  min-width: 130px;
+}
+
+/* Expandida (al pasar el ratón): más opaca (legible sobre cualquier fondo)
+   y más redondeada. */
+.agent-notch-island.expanded {
+  -agent-notch-fill: rgba(22, 22, 28, 0.9);
+  -agent-notch-border: rgba(255, 255, 255, 0.2);
+  -agent-notch-radius: 24px;
+}
+
+/* El padding va en la capa de contenido (el fondo ocupa toda la isla).
+   El lateral incluye el ancho del hombro. */
+.agent-notch-content {
+  padding: 0 26px;            /* 10px hombro + 16px */
+}
+
+.agent-notch-island.expanded .agent-notch-content {
+  padding: 0 28px 16px 28px;  /* 10px hombro + 18px */
+}
+
+/* Secciones de los módulos, apiladas. Va superpuesta a la fila compacta
+   (que se desvanece), así que empieza arriba: el padding deja sitio a los
+   hombros. */
+.agent-notch-expanded {
+  padding-top: 14px;
+  spacing: 14px;
+}
+
+/* ── Módulo Música ────────────────────────────────── */
+
+.agent-notch-music {
+  spacing: 8px;
+}
+
+.agent-notch-music-icon {
+  icon-size: 16px;
+}
+
+.agent-notch-music-label {
+  max-width: 360px;
+  font-weight: bold;
+}
+
+/* Carátula mini en lugar del icono de la app (cargada a este tamaño). */
+.agent-notch-music-icon.cover {
+  icon-size: 18px;
+}
+
+/* Barritas: el alto real lo da scale_y (animado con ease()). */
+.agent-notch-bars {
+  spacing: 2px;
+  height: 12px;
+}
+
+.agent-notch-bar {
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background-color: #e5484d;
+}
+
+.agent-notch-music.paused .agent-notch-bar {
+  background-color: #6a6a6a;
+}
+
+/* En pausa: atenuado. */
+.agent-notch-music.paused {
+  color: #9a9a9a;
+}
+
+/* Vista expandida (hover, M4): tarjeta con la carátula de fondo.
+   Tamaño fijo: el icono de la carátula mide lo mismo que el ancho
+   (ver CoverBackdrop en modules/widgets.js). */
+
+.agent-notch-music-hero {
+  border-radius: 18px;
+}
+
+.agent-notch-music-hero-backdrop {
+  width: 400px;
+  height: 196px;
+}
+
+.agent-notch-music-hero-cover {
+  icon-size: 400px;
+}
+
+.agent-notch-music-hero.no-progress .agent-notch-music-hero-backdrop {
+  height: 150px;
+}
+
+/* Oscurecido sobre la carátula para leer el texto. */
+.agent-notch-music-hero-dim {
+  background-gradient-direction: vertical;
+  background-gradient-start: rgba(10, 10, 14, 0.55);
+  background-gradient-end: rgba(10, 10, 14, 0.78);
+}
+
+/* Bordes que funden la carátula con la isla (mismo color que el relleno
+   de la isla expandida): así no se ven esquinas rectas. */
+.agent-notch-music-hero-fade.left,
+.agent-notch-music-hero-fade.right {
+  width: 44px;
+  background-gradient-direction: horizontal;
+}
+
+.agent-notch-music-hero-fade.top,
+.agent-notch-music-hero-fade.bottom {
+  height: 34px;
+  background-gradient-direction: vertical;
+}
+
+.agent-notch-music-hero-fade.left,
+.agent-notch-music-hero-fade.top {
+  background-gradient-start: rgba(22, 22, 28, 0.75);
+  background-gradient-end: rgba(22, 22, 28, 0);
+}
+
+.agent-notch-music-hero-fade.right,
+.agent-notch-music-hero-fade.bottom {
+  background-gradient-start: rgba(22, 22, 28, 0);
+  background-gradient-end: rgba(22, 22, 28, 0.75);
+}
+
+.agent-notch-music-hero-content {
+  padding: 10px 18px 10px 18px;
+  spacing: 4px;
+}
+
+.agent-notch-music-hero-output-box {
+  spacing: 6px;
+}
+
+.agent-notch-music-hero-output-icon {
+  icon-size: 14px;
+  color: #e8e8e8;
+}
+
+.agent-notch-music-hero-output {
+  max-width: 260px;
+  font-size: 9.5pt;
+  color: #e8e8e8;
+}
+
+.agent-notch-music-hero-line {
+  spacing: 8px;
+  padding-top: 2px;
+}
+
+.agent-notch-music-hero-app {
+  icon-size: 18px;
+}
+
+.agent-notch-music-hero-title {
+  max-width: 190px;
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+.agent-notch-music-hero-dot {
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+.agent-notch-music-hero-artist {
+  max-width: 130px;
+  font-size: 12pt;
+  font-weight: bold;
+}
+
+.agent-notch-music-hero-progress {
+  spacing: 0;
+  padding-top: 2px;
+}
+
+/* Onda fija: color de lo reproducido y de lo que queda. */
+.agent-notch-wave {
+  height: 26px;
+  -agent-notch-wave-color: #e5484d;
+  -agent-notch-wave-track: rgba(255, 255, 255, 0.35);
+}
+
+.agent-notch-music-hero-time {
+  font-size: 9pt;
+  font-feature-settings: "tnum";
+  color: #c8c8c8;
+}
+
+.agent-notch-music-hero-controls {
+  spacing: 18px;
+}
+
+.agent-notch-music-hero-button {
+  border-radius: 99px;
+  padding: 10px;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition-duration: 100ms;
+}
+
+.agent-notch-music-hero-button:hover,
+.agent-notch-music-hero-button:focus {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.agent-notch-music-hero-button:active {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+.agent-notch-music-hero-button:insensitive {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.agent-notch-music-hero-button StIcon {
+  icon-size: 18px;
+}
+
+/* Aleatorio, repetir, abrir reproductor: sin fondo; encendidos, del
+   color de la onda. */
+/* Varios reproductores: iconos para elegir cuál se ve. */
+.agent-notch-music-hero-players {
+  spacing: 2px;
+  padding-right: 4px;
+}
+
+.agent-notch-music-hero-player {
+  border-radius: 99px;
+  padding: 4px;
+  transition-duration: 100ms;
+}
+
+.agent-notch-music-hero-player StIcon {
+  icon-size: 16px;
+}
+
+.agent-notch-music-hero-player:hover,
+.agent-notch-music-hero-player:focus {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.agent-notch-music-hero-player.current {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.agent-notch-music-hero-small-button {
+  border-radius: 99px;
+  padding: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  transition-duration: 100ms;
+}
+
+.agent-notch-music-hero-small-button:hover,
+.agent-notch-music-hero-small-button:focus {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.agent-notch-music-hero-small-button.on {
+  color: #e5484d;
+}
+
+.agent-notch-music-hero-small-button StIcon {
+  icon-size: 16px;
+}
+
+.agent-notch-music-cover-button {
+  border-radius: 10px;
+}
+
+.agent-notch-music-player {
+  max-width: 260px;
+  color: #8a8a8a;
+  font-size: 8.5pt;
+}
+
+.agent-notch-music-controls {
+  spacing: 6px;
+  padding-top: 6px;
+}
+
+.agent-notch-music-button {
+  border-radius: 99px;
+  padding: 6px;
+  color: #f5f5f5;
+  transition-duration: 100ms;
+}
+
+.agent-notch-music-button:hover,
+.agent-notch-music-button:focus {
+  background-color: #2a2a2a;
+}
+
+.agent-notch-music-button:active {
+  background-color: #3a3a3a;
+}
+
+.agent-notch-music-button:insensitive {
+  color: #555;
+}
+
+.agent-notch-music-button StIcon {
+  icon-size: 16px;
+}
+
+/* ── Módulo Sistema ───────────────────────────────── */
+
+.agent-notch-system {
+  spacing: 10px;
+  min-width: 300px;
+}
+
+.agent-notch-usage-row {
+  spacing: 4px;
+}
+
+.agent-notch-usage-name {
+  font-weight: bold;
+  font-size: 9pt;
+  color: #c8c8c8;
+}
+
+.agent-notch-usage-value {
+  font-family: monospace;
+  font-size: 9pt;
+}
+
+.agent-notch-usage-trough {
+  height: 6px;
+  border-radius: 3px;
+  background-color: #2a2a2a;
+}
+
+.agent-notch-usage-fill {
+  border-radius: 3px;
+  background-color: #60a5fa;
+}
+
+.agent-notch-usage-fill.high {
+  background-color: #fbbf24;
+}
+
+.agent-notch-usage-fill.critical {
+  background-color: #f87171;
+}
+
+/* ── Módulo Notificaciones (banner) ───────────────── */
+
+.agent-notch-banner {
+  min-width: 380px;
+  border-radius: 12px;
+  padding: 2px 0;
+}
+
+.agent-notch-banner-box {
+  spacing: 12px;
+}
+
+.agent-notch-banner-icon {
+  icon-size: 28px;
+}
+
+.agent-notch-banner-title {
+  max-width: 260px;
+  font-weight: bold;
+  font-size: 10.5pt;
+}
+
+.agent-notch-banner-app {
+  max-width: 120px;
+  padding-left: 12px;
+  font-family: monospace;
+  font-size: 8.5pt;
+  color: #b8b8b8;
+}
+
+.agent-notch-banner-body {
+  max-width: 380px;
+  color: #d0d0d0;
+}
+
+/* ── Panel con pestañas (D3) ──────────────────────── */
+
+.agent-notch-panel {
+  spacing: 10px;
+  min-width: 460px;
+}
+
+.agent-notch-panel-date {
+  font-family: monospace;
+  font-size: 8.5pt;
+  color: #9a9a9a;
+}
+
+.agent-notch-panel-page {
+  min-height: 150px;
+}
+
+.agent-notch-tabs {
+  spacing: 4px;
+  padding-top: 2px;
+}
+
+.agent-notch-tab {
+  border-radius: 99px;
+  padding: 5px 10px;
+  color: #b8b8b8;
+  transition-duration: 100ms;
+}
+
+.agent-notch-tab:hover,
+.agent-notch-tab:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #f5f5f5;
+}
+
+.agent-notch-tab:checked {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.agent-notch-tab-box {
+  spacing: 6px;
+}
+
+.agent-notch-tab-icon {
+  icon-size: 16px;
+}
+
+.agent-notch-tab-label {
+  font-family: monospace;
+  font-size: 8.5pt;
+  font-weight: bold;
+}
+
+/* Home */
+
+.agent-notch-home {
+  spacing: 12px;
+}
+
+.agent-notch-home-clock {
+  font-size: 40pt;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.agent-notch-home-cards {
+  spacing: 10px;
+}
+
+.agent-notch-card {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+  spacing: 10px;
+}
+
+.agent-notch-card-title {
+  max-width: 150px;
+  font-weight: bold;
+}
+
+.agent-notch-card-subtitle {
+  max-width: 150px;
+  font-size: 9pt;
+  color: #b8b8b8;
+}
+
+.agent-notch-music-card {
+  min-width: 220px;
+}
+
+.agent-notch-music-card-cover {
+  icon-size: 40px;
+  border-radius: 8px;
+}
+
+.agent-notch-music-card-cover.no-cover {
+  background-color: #222;
+  color: #8a8a8a;
+}
+
+.agent-notch-music-button.play {
+  background-color: rgba(255, 255, 255, 0.92);
+  color: #111;
+}
+
+.agent-notch-music-button.play:hover {
+  background-color: #ffffff;
+}
+
+/* Página de música */
+
+.agent-notch-music-page {
+  spacing: 18px;
+}
+
+.agent-notch-music-page-cover {
+  icon-size: 150px;
+  border-radius: 14px;
+}
+
+.agent-notch-music-page-cover.no-cover {
+  background-color: #222;
+  color: #8a8a8a;
+}
+
+/* Degradado sobre el borde derecho de la carátula: la funde con el panel
+   (mismo color que el relleno de la isla expandida). */
+.agent-notch-music-page-fade {
+  width: 40px;
+  background-gradient-direction: horizontal;
+  background-gradient-start: rgba(22, 22, 28, 0);
+  background-gradient-end: rgba(22, 22, 28, 0.9);
+}
+
+.agent-notch-music-page-info {
+  spacing: 4px;
+}
+
+.agent-notch-music-page-artist {
+  max-width: 260px;
+  font-size: 9pt;
+  color: #c8c8c8;
+}
+
+.agent-notch-music-page-title {
+  max-width: 260px;
+  font-size: 15pt;
+  font-weight: 800;
+}
+
+.agent-notch-music-progress {
+  spacing: 4px;
+  padding-top: 8px;
+}
+
+.agent-notch-music-time {
+  font-family: monospace;
+  font-size: 8pt;
+  color: #9a9a9a;
+}
+
+.agent-notch-music-page-controls {
+  spacing: 10px;
+  padding-top: 4px;
+}
+
+.agent-notch-music-button.big StIcon {
+  icon-size: 20px;
+}
+
+.agent-notch-music-button.big {
+  padding: 8px;
+}
+
+/* Tarjeta y página del módulo Sistema */
+
+.agent-notch-system.agent-notch-card {
+  min-width: 180px;
+}
+
+.agent-notch-system-page {
+  spacing: 14px;
+  padding-top: 8px;
+}
+
+/* Pestaña Sistema ampliada (S2) */
+
+.agent-notch-system-page {
+  min-width: 380px;
+}
+
+.agent-notch-system-usage {
+  spacing: 10px;
+}
+
+.agent-notch-info {
+  spacing: 7px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-info-row {
+  spacing: 12px;
+}
+
+.agent-notch-info-name {
+  min-width: 84px;
+  font-weight: bold;
+  font-size: 9pt;
+  color: #c8c8c8;
+}
+
+.agent-notch-info-value {
+  max-width: 300px;
+  font-size: 9pt;
+}
+
+.agent-notch-system-button {
+  border-radius: 99px;
+  padding: 2px 10px;
+  font-size: 8.5pt;
+  color: #f5f5f5;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition-duration: 100ms;
+}
+
+.agent-notch-system-button:hover,
+.agent-notch-system-button:focus {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Módulo Concentración (D4) ────────────────────── */
+
+.agent-notch-focus-compact {
+  spacing: 8px;
+}
+
+.agent-notch-focus-compact-label {
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.agent-notch-focus-expanded,
+.agent-notch-focus-page {
+  spacing: 8px;
+  min-width: 300px;
+}
+
+.agent-notch-focus-time {
+  font-family: monospace;
+  font-size: 30pt;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.agent-notch-focus-page .agent-notch-focus-time {
+  font-size: 40pt;
+}
+
+.agent-notch-focus-status {
+  font-size: 9pt;
+  color: #b8b8b8;
+}
+
+.agent-notch-focus-card {
+  min-width: 200px;
+}
+
+.agent-notch-focus-card-time {
+  font-family: monospace;
+  font-size: 16pt;
+  font-weight: bold;
+}
+
+.agent-notch-focus-bar {
+  margin: 6px 0;
+}
+
+.agent-notch-focus-bar .agent-notch-usage-fill {
+  background-color: #a78bfa;
+}
+
+.agent-notch-focus-presets {
+  spacing: 6px;
+}
+
+/* ── Mascota (D4): ojos fijos propios ─────────────── */
+
+/* Círculos (distintos de los óvalos verticales de Mochi/Coucou). */
+.agent-notch-eyes {
+  spacing: 10px;
+}
+
+.agent-notch-eye {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: #dbeafe;
+}
+
+/* ── Módulo Portapapeles (C1) ─────────────────────── */
+
+.agent-notch-clipboard-page {
+  spacing: 8px;
+  min-width: 420px;
+}
+
+.agent-notch-clipboard-search {
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 9.5pt;
+  color: #f5f5f5;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  caret-color: #f5f5f5;
+  selection-background-color: rgba(255, 255, 255, 0.25);
+  selected-color: #ffffff;
+}
+
+.agent-notch-clipboard-search:focus {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.agent-notch-clipboard-search StLabel.hint-text {
+  color: #8a8a8a;
+}
+
+.agent-notch-clipboard-search-icon {
+  icon-size: 14px;
+  padding-right: 6px;
+  color: #9a9a9a;
+}
+
+.agent-notch-clipboard-scroll {
+  max-height: 300px;
+}
+
+.agent-notch-clipboard-list {
+  spacing: 2px;
+}
+
+.agent-notch-clipboard-row {
+  spacing: 2px;
+}
+
+.agent-notch-clipboard-item {
+  border-radius: 10px;
+  padding: 6px 10px;
+  color: #e8e8e8;
+  transition-duration: 100ms;
+}
+
+.agent-notch-clipboard-item:hover,
+.agent-notch-clipboard-item:focus {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.agent-notch-clipboard-item:selected {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.agent-notch-clipboard-text {
+  font-size: 9.5pt;
+  max-width: 360px;
+}
+
+.agent-notch-clipboard-pin {
+  border-radius: 99px;
+  padding: 5px;
+  color: #7a7a7a;
+  transition-duration: 100ms;
+}
+
+.agent-notch-clipboard-pin:hover,
+.agent-notch-clipboard-pin:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #f5f5f5;
+}
+
+.agent-notch-clipboard-pin:checked {
+  color: #fbbf24;
+}
+
+.agent-notch-clipboard-pin-icon {
+  icon-size: 14px;
+}
+
+.agent-notch-clipboard-empty {
+  padding: 24px 0;
+  font-size: 9.5pt;
+  color: #8a8a8a;
+}

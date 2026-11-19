@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+
+# Solo en local
+docs/
+CLAUDE.md
