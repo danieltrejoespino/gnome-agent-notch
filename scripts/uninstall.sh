@@ -36,6 +36,15 @@ main() {
         say "Borrada $EXT_DIR"
     fi
 
+    # Quitar el hook de Claude Code ANTES de borrar hook.py (el de un repo
+    # clonado, si lo hay, se deja). Si quedara, su comando sale con 0 al no
+    # encontrar hook.py, pero mejor no dejar restos.
+    local configure="$APP_DIR/adapters/claude-code/configure.py"
+    if [ -f "$configure" ]; then
+        python3 -I "$configure" uninstall ||
+            say "No pude quitar el hook de Claude Code: revisa ~/.claude/settings.json"
+    fi
+
     # Aviso de versión nueva (systemd del usuario).
     local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
     if [ -f "$UNIT_DIR/agent-notch-update.timer" ]; then

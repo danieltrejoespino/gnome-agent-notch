@@ -15,6 +15,7 @@
 # Qué instala:
 #   ~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/   la extensión
 #   ~/.local/share/agent-notch/services/                              servicios D-Bus
+#   ~/.local/share/agent-notch/adapters/                              hooks de los agentes
 #   ~/.local/share/dbus-1/services/dev.agentnotch.*.service            su activación
 #   ~/.config/systemd/user/agent-notch-update.{service,timer}          aviso de versión nueva
 #
@@ -107,6 +108,16 @@ main() {
     find "$APP_DIR/services.new" -name __pycache__ -type d -prune -exec rm -rf {} +
     rm -rf "$APP_DIR/services"
     mv "$APP_DIR/services.new" "$APP_DIR/services"
+    # Adaptadores de agentes (hook de Claude Code…), sin sus pruebas. El hook
+    # apunta aquí: una ruta fija que no depende de dónde esté el repo.
+    if [ -d "$src/adapters" ]; then
+        rm -rf "$APP_DIR/adapters.new"
+        cp -r "$src/adapters" "$APP_DIR/adapters.new"
+        find "$APP_DIR/adapters.new" -name __pycache__ -type d -prune -exec rm -rf {} +
+        find "$APP_DIR/adapters.new" -name 'test_*.py' -type f -delete
+        rm -rf "$APP_DIR/adapters"
+        mv "$APP_DIR/adapters.new" "$APP_DIR/adapters"
+    fi
     if [ -f "$src/scripts/uninstall.sh" ]; then
         cp "$src/scripts/uninstall.sh" "$APP_DIR/uninstall.sh"
         chmod +x "$APP_DIR/uninstall.sh"
@@ -189,6 +200,10 @@ main() {
     echo
     say "Instalada la versión $ref."
     say "$restart_hint"
+    local configure="$APP_DIR/adapters/claude-code/configure.py"
+    if [ -f "$configure" ] && ! python3 -I "$configure" status >/dev/null 2>&1; then
+        say "Para ver Claude Code en la isla: python3 $configure install"
+    fi
     if ! command -v ddcutil >/dev/null; then
         say "Opcional, para el brillo del monitor externo: sudo apt install ddcutil (y volver a entrar)."
     fi

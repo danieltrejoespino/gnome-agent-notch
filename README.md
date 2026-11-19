@@ -35,7 +35,7 @@ El instalador no usa `sudo` y solo escribe en tu carpeta personal:
 | Dónde | Qué |
 |---|---|
 | `~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/` | la extensión |
-| `~/.local/share/agent-notch/` | los servicios de velocidad y brillo, el desinstalador y los fijados del portapapeles |
+| `~/.local/share/agent-notch/` | los servicios de velocidad y brillo, los adaptadores de agentes, el desinstalador y los fijados del portapapeles |
 | `~/.local/share/dbus-1/services/dev.agentnotch.*.service` | para que D-Bus arranque esos servicios solo cuando se usan (se cierran solos) |
 | `~/.config/systemd/user/agent-notch-update.*` | el aviso diario de versión nueva |
 
@@ -46,6 +46,18 @@ Instala la última *release*; si no hay ninguna, la rama `main`. Para elegir ver
 El aviso es un temporizador de systemd del usuario que hace una sola consulta a GitHub al día, fuera de GNOME Shell. Para desactivarlo: `systemctl --user disable --now agent-notch-update.timer`, o instala con `curl … | AGENT_NOTCH_NO_UPDATE_CHECK=1 bash`.
 
 Desde un repo clonado, `scripts/install.sh` instala esa copia en vez de descargarla.
+
+### Claude Code (opcional)
+
+Para ver tus sesiones de Claude Code en la isla:
+
+```bash
+python3 ~/.local/share/agent-notch/adapters/claude-code/configure.py install
+```
+
+Añade el hook a `~/.claude/settings.json` (o `$CLAUDE_CONFIG_DIR/settings.json`) sin tocar tus otros ajustes ni hooks, y guarda antes una copia en `settings.json.agent-notch.bak`. Las sesiones abiertas lo cargan solas o al reiniciarlas. `configure.py status` dice si está puesto, `configure.py uninstall` lo quita, y el desinstalador de agent-notch también lo quita.
+
+Si `hook.py` desaparece, el hook no hace nada en lugar de fallar, así que nunca bloquea a Claude Code.
 
 ### Brillo del monitor externo (opcional)
 
@@ -61,11 +73,13 @@ Y vuelve a entrar en la sesión para que su regla de udev te dé acceso a `/dev/
 ~/.local/share/agent-notch/uninstall.sh
 ```
 
-Deja todo como antes de instalar (también borra los fijados del portapapeles).
+Deja todo como antes de instalar: también quita el hook de Claude Code y borra los fijados del portapapeles.
 
 ## Desarrollo
 
 `scripts/dev-link.sh` enlaza la extensión a la carpeta del repo (los cambios se ven sin copiar nada) en vez de instalar una copia. No se puede usar a la vez que `install.sh`: desinstala antes una para usar la otra.
+
+Para que Claude Code use el hook del repo en lugar de la copia instalada: `python3 adapters/claude-code/configure.py install` desde el repo. Sustituye al otro, porque solo puede haber uno.
 
 Para probar cambios sin tocar el escritorio real:
 
