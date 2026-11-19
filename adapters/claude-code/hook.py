@@ -10,9 +10,9 @@ Reglas de la Fase 1:
   stdout (en algunos eventos se añadiría al contexto de Claude).
 - Termina en menos de 100 ms: solo importa os, sys, json, time y re.
 
-En settings.json se usa la forma "args" (no "command" con todo el texto):
-así el padre de este proceso es Claude Code y os.getppid() sirve para que
-la isla detecte sesiones muertas.
+configure.py lo añade a settings.json con `exec python3 hook.py`: así el
+padre de este proceso es Claude Code y os.getppid() sirve para que la isla
+detecte sesiones muertas.
 """
 
 import json
