@@ -10,11 +10,13 @@
 #   AGENT_NOTCH_REF=v1      versión a instalar (etiqueta o rama). Por defecto,
 #                           la última release; si no hay ninguna, main.
 #   AGENT_NOTCH_NO_ENABLE=1 no activar la extensión.
+#   AGENT_NOTCH_NO_UPDATE_CHECK=1  no instalar el aviso diario de versión nueva.
 #
 # Qué instala:
 #   ~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/   la extensión
 #   ~/.local/share/agent-notch/services/                              servicios D-Bus
 #   ~/.local/share/dbus-1/services/dev.agentnotch.*.service            su activación
+#   ~/.config/systemd/user/agent-notch-update.{service,timer}          aviso de versión nueva
 #
 # Todo va dentro de main(): si la descarga por curl se corta a medias, bash
 # no ejecuta nada.
@@ -118,6 +120,43 @@ main() {
     install_service dev.agentnotch.SpeedTest speedtest/speedtest.py
     install_service dev.agentnotch.Brightness brightness/brightness.py
     say "Servicios D-Bus en $APP_DIR/services"
+
+    # --- 4b. Aviso de versión nueva ------------------------------------------
+    # Una vez al día, fuera de GNOME Shell: una consulta a GitHub y, si hay
+    # una release nueva, una notificación con «Actualizar». Solo tiene
+    # sentido instalando releases (no desde un repo clonado ni desde main).
+    local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    if [ "${AGENT_NOTCH_NO_UPDATE_CHECK:-}" = "1" ] || ! command -v systemctl >/dev/null; then
+        :
+    elif [[ "$ref" =~ ^v[0-9] ]]; then
+        mkdir -p "$UNIT_DIR"
+        printf '%s\n' \
+            '[Unit]' \
+            'Description=agent-notch: comprobar si hay una versión nueva' \
+            '' \
+            '[Service]' \
+            'Type=exec' \
+            "ExecStart=/usr/bin/python3 -I $APP_DIR/services/updater/update_check.py" \
+            > "$UNIT_DIR/agent-notch-update.service"
+        printf '%s\n' \
+            '[Unit]' \
+            'Description=agent-notch: aviso diario de versión nueva' \
+            '' \
+            '[Timer]' \
+            'OnCalendar=daily' \
+            'RandomizedDelaySec=1h' \
+            'Persistent=true' \
+            '' \
+            '[Install]' \
+            'WantedBy=timers.target' \
+            > "$UNIT_DIR/agent-notch-update.timer"
+        if systemctl --user daemon-reload 2>/dev/null &&
+           systemctl --user enable --now agent-notch-update.timer >/dev/null 2>&1; then
+            say "Aviso diario de versión nueva activado (desactivar: systemctl --user disable --now agent-notch-update.timer)"
+        else
+            warn "No se pudo activar el aviso de versión nueva (systemd del usuario no disponible)."
+        fi
+    fi
 
     # --- 5. Activar ------------------------------------------------------
     local restart_hint="Cierra sesión y vuelve a entrar para cargarla."
