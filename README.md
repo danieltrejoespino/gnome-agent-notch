@@ -59,6 +59,24 @@ Añade el hook a `~/.claude/settings.json` (o `$CLAUDE_CONFIG_DIR/settings.json`
 
 Si `hook.py` desaparece, el hook no hace nada en lugar de fallar, así que nunca bloquea a Claude Code.
 
+### OpenCode (opcional)
+
+**Requerido para ver OpenCode en la isla:** instalar el plugin. Desde el repo clonado:
+
+```bash
+python3 adapters/opencode/configure.py install
+```
+
+Después abre `opencode` en un proyecto y pídele algo: la isla lo sigue, y al cerrar la terminal la sesión desaparece.
+
+Con agent-notch ya instalado, desde la copia instalada:
+
+```bash
+python3 ~/.local/share/agent-notch/adapters/opencode/configure.py install
+```
+
+Deja un plugin pequeño en `~/.config/opencode/plugins/agent-notch.js` sin tocar tus otros plugins. OpenCode lo carga solo; si no lo ves, cierra su servicio de fondo (`pkill -f 'opencode serve'`) y vuelve a abrir OpenCode. `configure.py status` dice si está puesto, `configure.py uninstall` lo quita, y el desinstalador de agent-notch también lo quita.
+
 ### Brillo del monitor externo (opcional)
 
 ```bash
@@ -73,7 +91,7 @@ Y vuelve a entrar en la sesión para que su regla de udev te dé acceso a `/dev/
 ~/.local/share/agent-notch/uninstall.sh
 ```
 
-Deja todo como antes de instalar: también quita el hook de Claude Code y borra los fijados del portapapeles.
+Deja todo como antes de instalar: también quita el hook de Claude Code, el plugin de OpenCode y borra los fijados del portapapeles.
 
 ## Desarrollo
 

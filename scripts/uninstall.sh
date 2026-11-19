@@ -44,6 +44,12 @@ main() {
         python3 -I "$configure" uninstall ||
             say "No pude quitar el hook de Claude Code: revisa ~/.claude/settings.json"
     fi
+    # Plugin de OpenCode (solo el cargador que apunta a esta copia).
+    configure="$APP_DIR/adapters/opencode/configure.py"
+    if [ -f "$configure" ]; then
+        python3 -I "$configure" uninstall ||
+            say "No pude quitar el plugin de OpenCode: revisa ~/.config/opencode/plugins/agent-notch.js"
+    fi
 
     # Aviso de versión nueva (systemd del usuario).
     local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"

@@ -114,7 +114,7 @@ main() {
         rm -rf "$APP_DIR/adapters.new"
         cp -r "$src/adapters" "$APP_DIR/adapters.new"
         find "$APP_DIR/adapters.new" -name __pycache__ -type d -prune -exec rm -rf {} +
-        find "$APP_DIR/adapters.new" -name 'test_*.py' -type f -delete
+        find "$APP_DIR/adapters.new" \( -name 'test_*.py' -o -name '*.test.js' \) -type f -delete
         rm -rf "$APP_DIR/adapters"
         mv "$APP_DIR/adapters.new" "$APP_DIR/adapters"
     fi
@@ -203,6 +203,11 @@ main() {
     local configure="$APP_DIR/adapters/claude-code/configure.py"
     if [ -f "$configure" ] && ! python3 -I "$configure" status >/dev/null 2>&1; then
         say "Para ver Claude Code en la isla: python3 $configure install"
+    fi
+    configure="$APP_DIR/adapters/opencode/configure.py"
+    if [ -f "$configure" ] && { command -v opencode >/dev/null || [ -x "$HOME/.opencode/bin/opencode" ]; } &&
+       ! python3 -I "$configure" status >/dev/null 2>&1; then
+        say "Para ver OpenCode en la isla: python3 $configure install"
     fi
     if ! command -v ddcutil >/dev/null; then
         say "Opcional, para el brillo del monitor externo: sudo apt install ddcutil (y volver a entrar)."
