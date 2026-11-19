@@ -27,11 +27,23 @@
 //     revisar sesiones muertas cada 30 s solo si hay sesiones; refrescar
 //     los tiempos cada 30 s solo con la lista (hover o pestaña) a la vista.
 //   - Cada lista se crea la primera vez que se ve y reutiliza sus filas.
+//
+// Animaciones y avisos (paso 7, docs/09-diseno-visual.md):
+//   - Pulso del punto (opacidad, con ease() en la GPU) mientras piensa o
+//     trabaja (900 ms) o pide atención (500 ms), SOLO con la compacta a la
+//     vista y con las animaciones de GNOME activadas. Si no, ningún bucle.
+//   - `terminado`: un destello único del punto.
+//   - Al pasar una sesión a `atencion` (una vez por cambio, no en cada
+//     evento): la isla se despliega 5 s con un banner ámbar y suena
+//     `dialog-question` del tema. Clic en el banner → su terminal. Con
+//     «No molestar» no hay banner ni sonido. Las sesiones que ya pedían
+//     atención al activar la extensión (p. ej. al desbloquear) no avisan.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
+import Graphene from 'gi://Graphene';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
 
@@ -56,6 +68,13 @@ const AGE_TICK_S = 30;
 const MAX_ROWS = 6;          // en el hover
 const MAX_PAGE_ROWS = 40;    // en la pestaña (con desplazamiento)
 const ICON = 'utilities-terminal-symbolic';
+const PULSE_MS = {pensando: 900, trabajando: 900, atencion: 500};
+const PULSE_OPACITY = 110;
+const FLASH_MS = 180;
+const BANNER_MS = 5000;
+const BANNER_HOVER_RETRY_MS = 1000;
+const ATTENTION_SOUND = 'dialog-question';   // tema Yaru (docs/09)
+const ATTENTION_RGB = {red: 251, green: 191, blue: 36};   // #fbbf24
 const MAX_ANCESTORS = 16;
 
 const decoder = new TextDecoder();
@@ -95,6 +114,16 @@ class AgentsModule extends NotchModule {
         this._exp = null;             // lista del hover, al primer uso
         this._page = null;            // pestaña del panel, al primer uso
         this._cancellable = new Gio.Cancellable();
+        this._pulseMs = 0;            // duración del pulso en marcha (0 = parado)
+        this._banner = null;          // se crea con el primer aviso
+        this._bannerName = null;      // archivo de la sesión del banner
+        this._bannerSession = null;
+        this._bannerId = 0;
+
+        this._settings = St.Settings.get();
+        this._settings.connectObject('notify::enable-animations', () => this._syncPulse(), this);
+        // «No molestar» de GNOME = show-banners a false.
+        this._notifSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.notifications'});
 
         this._buildCompact();
 
@@ -196,7 +225,7 @@ class AgentsModule extends NotchModule {
             }
             for (const info of infos) {
                 if (isSessionFile(info.get_name()))
-                    this._read(info.get_name());
+                    this._read(info.get_name(), {initial: true});
             }
             if (infos.length > 0)
                 this._nextFiles(en);
@@ -205,7 +234,8 @@ class AgentsModule extends NotchModule {
         });
     }
 
-    _read(name) {
+    // initial: lectura al activar la extensión (no avisa de lo que ya había).
+    _read(name, {initial = false} = {}) {
         // Si llegan dos lecturas del mismo archivo, solo cuenta la última
         // pedida (la otra podría traer datos viejos).
         const gen = (this._readGen.get(name) ?? 0) + 1;
@@ -223,10 +253,13 @@ class AgentsModule extends NotchModule {
             if (!this._dir || this._readGen.get(name) !== gen)
                 return;   // destruido, o hay una lectura más nueva en camino
             this._readGen.delete(name);
+            const prev = this._sessions.get(name);
             if (session)
                 this._sessions.set(name, session);
             else
                 this._sessions.delete(name);
+            if (!initial && session?.estado === 'atencion' && prev?.estado !== 'atencion')
+                this._alert(name, session);
             this._render();
         });
     }
@@ -280,6 +313,7 @@ class AgentsModule extends NotchModule {
         this._dot = new St.Widget({
             style_class: 'agent-notch-dot',
             y_align: Clutter.ActorAlign.CENTER,
+            pivot_point: new Graphene.Point({x: 0.5, y: 0.5}),   // destello desde el centro
         });
         this._title = makeLabel('agent-notch-agents-title', {y_align: Clutter.ActorAlign.CENTER});
         this._separator = new St.Label({
@@ -329,6 +363,14 @@ class AgentsModule extends NotchModule {
                 this._detail.text = summary.detail;
             }
         }
+        this._syncPulse();
+        if (summary?.state === 'terminado' && before?.state !== 'terminado')
+            this._flash();
+
+        // El banner sobra si su sesión ya no pide atención (se contestó en
+        // la terminal) o desapareció.
+        if (this._bannerName && this._sessions.get(this._bannerName)?.estado !== 'atencion')
+            this._hideBanner();
 
         // A la isla solo le importa si aparece/desaparece algo, cambia la
         // prioridad o cambia el alto de la vista expandida; los cambios de
@@ -355,6 +397,136 @@ class AgentsModule extends NotchModule {
             this._render();
             return GLib.SOURCE_REMOVE;
         });
+    }
+
+    // --- Animaciones (paso 7) ----------------------------------------------------
+
+    _onCompactVisibleChanged() {
+        this._syncPulse();
+    }
+
+    // Un único bucle de opacidad, y solo mientras aporta algo.
+    _syncPulse() {
+        if (!this._dot)
+            return;
+        const ms = PULSE_MS[this._summary?.state] ?? 0;
+        const want = ms && this.compactVisible && this._settings.enable_animations ? ms : 0;
+        if (want === this._pulseMs)
+            return;
+        this._dot.remove_transition('opacity');
+        this._dot.opacity = 255;
+        this._pulseMs = want;
+        if (want) {
+            this._dot.ease({
+                opacity: PULSE_OPACITY,
+                duration: want,
+                mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
+                repeatCount: -1,
+                autoReverse: true,
+            });
+        }
+    }
+
+    _flash() {
+        if (!this.compactVisible || !this._settings.enable_animations)
+            return;
+        this._dot.remove_transition('scale-x');
+        this._dot.remove_transition('scale-y');
+        this._dot.set_scale(1, 1);
+        this._dot.ease({
+            scale_x: 1.8,
+            scale_y: 1.8,
+            duration: FLASH_MS,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            repeatCount: 1,
+            autoReverse: true,
+        });
+    }
+
+    // --- Aviso al pedir atención (paso 7) -----------------------------------------
+
+    get bannerActor() {
+        return this._bannerSession ? this._banner : null;
+    }
+
+    get bannerAccent() {
+        return this._bannerSession ? ATTENTION_RGB : null;
+    }
+
+    _alert(name, session) {
+        if (!this._notifSettings.get_boolean('show-banners'))
+            return;   // «No molestar»: solo cambia el punto
+        try {
+            global.display.get_sound_player().play_from_theme(
+                ATTENTION_SOUND, `${session.proyecto} te necesita`, null);
+        } catch (e) {
+            console.error(`[agent-notch] Agentes: no se pudo reproducir el aviso: ${e.message}`);
+        }
+        this._showBanner(name, session);
+    }
+
+    _buildBanner() {
+        const box = new St.BoxLayout({style_class: 'agent-notch-agents-banner-box', x_expand: true});
+        this._bannerDot = new St.Widget({style_class: 'agent-notch-dot', y_align: Clutter.ActorAlign.CENTER});
+        this._bannerTitle = makeLabel('agent-notch-agents-banner-title', {y_align: Clutter.ActorAlign.CENTER});
+        this._bannerDetail = makeLabel('agent-notch-agents-banner-detail', {
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+        });
+        box.add_child(this._bannerDot);
+        box.add_child(this._bannerTitle);
+        box.add_child(this._bannerDetail);
+        this._banner = new St.Button({
+            style_class: 'agent-notch-agents-banner estado-atencion',
+            child: box,
+            x_expand: true,
+            track_hover: true,
+            can_focus: true,
+        });
+        this._banner.connect('clicked', () => {
+            const session = this._bannerSession;
+            this._hideBanner();
+            if (session)
+                this._focusTerminal(session);
+        });
+    }
+
+    _showBanner(name, session) {
+        if (!this._banner)
+            this._buildBanner();
+        this._bannerTitle.text = `${session.proyecto} te necesita`;
+        this._bannerDetail.text = session.accion ?? stateText('atencion');
+        this._banner.accessible_name = `${this._bannerTitle.text}: ${this._bannerDetail.text}`;
+        this._bannerName = name;
+        this._bannerSession = session;
+        this._scheduleBannerEnd(BANNER_MS);
+        this.emit('changed');
+    }
+
+    // Se va a los 5 s; con el ratón encima, espera a que salga.
+    _scheduleBannerEnd(ms) {
+        if (this._bannerId)
+            GLib.source_remove(this._bannerId);
+        this._bannerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+            this._bannerId = 0;
+            if (this._banner?.hover)
+                this._scheduleBannerEnd(BANNER_HOVER_RETRY_MS);
+            else
+                this._hideBanner();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _hideBanner() {
+        if (this._bannerId) {
+            GLib.source_remove(this._bannerId);
+            this._bannerId = 0;
+        }
+        if (!this._bannerSession)
+            return;
+        this._bannerName = null;
+        this._bannerSession = null;
+        this.emit('changed');
     }
 
     // --- Listas de sesiones (hover y pestaña) -----------------------------------
@@ -522,6 +694,14 @@ class AgentsModule extends NotchModule {
 
     destroy() {
         this._cancellable.cancel();
+        this._settings?.disconnectObject(this);
+        this._settings = this._notifSettings = null;
+        if (this._bannerId)
+            GLib.source_remove(this._bannerId);
+        this._bannerId = 0;
+        this._bannerName = this._bannerSession = null;
+        this._banner?.destroy();
+        this._banner = this._bannerDot = this._bannerTitle = this._bannerDetail = null;
         this._monitor?.disconnectObject(this);
         this._monitor?.cancel();
         this._monitor = null;

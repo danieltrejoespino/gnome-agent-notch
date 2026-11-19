@@ -954,3 +954,36 @@
   font-size: 9pt;
   color: #8a8a8a;
 }
+
+/* Banner al pedir atención (paso 7): la isla se despliega 5 s.
+   El brillo ámbar de abajo lo pinta la isla (bannerAccent). */
+.agent-notch-agents-banner {
+  min-width: 320px;
+  border-radius: 12px;
+  padding: 4px 6px;
+}
+
+.agent-notch-agents-banner:hover,
+.agent-notch-agents-banner:focus {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.agent-notch-agents-banner-box {
+  spacing: 8px;
+}
+
+.agent-notch-agents-banner .agent-notch-dot {
+  background-color: #fbbf24;
+}
+
+.agent-notch-agents-banner-title {
+  max-width: 160px;
+  font-weight: bold;
+}
+
+.agent-notch-agents-banner-detail {
+  max-width: 260px;
+  font-family: monospace;
+  font-size: 9pt;
+  color: #fbbf24;
+}
