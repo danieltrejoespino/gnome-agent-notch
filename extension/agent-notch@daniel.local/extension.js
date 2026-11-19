@@ -5,6 +5,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {MonitorBrightness} from './brightness.js';
 import {Island} from './island.js';
+import {AgentsModule} from './modules/agents.js';
 import {ClipboardModule} from './modules/clipboard.js';
 import {FocusModule} from './modules/focus.js';
 import {MascotModule} from './modules/mascot.js';
@@ -30,6 +31,7 @@ export default class AgentNotchExtension extends Extension {
         this._island.addModule(new NotificationsModule());
         this._island.addModule(new FocusModule());
         this._island.addModule(new ClipboardModule());
+        this._island.addModule(new AgentsModule());
         this._island.addModule(new MascotModule());
         Main.layoutManager.addTopChrome(this._island, {trackFullscreen: true});
 

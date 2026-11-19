@@ -799,3 +799,43 @@
   font-size: 9.5pt;
   color: #8a8a8a;
 }
+
+/* ── Módulo Agentes (Fase 1) ──────────────────────── */
+
+/* Compacta: «● mi-app · Editando main.py». Colores por estado: docs/09.
+   Sin animaciones todavía (pulso del punto: paso 7 de la hoja de ruta). */
+.agent-notch-agents {
+  spacing: 7px;
+}
+
+.agent-notch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: #8a8a8a;
+}
+
+.agent-notch-agents.estado-pensando   .agent-notch-dot { background-color: #a78bfa; }
+.agent-notch-agents.estado-trabajando .agent-notch-dot { background-color: #60a5fa; }
+.agent-notch-agents.estado-atencion   .agent-notch-dot { background-color: #fbbf24; }
+.agent-notch-agents.estado-terminado  .agent-notch-dot { background-color: #34d399; }
+.agent-notch-agents.estado-error      .agent-notch-dot { background-color: #f87171; }
+
+.agent-notch-agents-title {
+  max-width: 140px;
+  font-weight: bold;
+}
+
+.agent-notch-agents-separator {
+  color: #8a8a8a;
+}
+
+.agent-notch-agents-detail {
+  max-width: 220px;
+  font-family: monospace;
+  color: #cfcfcf;
+}
+
+.agent-notch-agents.estado-atencion .agent-notch-agents-detail {
+  color: #fbbf24;
+}

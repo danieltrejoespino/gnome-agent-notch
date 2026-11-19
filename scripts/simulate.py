@@ -53,6 +53,9 @@ ACTIONS = {
 
 
 def default_dir(real):
+    """Bus de pruebas, salvo --real. Un AGENT_NOTCH_DIR ya puesto manda."""
+    if not real and os.environ.get("AGENT_NOTCH_DIR"):
+        return os.environ["AGENT_NOTCH_DIR"]
     runtime = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
     return os.path.join(runtime, "agent-notch" if real else "agent-notch-dev")
 
