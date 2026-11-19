@@ -7,8 +7,10 @@
 
 Edita ~/.claude/settings.json ($CLAUDE_CONFIG_DIR/settings.json si está
 definida). Solo toca las entradas de este hook: las demás (otros hooks,
-permisos, ajustes…) quedan igual. Antes de cambiar nada guarda una copia en
-settings.json.agent-notch.bak, y escribe de forma atómica.
+permisos, ajustes…) quedan igual. La primera vez que lo cambia guarda una
+copia del original en settings.json.agent-notch.bak (no se vuelve a pisar),
+y escribe de forma atómica. Si al quitar el hook no queda nada (el archivo
+lo creó install), borra settings.json y esa copia: no deja rastro.
 
 --hook RUTA elige qué hook.py usar; por defecto, el que está junto a este
 script. Así sirve tanto la copia instalada
@@ -79,13 +81,23 @@ def load(path):
     return data
 
 
+def backup_path(path):
+    return path + ".agent-notch.bak"
+
+
 def save(path, data):
-    """Copia de seguridad y escritura atómica, con los permisos que tuviera."""
+    """Copia de seguridad y escritura atómica, con los permisos que tuviera.
+
+    La copia se hace solo si no existe: así guarda el original de antes de
+    agent-notch y no la versión de un cambio anterior (instalar y luego
+    desinstalar la pisaba con la que llevaba el hook).
+    """
     folder = os.path.dirname(path)
     os.makedirs(folder, exist_ok=True)
     mode = 0o600
     if os.path.exists(path):
-        shutil.copy2(path, path + ".agent-notch.bak")
+        if not os.path.exists(backup_path(path)):
+            shutil.copy2(path, backup_path(path))
         mode = os.stat(path).st_mode & 0o777
     tmp = os.path.join(folder, ".settings.json.agent-notch.%d.tmp" % os.getpid())
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
@@ -191,7 +203,15 @@ def main(argv=None):
         return 0
 
     new, removed = without_ours(data, hook)
-    if removed:
+    if removed and not new:
+        # Solo quedaba el hook: el archivo lo creó install. Sin rastro, ni
+        # siquiera la copia si tampoco guarda nada del usuario.
+        os.unlink(path)
+        bak = backup_path(path)
+        if os.path.exists(bak) and not without_ours(load(bak))[0]:
+            os.unlink(bak)
+        print("agent-notch: hook quitado; %s solo tenía el hook y se ha borrado" % path)
+    elif removed:
         save(path, new)
         print("agent-notch: hook quitado de %s" % path)
     else:

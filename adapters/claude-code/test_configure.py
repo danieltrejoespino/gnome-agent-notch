@@ -128,6 +128,33 @@ class ConfigureTest(unittest.TestCase):
         self.run_cfg("uninstall", "--hook", "/otra/agent-notch/adapters/claude-code/hook.py")
         self.run_cfg("status")
 
+    def test_sin_archivo_previo_no_deja_rastro(self):
+        self.run_cfg("install")
+        self.run_cfg("uninstall")
+        self.assertEqual(os.listdir(self.config), [])
+
+    def test_copia_guarda_el_original(self):
+        original = {"theme": "dark", "hooks": {"Stop": [OTHER_HOOK]}}
+        self.write(original)
+        bak = self.settings + ".agent-notch.bak"
+        other = os.path.join(self.tmp.name, "otra", "adapters", "claude-code", "hook.py")
+        os.makedirs(os.path.dirname(other))
+        with open(HOOK, encoding="utf-8") as src, open(other, "w", encoding="utf-8") as dst:
+            dst.write(src.read())
+        self.run_cfg("install")
+        self.run_cfg("install", "--hook", other)   # sustituye al anterior: otro cambio
+        self.run_cfg("uninstall", "--hook", other)
+        with open(bak, encoding="utf-8") as f:
+            self.assertEqual(json.load(f), original)   # no la pisan los cambios siguientes
+        self.assertEqual(self.read(), original)
+
+    def test_original_vacio_con_datos_no_se_borra(self):
+        self.write({"theme": "dark"})
+        self.run_cfg("install")
+        self.run_cfg("uninstall")
+        self.assertEqual(self.read(), {"theme": "dark"})
+        self.assertTrue(os.path.exists(self.settings + ".agent-notch.bak"))
+
     def test_uninstall_sin_nada(self):
         p = self.run_cfg("uninstall")
         self.assertIn("no estaba", p.stdout)
