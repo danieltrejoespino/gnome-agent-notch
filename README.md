@@ -25,22 +25,24 @@ Una "isla" estilo notch arriba al centro de GNOME Shell, escrita como extensión
 ## Instalación
 
 ```bash
-git clone https://github.com/danieltrejoespino/gnome-agent-notch.git
-cd gnome-agent-notch
-scripts/dev-link.sh
+curl -fsSL https://raw.githubusercontent.com/danieltrejoespino/gnome-agent-notch/main/scripts/install.sh | bash
 ```
 
-`dev-link.sh` enlaza la extensión en `~/.local/share/gnome-shell/extensions/` (los cambios en el repo se ven sin copiar nada) y registra los servicios D-Bus del test de velocidad y del brillo en `~/.local/share/dbus-1/services/`. Esos servicios solo arrancan cuando se usan y se cierran solos.
+Después, **cierra sesión y vuelve a entrar**: en Wayland GNOME solo carga extensiones nuevas al empezar la sesión.
 
-Después:
+El instalador no usa `sudo` y solo escribe en tu carpeta personal:
 
-1. Cierra sesión y vuelve a entrar (en Wayland GNOME no detecta extensiones nuevas sin reiniciar la sesión).
-2. Actívala:
-   ```bash
-   gnome-extensions enable agent-notch@daniel.local
-   ```
+| Dónde | Qué |
+|---|---|
+| `~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/` | la extensión |
+| `~/.local/share/agent-notch/` | los servicios de velocidad y brillo, el desinstalador y los fijados del portapapeles |
+| `~/.local/share/dbus-1/services/dev.agentnotch.*.service` | para que D-Bus arranque esos servicios solo cuando se usan (se cierran solos) |
 
-**No muevas la carpeta del repo** después de instalarla: el enlace y los servicios apuntan a ella. Si la mueves, vuelve a ejecutar `scripts/dev-link.sh` (antes borra el enlace viejo de `~/.local/share/gnome-shell/extensions/agent-notch@daniel.local`).
+Instala la última *release*; si no hay ninguna, la rama `main`. Para elegir versión: `curl … | AGENT_NOTCH_REF=v1 bash`.
+
+**Actualizar:** vuelve a ejecutar el mismo comando y entra de nuevo en la sesión.
+
+Desde un repo clonado, `scripts/install.sh` instala esa copia en vez de descargarla.
 
 ### Brillo del monitor externo (opcional)
 
@@ -53,12 +55,14 @@ Y vuelve a entrar en la sesión para que su regla de udev te dé acceso a `/dev/
 ## Desinstalar
 
 ```bash
-gnome-extensions disable agent-notch@daniel.local
-rm ~/.local/share/gnome-shell/extensions/agent-notch@daniel.local
-rm ~/.local/share/dbus-1/services/dev.agentnotch.{SpeedTest,Brightness}.service
+~/.local/share/agent-notch/uninstall.sh
 ```
 
+Deja todo como antes de instalar (también borra los fijados del portapapeles).
+
 ## Desarrollo
+
+`scripts/dev-link.sh` enlaza la extensión a la carpeta del repo (los cambios se ven sin copiar nada) en vez de instalar una copia. No se puede usar a la vez que `install.sh`: desinstala antes una para usar la otra.
 
 Para probar cambios sin tocar el escritorio real:
 
@@ -81,7 +85,7 @@ journalctl -f -o cat /usr/bin/gnome-shell | grep agent-notch
 extension/agent-notch@daniel.local/   la extensión (island.js, panel.js, modules/…)
 services/speedtest/                   test de velocidad, servicio D-Bus aparte
 services/brightness/                  brillo por DDC/CI, servicio D-Bus aparte
-scripts/                              instalación y herramientas de prueba
+scripts/                              install.sh, uninstall.sh y herramientas de desarrollo
 ```
 
 ## Licencia
