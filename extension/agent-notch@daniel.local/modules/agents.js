@@ -11,8 +11,10 @@
 //   - Compacta: «● mi-app · Editando main.py», o «● 3 agentes · 1 te
 //     necesita» con varias. Las sesiones que solo esperan no la ocupan.
 //   - Expandida (hover): una fila por sesión (punto · proyecto · acción ·
-//     tiempo). Clic en una fila → trae al frente la ventana de su terminal,
-//     si se sabe cuál es con certeza (si no, no hace nada).
+//     tiempo), hasta 6. Clic en una fila → trae al frente la ventana de su
+//     terminal, si se sabe cuál es con certeza (si no, no hace nada).
+//   - Pestaña «Agentes» del panel: la misma lista, con todas las sesiones
+//     y desplazamiento; sigue ahí al hacer clic en la isla.
 //
 // Sesiones muertas (docs/03): con PID, cuando ese proceso ya no existe; sin
 // PID, a los 30 min sin novedades. Se quitan y se borra su archivo.
@@ -23,8 +25,8 @@
 //   - Lecturas asíncronas, canceladas al destruir.
 //   - Temporizadores solo mientras hacen falta: 5 s tras `terminado`;
 //     revisar sesiones muertas cada 30 s solo si hay sesiones; refrescar
-//     los tiempos cada 30 s solo con la vista expandida a la vista.
-//   - Las filas se crean al primer hover y se reutilizan.
+//     los tiempos cada 30 s solo con la lista (hover o pestaña) a la vista.
+//   - Cada lista se crea la primera vez que se ve y reutiliza sus filas.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -51,7 +53,9 @@ const PRIORITY_ATTENTION = 50;
 const BATCH_MS = 100;
 const REAP_S = 30;
 const AGE_TICK_S = 30;
-const MAX_ROWS = 6;
+const MAX_ROWS = 6;          // en el hover
+const MAX_PAGE_ROWS = 40;    // en la pestaña (con desplazamiento)
+const ICON = 'utilities-terminal-symbolic';
 const MAX_ANCESTORS = 16;
 
 const decoder = new TextDecoder();
@@ -87,9 +91,9 @@ class AgentsModule extends NotchModule {
         this._reapId = 0;
         this._ageId = 0;
         this._summary = null;
-        this._rowCount = 0;           // filas visibles en la vista expandida
-        this._exp = null;             // vista expandida, al primer hover
-        this._rows = [];
+        this._rowCount = 0;           // sesiones en las listas (para reajustar la isla)
+        this._exp = null;             // lista del hover, al primer uso
+        this._page = null;            // pestaña del panel, al primer uso
         this._cancellable = new Gio.Cancellable();
 
         this._buildCompact();
@@ -128,9 +132,21 @@ class AgentsModule extends NotchModule {
     }
 
     get expandedActor() {
-        if (!this._exp)
-            this._buildExpanded();
-        return this._exp;
+        this._exp ??= this._newList(MAX_ROWS);
+        return this._exp.actor;
+    }
+
+    get pageActor() {
+        this._page ??= this._buildPage();
+        return this._page.actor;
+    }
+
+    get pageTitle() {
+        return 'Agentes';
+    }
+
+    get pageIcon() {
+        return ICON;
     }
 
     // --- Lectura de la carpeta -------------------------------------------------
@@ -291,9 +307,18 @@ class AgentsModule extends NotchModule {
         this._scheduleExpiry(sessions, now);
         this._syncReaper();
 
-        const rowCount = Math.min(sessions.length, MAX_ROWS) + (sessions.length > MAX_ROWS ? 1 : 0);
-        if (this._exp)
-            this._renderRows(sessions, now);
+        // Cualquier cambio en el número de sesiones cambia el alto del hover
+        // o de la pestaña: la isla tiene que reajustarse.
+        const rowCount = sessions.length;
+        const sorted = sortSessions(sessions, now);
+        for (const list of [this._exp, this._page?.list]) {
+            if (list)
+                this._renderList(list, sorted, now);
+        }
+        if (this._page) {
+            this._page.scroll.visible = sessions.length > 0;
+            this._page.empty.visible = sessions.length === 0;
+        }
 
         const before = this._summary;
         if (!sameSummary(summary, before)) {
@@ -332,20 +357,67 @@ class AgentsModule extends NotchModule {
         });
     }
 
-    // --- Vista expandida ---------------------------------------------------------
+    // --- Listas de sesiones (hover y pestaña) -----------------------------------
 
-    _buildExpanded() {
-        this._exp = new St.BoxLayout({
+    // Una lista reutilizable: filas que se crean al hacer falta y se
+    // reutilizan; como mucho `maxRows`, y «y N más» si no caben.
+    _newList(maxRows) {
+        const actor = new St.BoxLayout({
             style_class: 'agent-notch-agents-list',
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
         });
-        this._more = makeLabel('agent-notch-agents-more', {visible: false});
-        this._exp.add_child(this._more);
-        this._renderRows([...this._sessions.values()], nowSeconds());
+        const more = makeLabel('agent-notch-agents-more', {visible: false});
+        actor.add_child(more);
+        const list = {actor, more, rows: [], maxRows};
+        const now = nowSeconds();
+        this._renderList(list, sortSessions([...this._sessions.values()], now), now);
+        return list;
     }
 
-    _newRow() {
+    _buildPage() {
+        const actor = new St.BoxLayout({
+            style_class: 'agent-notch-agents-page',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            // Pegada arriba (el St.Bin del panel solo respeta y_align con y_expand).
+            y_expand: true,
+            y_align: Clutter.ActorAlign.START,
+        });
+        const list = this._newList(MAX_PAGE_ROWS);
+        const scroll = new St.ScrollView({
+            style_class: 'agent-notch-agents-scroll',
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+            overlay_scrollbars: true,
+            x_expand: true,
+            child: list.actor,
+            visible: this._sessions.size > 0,
+        });
+        actor.add_child(scroll);
+
+        const empty = new St.BoxLayout({
+            style_class: 'agent-notch-agents-empty',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_align: Clutter.ActorAlign.CENTER,
+            visible: this._sessions.size === 0,
+        });
+        empty.add_child(new St.Icon({icon_name: ICON, style_class: 'agent-notch-agents-empty-icon'}));
+        empty.add_child(new St.Label({
+            style_class: 'agent-notch-agents-empty-title',
+            text: 'Ningún agente en marcha',
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
+        empty.add_child(new St.Label({
+            style_class: 'agent-notch-agents-empty-hint',
+            text: 'Las sesiones de Claude Code aparecerán aquí',
+            x_align: Clutter.ActorAlign.CENTER,
+        }));
+        actor.add_child(empty);
+        return {actor, list, scroll, empty};
+    }
+
+    _newRow(list) {
         const row = {};
         const box = new St.BoxLayout({style_class: 'agent-notch-agents-row-box', x_expand: true});
         row.button = new St.Button({
@@ -368,17 +440,16 @@ class AgentsModule extends NotchModule {
                 this._focusTerminal(row.session);
         });
         // Antes de la etiqueta «y N más», que va siempre la última.
-        this._exp.insert_child_below(row.button, this._more);
+        list.actor.insert_child_below(row.button, list.more);
         return row;
     }
 
-    _renderRows(sessions, now) {
-        const sorted = sortSessions(sessions, now);
-        const shown = sorted.slice(0, MAX_ROWS);
-        while (this._rows.length < shown.length)
-            this._rows.push(this._newRow());
+    _renderList(list, sorted, now) {
+        const shown = sorted.slice(0, list.maxRows);
+        while (list.rows.length < shown.length)
+            list.rows.push(this._newRow(list));
 
-        this._rows.forEach((row, i) => {
+        list.rows.forEach((row, i) => {
             const s = shown[i];
             row.session = s ?? null;
             row.button.visible = Boolean(s);
@@ -398,14 +469,14 @@ class AgentsModule extends NotchModule {
         });
 
         const hidden = sorted.length - shown.length;
-        this._more.visible = hidden > 0;
+        list.more.visible = hidden > 0;
         if (hidden > 0)
-            this._more.text = `y ${hidden} más`;
+            list.more.text = `y ${hidden} más`;
     }
 
-    // Los tiempos («12 min») solo se refrescan con la vista a la vista.
+    // Los tiempos («12 min») solo se refrescan con alguna lista a la vista.
     _onViewsChanged(views) {
-        const visible = views.has('expanded');
+        const visible = views.has('expanded') || views.has('page');
         if (visible && !this._ageId) {
             this._render();
             this._ageId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, AGE_TICK_S, () => {
@@ -464,9 +535,9 @@ class AgentsModule extends NotchModule {
         this._readGen.clear();
         this._compact?.destroy();
         this._compact = this._dot = this._title = this._separator = this._detail = null;
-        this._exp?.destroy();
-        this._exp = this._more = null;
-        this._rows = [];
+        this._exp?.actor.destroy();
+        this._page?.actor.destroy();
+        this._exp = this._page = null;
         this._dir = null;
     }
 });

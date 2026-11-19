@@ -739,6 +739,31 @@
   color: #9a9a9a;
 }
 
+.agent-notch-clipboard-toolbar {
+  spacing: 6px;
+}
+
+/* «Limpiar»: borra el historial, los fijados se quedan. */
+.agent-notch-clipboard-clear {
+  border-radius: 99px;
+  padding: 6px;
+  color: #cfcfcf;
+}
+
+.agent-notch-clipboard-clear:hover,
+.agent-notch-clipboard-clear:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.agent-notch-clipboard-clear:insensitive {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.agent-notch-clipboard-clear-icon {
+  icon-size: 16px;
+}
+
 .agent-notch-clipboard-scroll {
   max-height: 300px;
 }
@@ -896,6 +921,36 @@
 
 .agent-notch-agents-more {
   padding: 2px 8px;
+  font-size: 9pt;
+  color: #8a8a8a;
+}
+
+/* Pestaña «Agentes» del panel: la misma lista que el hover, con todas las
+   sesiones y desplazamiento. */
+.agent-notch-agents-page {
+  min-width: 380px;
+}
+
+.agent-notch-agents-scroll {
+  max-height: 300px;
+}
+
+.agent-notch-agents-empty {
+  spacing: 4px;
+  padding: 24px 0;
+}
+
+.agent-notch-agents-empty-icon {
+  icon-size: 32px;
+  color: #8a8a8a;
+  margin-bottom: 6px;
+}
+
+.agent-notch-agents-empty-title {
+  font-weight: bold;
+}
+
+.agent-notch-agents-empty-hint {
   font-size: 9pt;
   color: #8a8a8a;
 }

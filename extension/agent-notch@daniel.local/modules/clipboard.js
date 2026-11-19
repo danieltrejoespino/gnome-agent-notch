@@ -313,7 +313,20 @@ class ClipboardModule extends NotchModule {
             this._render();
         });
         this._entry.clutter_text.connect('key-press-event', (_actor, event) => this._onKeyPress(event));
-        page.add_child(this._entry);
+
+        // Buscador + «Limpiar»: borra el historial pero no los fijados.
+        const toolbar = new St.BoxLayout({style_class: 'agent-notch-clipboard-toolbar', x_expand: true});
+        toolbar.add_child(this._entry);
+        this._clearButton = new St.Button({
+            style_class: 'agent-notch-clipboard-clear',
+            can_focus: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            accessible_name: 'Limpiar historial (los fijados se quedan)',
+            child: new St.Icon({icon_name: 'edit-clear-all-symbolic', style_class: 'agent-notch-clipboard-clear-icon'}),
+        });
+        this._clearButton.connect('clicked', () => this._clearHistory());
+        toolbar.add_child(this._clearButton);
+        page.add_child(toolbar);
 
         this._list = new St.BoxLayout({
             style_class: 'agent-notch-clipboard-list',
@@ -338,6 +351,15 @@ class ClipboardModule extends NotchModule {
         page.add_child(this._empty);
 
         return page;
+    }
+
+    // Borra el historial; los fijados se quedan (como en Windows).
+    _clearHistory() {
+        this._history = [];
+        this._selected = 0;
+        this._entry.text = '';   // dispara _render() vía text-changed
+        this._render();
+        this._entry.grab_key_focus();
     }
 
     _onKeyPress(event) {
@@ -432,7 +454,21 @@ class ClipboardModule extends NotchModule {
             this._selected = 0;
         this._syncSelection();
 
+        const unpinned = this._history.some(t => !this._pinned.includes(t));
+        this._clearButton.reactive = unpinned;
+        this._clearButton.can_focus = unpinned;
+        if (unpinned)
+            this._clearButton.remove_style_pseudo_class('insensitive');
+        else
+            this._clearButton.add_style_pseudo_class('insensitive');
+
         const empty = this._items.length === 0;
+        // Menos o más filas (buscar, limpiar, copiar): la isla se reajusta.
+        if (this._shownCount !== undefined && this._shownCount !== this._items.length) {
+            this._shownCount = this._items.length;
+            this.emit('changed');
+        }
+        this._shownCount = this._items.length;
         this._scroll.visible = !empty;
         this._empty.visible = empty;
         this._empty.text = this._history.length + this._pinned.length === 0
@@ -466,7 +502,7 @@ class ClipboardModule extends NotchModule {
         this._keyboard = null;
 
         this._page?.destroy();
-        this._page = this._entry = this._list = this._scroll = this._empty = null;
+        this._page = this._entry = this._list = this._scroll = this._empty = this._clearButton = null;
         this._rows = [];
         this._items = [];
         this._history = [];
