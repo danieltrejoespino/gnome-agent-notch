@@ -7,6 +7,7 @@ import {MonitorBrightness} from './brightness.js';
 import {Island} from './island.js';
 import {AgentsModule} from './modules/agents.js';
 import {ClipboardModule} from './modules/clipboard.js';
+import {DockerModule} from './modules/docker.js';
 import {FocusModule} from './modules/focus.js';
 import {MascotModule} from './modules/mascot.js';
 import {MusicModule} from './modules/music.js';
@@ -32,6 +33,7 @@ export default class AgentNotchExtension extends Extension {
         this._island.addModule(new FocusModule());
         this._island.addModule(new ClipboardModule());
         this._island.addModule(new AgentsModule());
+        this._island.addModule(new DockerModule());
         this._island.addModule(new MascotModule());
         Main.layoutManager.addTopChrome(this._island, {trackFullscreen: true});
 

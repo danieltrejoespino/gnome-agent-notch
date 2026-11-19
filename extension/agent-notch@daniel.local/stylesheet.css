@@ -987,3 +987,139 @@
   font-size: 9pt;
   color: #fbbf24;
 }
+
+/* Pestaña «Docker» del panel (docs/19-modulo-docker.md): contenedores por
+   proyecto de Compose, con iniciar/detener por fila y por grupo. */
+.agent-notch-docker-page {
+  min-width: 420px;
+}
+
+.agent-notch-docker-scroll {
+  max-height: 340px;
+}
+
+.agent-notch-docker-list {
+  spacing: 10px;
+}
+
+.agent-notch-docker-group {
+  spacing: 2px;
+}
+
+.agent-notch-docker-group-header {
+  spacing: 8px;
+  padding: 0 8px 2px 8px;
+}
+
+.agent-notch-docker-group-title {
+  font-weight: bold;
+  max-width: 220px;
+}
+
+.agent-notch-docker-group-count {
+  font-size: 9pt;
+  color: #8a8a8a;
+}
+
+.agent-notch-docker-group-button {
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 9pt;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-docker-group-button:hover,
+.agent-notch-docker-group-button:focus {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.agent-notch-docker-group-button:insensitive {
+  color: #8a8a8a;
+}
+
+.agent-notch-docker-group-button-box {
+  spacing: 4px;
+}
+
+.agent-notch-docker-group-icon {
+  icon-size: 12px;
+}
+
+.agent-notch-docker-row {
+  spacing: 8px;
+  border-radius: 10px;
+  padding: 4px 8px;
+}
+
+.agent-notch-docker-row:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.agent-notch-docker-row.en-marcha .agent-notch-dot { background-color: #34d399; }
+.agent-notch-docker-row.cambiando .agent-notch-dot { background-color: #fbbf24; }
+
+.agent-notch-docker-row-name {
+  font-weight: bold;
+}
+
+.agent-notch-docker-row-detail {
+  font-size: 9pt;
+  color: #8a8a8a;
+}
+
+.agent-notch-docker-row.con-error .agent-notch-docker-row-detail {
+  color: #f87171;
+}
+
+.agent-notch-docker-row-ports {
+  font-family: monospace;
+  font-size: 9pt;
+  color: #cfcfcf;
+}
+
+.agent-notch-docker-row-button {
+  border-radius: 99px;
+  padding: 6px;
+}
+
+.agent-notch-docker-row-button:hover,
+.agent-notch-docker-row-button:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.agent-notch-docker-row-button:active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.agent-notch-docker-row-button:insensitive {
+  color: #8a8a8a;
+}
+
+.agent-notch-docker-row-icon {
+  icon-size: 14px;
+}
+
+.agent-notch-docker-notice {
+  spacing: 6px;
+  padding: 24px 0;
+}
+
+.agent-notch-docker-notice-icon {
+  icon-size: 32px;
+  color: #8a8a8a;
+}
+
+.agent-notch-docker-notice-title {
+  font-weight: bold;
+}
+
+.agent-notch-docker-retry {
+  border-radius: 99px;
+  padding: 4px 14px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.agent-notch-docker-retry:hover,
+.agent-notch-docker-retry:focus {
+  background-color: rgba(255, 255, 255, 0.18);
+}
