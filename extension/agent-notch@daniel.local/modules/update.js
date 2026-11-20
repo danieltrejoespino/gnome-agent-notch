@@ -4,8 +4,9 @@
 //
 // - Se entera por ~/.local/state/agent-notch/update.json, que escribe
 //   services/updater/update_check.py; lo vigila con Gio.FileMonitor (sin
-//   sondeo) y SOLO si lo instalado es una release vN (con main o una copia
-//   local no vigila nada).
+//   sondeo) y SOLO si el código en marcha es una release vN (con main o una
+//   copia local no vigila nada). La versión en marcha es la del metadata.json
+//   (version-name, la escribe install.sh), que GNOME lee una vez por sesión.
 // - Instalar: llama a dev.agentnotch.Updater.Instalar() por D-Bus (la
 //   extensión no lanza procesos, Regla 2); el progreso vuelve por update.json.
 // - Al terminar: «Cerrar sesión para terminar» abre el diálogo de GNOME.
@@ -21,7 +22,7 @@ import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.j
 
 import {NotchModule} from './module.js';
 import {readText, isCancelled} from './sysinfo.js';
-import {buttonText, parseInstalled, sameView, updateView, versionKey} from './updatestate.js';
+import {buttonText, sameView, updateView, versionKey} from './updatestate.js';
 import {makeLabel} from './widgets.js';
 
 const PRIORITY = -50;   // en el hover, debajo de lo demás
@@ -34,10 +35,10 @@ const OBJECT_PATH = '/dev/agentnotch/Updater';
 
 export const UpdateModule = GObject.registerClass(
 class UpdateModule extends NotchModule {
-    _init() {
+    _init(running = null) {
         super._init();
         this._view = null;
-        this._installed = null;
+        this._running = typeof running === 'string' ? running.trim() : null;
         this._starting = false;    // Instalar() pedido, aún sin noticias
         this._pill = null;         // botón de la barra de pestañas
         this._row = null;          // fila del hover
@@ -45,16 +46,9 @@ class UpdateModule extends NotchModule {
         this._batchId = 0;
         this._cancellable = new Gio.Cancellable();
 
-        const app = GLib.build_filenamev([GLib.get_user_data_dir(), 'agent-notch', 'VERSION']);
         this._stateDir = GLib.build_filenamev([GLib.get_user_state_dir(), 'agent-notch']);
-        readText(app, this._cancellable).then(text => {
-            this._installed = parseInstalled(text);
-            if (versionKey(this._installed))
-                this._watch();
-        }).catch(e => {
-            if (!isCancelled(e))
-                this._installed = null;   // sin VERSION: copia de desarrollo
-        });
+        if (versionKey(this._running))
+            this._watch();
     }
 
     /** ¿Hay una versión nueva que ofrecer? (lo usa la mascota). */
@@ -111,7 +105,7 @@ class UpdateModule extends NotchModule {
     _read() {
         const path = GLib.build_filenamev([this._stateDir, STATE_NAME]);
         readText(path, this._cancellable)
-            .then(text => this._apply(updateView(text, this._installed)))
+            .then(text => this._apply(updateView(text, this._running)))
             .catch(e => {
                 if (!isCancelled(e))
                     this._apply(null);   // no existe: nada que ofrecer

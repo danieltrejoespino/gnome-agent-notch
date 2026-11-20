@@ -35,14 +35,16 @@ export function parseInstalled(text) {
 }
 
 /**
- * Texto de update.json + versión instalada → qué mostrar, o null si no hay
- * nada (sin actualización, JSON roto, instalado algo que no es release…):
+ * Texto de update.json + versión EN MARCHA → qué mostrar, o null si no hay
+ * nada (sin actualización, JSON roto, código que no es una release…):
  *   {version: 'v5', state: 'disponible'|'instalando'|'instalada'|'error', log}
- * Tras instalar (`instalada`) se sigue mostrando aunque VERSION ya diga v5:
- * hasta cerrar sesión, GNOME sigue con la versión vieja cargada.
+ * `running` es la versión del código que GNOME tiene cargado (version-name
+ * del metadata.json, que escribe install.sh), no el archivo VERSION: así,
+ * tras instalar, «Cerrar sesión para terminar» sigue hasta volver a entrar
+ * y desaparece después (arreglado el 19-11-2026: antes se quedaba).
  */
-export function updateView(raw, installed) {
-    if (!versionKey(installed))
+export function updateView(raw, running) {
+    if (!versionKey(running))
         return null;
     let data;
     try {
@@ -56,7 +58,7 @@ export function updateView(raw, installed) {
     if (!versionKey(version))
         return null;
     const state = UPDATE_STATES.includes(data.estado) ? data.estado : 'disponible';
-    if (state !== 'instalada' && !isNewer(version, installed))
+    if (!isNewer(version, running))
         return null;
     const log = typeof data.registro === 'string' ? data.registro : null;
     return {version, state, log};

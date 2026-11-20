@@ -36,7 +36,8 @@ export default class AgentNotchExtension extends Extension {
         const agents = new AgentsModule();
         this._island.addModule(agents);
         this._island.addModule(new DockerModule());
-        const update = new UpdateModule();
+        // La versión del código cargado (version-name, la escribe install.sh).
+        const update = new UpdateModule(this.metadata['version-name'] ?? null);
         this._island.addModule(update);
         // Ojos según los agentes y puntito si hay versión nueva.
         this._island.addModule(new MascotModule(agents, update));

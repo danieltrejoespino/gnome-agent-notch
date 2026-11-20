@@ -96,6 +96,16 @@ main() {
     mkdir -p "$(dirname "$EXT_DIR")"
     local new_ext="$EXT_DIR.new.$$"
     cp -r "$src/extension/$UUID" "$new_ext"
+    # La versión del código que GNOME carga (la lee una vez por sesión): el
+    # botón «Actualizar» la compara con la disponible (docs/18).
+    python3 -I -c 'import json, sys
+p, ref = sys.argv[1], sys.argv[2]
+with open(p, encoding="utf-8") as f:
+    d = json.load(f)
+d["version-name"] = ref
+with open(p, "w", encoding="utf-8") as f:
+    json.dump(d, f, ensure_ascii=False, indent=2)
+    f.write("\n")' "$new_ext/metadata.json" "$ref"
     rm -rf "$EXT_DIR"
     mv "$new_ext" "$EXT_DIR"
     say "Extensión en $EXT_DIR"

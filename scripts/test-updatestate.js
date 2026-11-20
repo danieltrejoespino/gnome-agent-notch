@@ -51,8 +51,12 @@ eq(updateView(json(disp), 'v6'), null, 'instalada más nueva');
 eq(updateView(json(disp), 'local (v3-4)'), null, 'copia local: nada');
 eq(updateView(json(disp), 'main'), null, 'main: nada');
 eq(updateView(json({...disp, estado: 'instalando'}), 'v4').state, 'instalando', 'instalando');
-eq(updateView(json({...disp, estado: 'instalada'}), 'v5'), {version: 'v5', state: 'instalada', log: null},
-    'instalada: se muestra aunque VERSION ya diga v5 (falta cerrar sesión)');
+eq(updateView(json({...disp, estado: 'instalada'}), 'v4'), {version: 'v5', state: 'instalada', log: null},
+    'instalada sin cerrar sesión (sigue cargada la v4): «Cerrar sesión para terminar»');
+eq(updateView(json({...disp, estado: 'instalada'}), 'v5'), null,
+    'instalada y ya cargada la v5 (se volvió a entrar): nada (fallo del 19-11-2026)');
+eq(updateView(json({...disp, disponible: 'v6.1', estado: 'instalada'}), 'v6.1'), null,
+    'ídem con versiones con punto');
 eq(updateView(json({...disp, estado: 'error', registro: '/x/update.log'}), 'v4'),
     {version: 'v5', state: 'error', log: '/x/update.log'}, 'error con registro');
 eq(updateView(json({...disp, registro: 3}), 'v4').log, null, 'registro que no es texto');
