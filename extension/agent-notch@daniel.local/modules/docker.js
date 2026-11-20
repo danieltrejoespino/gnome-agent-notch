@@ -1,21 +1,21 @@
-// Módulo Docker: pestaña del panel para ver los contenedores e iniciarlos o
-// detenerlos, uno a uno o por proyecto de Compose (docs/19-modulo-docker.md).
+// Docker module: a panel tab to see the containers and start or
+// stop them, one by one or per Compose project (docs/19-modulo-docker.md).
 //
-// Habla HTTP con el socket de Docker usando Soup (sin lanzar `docker`): la
-// extensión no lanza procesos (Regla 2). Solo lista, inicia y detiene.
+// It speaks HTTP over the Docker socket using Soup (without launching `docker`): the
+// extension does not launch processes (Rule 2). It only lists, starts and stops.
 //
-// La pestaña solo existe si el socket existe y se puede escribir en él (el
-// usuario está en el grupo `docker`). Sin Docker, el módulo no hace nada más
-// que comprobarlo una vez al activarse.
+// The tab only exists if the socket exists and can be written to (the
+// user is in the `docker` group). Without Docker, the module does nothing else
+// than check that once when enabled.
 //
 // Consumo:
-//   - Con la pestaña oculta: nada (ni conexiones ni temporizadores).
-//   - Al mostrarla: abre el flujo de eventos de Docker y pide la lista una
-//     vez. Cada evento (o tanda de eventos, agrupados en 100 ms) vuelve a
-//     pedir la lista: son unos KB y solo pasa cuando algo cambia.
-//   - Al ocultarla: cierra el flujo. Las órdenes en curso (iniciar/detener)
-//     siguen hasta acabar, para no dejar un contenedor a medias.
-//   - Filas y grupos se crean una vez por contenedor/proyecto y se reutilizan.
+//   - With the tab hidden: nothing (no connections, no timers).
+//   - When shown: it opens Docker's event stream and asks for the list
+//     once. Each event (or batch of events, grouped in 100 ms) asks for the
+//     list again: it is a few KB and only happens when something changes.
+//   - When hidden: it closes the stream. Commands in progress (start/stop)
+//     run until they finish, so as not to leave a container half-way.
+//   - Rows and groups are created once per container/project and reused.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -32,7 +32,7 @@ import {
     groupPlan, isRunning, parseContainers, socketPath, stateText,
 } from './dockerstate.js';
 
-// La pestaña va después de las demás (Agentes es 15).
+// The tab goes after the others (Agents is 15).
 const PRIORITY = 5;
 const ICON = 'package-x-generic-symbolic';
 const BATCH_MS = 100;
@@ -49,18 +49,18 @@ class DockerModule extends NotchModule {
 
         this._available = false;
         this._socket = socketPath(GLib.getenv('DOCKER_HOST'));
-        this._session = null;         // Soup, al primer uso
-        this._cancellable = new Gio.Cancellable();   // todo (se cancela en destroy)
-        this._events = null;          // Gio.Cancellable del flujo de eventos
+        this._session = null;         // Soup, on first use
+        this._cancellable = new Gio.Cancellable();   // everything (cancelled in destroy)
+        this._events = null;          // Gio.Cancellable of the event stream
         this._batchId = 0;
         this._errorId = 0;
         this._listGen = 0;
         this._containers = [];
-        this._busy = new Set();       // Ids con una orden en curso
-        this._busyGroups = new Set(); // proyectos con «todo» en curso
+        this._busy = new Set();       // Ids with a command in progress
+        this._busyGroups = new Set(); // projects with "all" in progress
         this._errors = new Map();     // Id → {text, until}, unos segundos
         this._mode = 'list';          // 'list' | 'empty' | 'down'
-        this._page = null;            // al primer uso
+        this._page = null;            // on first use
         this._shownCount = -1;
 
         this._checkSocket();
@@ -83,7 +83,7 @@ class DockerModule extends NotchModule {
         return this._page.actor;
     }
 
-    // --- ¿Hay Docker? --------------------------------------------------------------
+    // --- Is there Docker? --------------------------------------------------------------
 
     _checkSocket() {
         const file = Gio.File.new_for_path(this._socket);
@@ -93,7 +93,7 @@ class DockerModule extends NotchModule {
                 try {
                     info = f.query_info_finish(res);
                 } catch {
-                    return;   // no hay Docker (o se canceló): sin pestaña
+                    return;   // no Docker (or cancelled): no tab
                 }
                 this._available = info.get_file_type() === Gio.FileType.SPECIAL &&
                     info.get_attribute_boolean('access::can-write');
@@ -102,23 +102,23 @@ class DockerModule extends NotchModule {
             });
     }
 
-    // --- HTTP por el socket -------------------------------------------------------------
+    // --- HTTP over the socket -------------------------------------------------------------
 
     _soup() {
         this._session ??= new Soup.Session({
             remote_connectable: Gio.UnixSocketAddress.new(this._socket),
-            // Sin límite de E/S: el flujo de eventos pasa minutos en silencio y
-            // `stop` espera a que pare el contenedor (hasta 10 s o más).
+            // No I/O limit: the event stream stays silent for minutes and
+            // `stop` waits for the container to stop (up to 10 s or more).
             timeout: 0,
-            // Conexiones libres cerradas pronto: con la pestaña oculta no
-            // queda ninguna abierta.
+            // Idle connections closed soon: with the tab hidden none
+            // stays open.
             idle_timeout: 5,
             max_conns_per_host: 6,
         });
         return this._session;
     }
 
-    // Promesa con {status, text}. Rechaza si no se puede hablar con Docker.
+    // Promise with {status, text}. Rejects if Docker cannot be reached.
     _request(method, path, cancellable = this._cancellable) {
         const message = Soup.Message.new(method, apiUrl(path));
         return new Promise((resolve, reject) => {
@@ -133,7 +133,7 @@ class DockerModule extends NotchModule {
         });
     }
 
-    // --- Pestaña visible: eventos + lista ----------------------------------------------
+    // --- Tab visible: events + list ----------------------------------------------
 
     _onViewsChanged(views) {
         if (views.has('page'))
@@ -142,8 +142,8 @@ class DockerModule extends NotchModule {
             this._unwatch();
     }
 
-    // Primero el flujo de eventos y luego la lista: así no se pierde nada
-    // de lo que pase entre medias.
+    // First the event stream and then the list: that way nothing that happens
+    // in between is lost.
     _watch() {
         if (this._events)
             return;
@@ -181,12 +181,12 @@ class DockerModule extends NotchModule {
                 return;
             }
             if (line === null) {
-                // Docker cerró el flujo (se paró o se reinició).
+                // Docker closed the stream (it stopped or restarted).
                 l.close_async(GLib.PRIORITY_LOW, null, null);
                 this._dockerDown(cancellable, 'end of the event stream');
                 return;
             }
-            // No hace falta mirar qué evento es: cualquiera cambia la lista.
+            // No need to look at which event it is: any of them changes the list.
             this._queueRefresh();
             this._readEvent(l, cancellable);
         });
@@ -203,7 +203,7 @@ class DockerModule extends NotchModule {
 
     _dockerDown(cancellable, why) {
         if (cancellable !== this._events)
-            return;   // ya se cerró o se volvió a abrir
+            return;   // already closed or reopened
         console.log(`[agent-notch] Docker: not responding (${why})`);
         this._events = null;
         this._setMode('down');
@@ -220,7 +220,7 @@ class DockerModule extends NotchModule {
     }
 
     async _refresh() {
-        // Si llegan dos respuestas, solo cuenta la última pedida.
+        // If two answers arrive, only the last one requested counts.
         const gen = ++this._listGen;
         let containers;
         try {
@@ -242,7 +242,7 @@ class DockerModule extends NotchModule {
         this._render();
     }
 
-    // --- Órdenes ------------------------------------------------------------------------
+    // --- Commands ------------------------------------------------------------------------
 
     async _act(container, action) {
         if (this._busy.has(container.id))
@@ -263,10 +263,10 @@ class DockerModule extends NotchModule {
             this._showError(container.id, e.message);
         }
         if (!this._cancellable)
-            return false;   // destruido mientras tanto
+            return false;   // destroyed in the meantime
         this._busy.delete(container.id);
-        // El evento de Docker también lo traería, pero un 304 (ya estaba)
-        // no genera evento, y con la pestaña oculta no hay flujo.
+        // Docker's event would bring it too, but a 304 (already like that)
+        // does not generate an event, and with the tab hidden there is no stream.
         if (this._events)
             this._queueRefresh();
         else
@@ -281,7 +281,7 @@ class DockerModule extends NotchModule {
         const action = groupAction(group.containers);
         this._busyGroups.add(key);
         this._render();
-        // Uno detrás de otro, por dependencias; si uno falla, se para.
+        // One after another, by dependencies; if one fails, it stops.
         for (const c of groupPlan(group.containers, action)) {
             // eslint-disable-next-line no-await-in-loop
             if (!await this._act(c, action))
@@ -296,7 +296,7 @@ class DockerModule extends NotchModule {
     _showError(key, text) {
         console.log(`[agent-notch] Docker: ${key.slice(0, 12)}: ${text}`);
         this._errors.set(key, {text, until: GLib.get_monotonic_time() + ERROR_S * 1e6});
-        // Un solo temporizador, solo mientras haya algún error a la vista.
+        // A single timer, only while some error is visible.
         if (!this._errorId) {
             this._errorId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, ERROR_S, () => {
                 const now = GLib.get_monotonic_time();
@@ -313,7 +313,7 @@ class DockerModule extends NotchModule {
         }
     }
 
-    // --- Página ---------------------------------------------------------------------------
+    // --- Page ---------------------------------------------------------------------------
 
     _buildPage() {
         const actor = new St.BoxLayout({
@@ -339,7 +339,7 @@ class DockerModule extends NotchModule {
         });
         actor.add_child(scroll);
 
-        // Vacío o Docker sin responder: el mismo hueco con otro texto.
+        // Empty or Docker not responding: the same space with another text.
         const notice = new St.BoxLayout({
             style_class: 'agent-notch-docker-notice',
             orientation: Clutter.Orientation.VERTICAL,
@@ -409,7 +409,7 @@ class DockerModule extends NotchModule {
         });
         header.add_child(g.title);
         header.add_child(g.count);
-        // Solo los proyectos de Compose tienen «todo».
+        // Only Compose projects have "all".
         if (project) {
             g.buttonIcon = new St.Icon({style_class: 'agent-notch-docker-group-icon'});
             g.buttonLabel = new St.Label({y_align: Clutter.ActorAlign.CENTER});
@@ -528,7 +528,7 @@ class DockerModule extends NotchModule {
             }
         }
 
-        // A la isla solo le importa si cambia el alto.
+        // The island only cares whether the height changes.
         const count = this._containers.length + groups.length;
         if (count !== this._shownCount) {
             this._shownCount = count;

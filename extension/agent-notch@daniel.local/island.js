@@ -1,29 +1,29 @@
-// La isla: la píldora negra arriba al centro.
+// The island: the black pill at the top center.
 //
-// No sabe nada de música, agentes ni sistema:
-//   - Fila compacta: la vista compacta del módulo activo de mayor prioridad.
-//     Sin ninguno activo, queda mínima.
-//   - Vista expandida (al pasar el ratón): apila las secciones de TODOS los
-//     módulos que tengan algo que mostrar, por prioridad.
-//   - Banner: un módulo (Notificaciones) puede pedir que la isla se expanda
-//     sola para mostrar algo; tiene preferencia sobre todo lo demás.
-//   - Panel (clic): pestañas Home + una por módulo (panel.js). Se cierra al
-//     hacer clic fuera, con Esc o al sacar el ratón de la isla.
+// It knows nothing about music, agents or the system:
+//   - Compact row: the compact view of the active module with the highest priority.
+//     With none active, it stays minimal.
+//   - Expanded view (on hover): stacks the sections of ALL the modules that
+//     have something to show, by priority.
+//   - Banner: a module (Notifications) can ask the island to expand on its
+//     own to show something; it takes precedence over everything else.
+//   - Panel (click): Home tab + one per module (panel.js). It closes on a
+//     click outside, with Esc or when the pointer leaves the island.
 //
-// Forma (docs/13-rediseno.md): la isla dibuja su propio fondo con Cairo,
-// con "hombros" cóncavos arriba, como si saliera del borde de la pantalla.
-// CSS no puede hacer esquinas cóncavas. Colores y medidas salen del CSS
-// (propiedades -agent-notch-*), como hace la barra de volumen de GNOME.
+// Shape (docs/13-rediseno.md): the island draws its own background with Cairo,
+// with concave "shoulders" on top, as if it came out of the screen edge.
+// CSS cannot do concave corners. Colors and sizes come from the CSS
+// (-agent-notch-* properties), like GNOME's volume bar does.
 //
-// Dos capas apiladas (Clutter.BinLayout): debajo el fondo dibujado
-// (St.DrawingArea) y encima el contenido. ⚠️ Si la isla misma es el
-// St.DrawingArea, en GNOME 50 su contenido no se ve.
+// Two stacked layers (Clutter.BinLayout): the drawn background below
+// (St.DrawingArea) and the content on top. ⚠️ If the island itself is the
+// St.DrawingArea, its content does not show in GNOME 50.
 //
-// Consumo: los temporizadores (retardos de hover) solo existen mientras
-// el ratón entra o sale; las animaciones usan ease() (GPU) y respetan
-// "reducir animaciones" de GNOME automáticamente. La forma solo se
-// redibuja cuando cambia el tamaño o el estilo. Las secciones expandidas
-// no se crean hasta el primer hover.
+// Cost: the timers (hover delays) only exist while the pointer enters or
+// leaves; animations use ease() (GPU) and follow GNOME's
+// "reduce animations" automatically. The shape is only
+// redrawn when the size or the style changes. The expanded sections
+// are not created until the first hover.
 
 import Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
@@ -37,13 +37,13 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {NotchPanel} from './panel.js';
 
 const ANIMATION_MS = 200;
-// Contraer desde la vista del hover: más lento y en dos tiempos (primero se
-// desvanece el contenido, luego aparece el compacto) para que no se amontone.
+// Collapsing from the hover view: slower and in two steps (first the
+// content fades out, then the compact view appears) so they do not pile up.
 const HOVER_COLLAPSE_MS = 420;
 const HOVER_FADE_MS = 180;
-const EXPAND_FADE_MS = 120;    // al abrir: el compacto se va rápido
-const EXPAND_DELAY_MS = 120;   // evita expandir al rozarla de pasada
-const COLLAPSE_DELAY_MS = 300; // evita parpadeos al salir y volver
+const EXPAND_FADE_MS = 120;    // when opening: the compact view leaves quickly
+const EXPAND_DELAY_MS = 120;   // avoids expanding when brushing past it
+const COLLAPSE_DELAY_MS = 300; // avoids flicker when leaving and coming back
 
 const byPriority = (a, b) => b.priority - a.priority;
 
@@ -55,32 +55,32 @@ class Island extends St.Widget {
             style_class: 'agent-notch-island minimal',
             layout_manager: new Clutter.BinLayout(),
             reactive: true,
-            // Activa la pseudo-clase CSS :hover y la propiedad `hover`.
+            // Enables the CSS :hover pseudo-class and the `hover` property.
             track_hover: true,
-            // Recorta el contenido mientras la isla cambia de tamaño.
+            // Clips the content while the island changes size.
             clip_to_allocation: true,
         });
 
         this._modules = [];
         this._shownCompact = null;
-        this._sections = [];   // [{actor, show(), hide()}] en la vista expandida
+        this._sections = [];   // [{actor, show(), hide()}] in the expanded view
         this._expanded = false;
         this._hoverExpanded = false;
         this._accent = null;
         this._hoverTimeoutId = 0;
-        this._suppressHover = false;   // tras 'dismiss', hasta que el ratón salga
-        this._panel = null;    // se crea con el primer clic
-        this._grab = null;     // captura modal mientras el panel está abierto
+        this._suppressHover = false;   // after 'dismiss', until the pointer leaves
+        this._panel = null;    // created on the first click
+        this._grab = null;     // modal grab while the panel is open
         this._capturedId = 0;
         this._panelOpen = false;
-        this._compactBaseHeight = 0;   // alto de la barra + lo que sobresale
-        this._compactTall = false;     // el módulo mostrado pide dos líneas
-        this._separators = [];         // líneas entre secciones del hover (se reutilizan)
-        this._anchorX = null;          // centro horizontal (coordenadas del escenario)
-        this._anchorY = 0;             // borde superior
-        this._tallExtra = 0;           // px de más en ese caso (CSS)
+        this._compactBaseHeight = 0;   // bar height + how far it hangs below
+        this._compactTall = false;     // the shown module asks for two lines
+        this._separators = [];         // lines between hover sections (reused)
+        this._anchorX = null;          // horizontal center (stage coordinates)
+        this._anchorY = 0;             // top edge
+        this._tallExtra = 0;           // extra px in that case (CSS)
 
-        // Capa de abajo: el fondo dibujado, ocupa toda la isla.
+        // Bottom layer: the drawn background, it fills the whole island.
         this._background = new St.DrawingArea({
             x_expand: true,
             y_expand: true,
@@ -90,9 +90,9 @@ class Island extends St.Widget {
         this._background.connect('repaint', area => this._paintShape(area));
         this.add_child(this._background);
 
-        // Capa de arriba: el contenido. La fila compacta y la vista expandida
-        // van SUPERPUESTAS (BinLayout), las dos pegadas arriba: al expandir, la
-        // compacta se desvanece y la expandida empieza desde arriba (sin hueco).
+        // Top layer: the content. The compact row and the expanded view
+        // OVERLAP (BinLayout), both stuck to the top: when expanding, the
+        // compact view fades out and the expanded one starts from the top (no gap).
         this._content = new St.Widget({
             style_class: 'agent-notch-content',
             layout_manager: new Clutter.BinLayout(),
@@ -101,7 +101,7 @@ class Island extends St.Widget {
         });
         this.add_child(this._content);
 
-        // Fila compacta: misma altura que la barra superior.
+        // Compact row: same height as the top bar.
         this._compactBin = new St.Bin({
             style_class: 'agent-notch-compact',
             x_expand: true,
@@ -110,7 +110,7 @@ class Island extends St.Widget {
         });
         this._content.add_child(this._compactBin);
 
-        // Vista expandida: secciones de los módulos, banner o panel.
+        // Expanded view: module sections, banner or panel.
         this._expandedBox = new St.BoxLayout({
             style_class: 'agent-notch-expanded',
             orientation: Clutter.Orientation.VERTICAL,
@@ -121,11 +121,11 @@ class Island extends St.Widget {
         });
         this._content.add_child(this._expandedBox);
 
-        // Clic en la isla (fuera de sus botones): abrir el panel.
-        // ⚠️ Solo si se suelta DENTRO de la isla: al cerrar el panel con un
-        // clic fuera, la pulsación cierra y el soltar le llega igualmente a la
-        // isla (tenía la captura modal); sin esta comprobación lo reabría
-        // al instante (14-11-2026).
+        // Click on the island (outside its buttons): open the panel.
+        // ⚠️ Only if released INSIDE the island: when the panel is closed with a
+        // click outside, the press closes it and the release still reaches the
+        // island (it had the modal grab); without this check it reopened
+        // right away (14-11-2026).
         this.connect('button-release-event', (_actor, event) => {
             if (event.get_button() !== Clutter.BUTTON_PRIMARY || this._panelOpen)
                 return Clutter.EVENT_PROPAGATE;
@@ -141,7 +141,7 @@ class Island extends St.Widget {
         this.connect('destroy', () => this._onDestroy());
     }
 
-    // --- Forma ---------------------------------------------------------------
+    // --- Shape ---------------------------------------------------------------
 
     vfunc_style_changed() {
         const node = this.get_theme_node();
@@ -155,7 +155,7 @@ class Island extends St.Widget {
         this._glowAlpha = node.get_double('-agent-notch-glow-opacity');
         const tallExtra = node.get_length('-agent-notch-tall-extra');
         super.vfunc_style_changed();
-        // Fuera del escenario (al desactivar) el tema no es el real: ignorarlo.
+        // Off stage (when disabling) the theme is not the real one: ignore it.
         if (tallExtra !== this._tallExtra && this.get_stage()) {
             this._tallExtra = tallExtra;
             this._syncCompactHeight(false);
@@ -166,17 +166,17 @@ class Island extends St.Widget {
     _paintShape(area) {
         const cr = area.get_context();
         const [w, h] = area.get_surface_size();
-        if (!this._fillColor) {   // aún sin estilo: nada que dibujar
+        if (!this._fillColor) {   // no style yet: nothing to draw
             cr.$dispose();
             return;
         }
 
-        // Que las curvas quepan aunque la isla sea pequeña.
+        // Make the curves fit even if the island is small.
         const s = Math.max(0, Math.min(this._shoulder, w / 4, h / 2));
         const r = Math.max(0, Math.min(this._radius, (w - 2 * s) / 2, h - s));
 
-        // Contorno desplazado `i` hacia dentro (0 = borde exterior).
-        // Hombros: arcos cóncavos centrados fuera de la isla, en (0, s) y (w, s).
+        // Outline moved `i` inwards (0 = outer edge).
+        // Shoulders: concave arcs centered outside the island, at (0, s) and (w, s).
         const shape = i => {
             cr.newPath();
             cr.arc(0, s, s + i, -Math.PI / 2, 0);
@@ -188,7 +188,7 @@ class Island extends St.Widget {
             cr.arc(w, s, s + i, Math.PI, 3 * Math.PI / 2);
         };
 
-        // Relleno de vidrio + brillo sutil que se desvanece hacia abajo.
+        // Glass fill + subtle highlight that fades downwards.
         shape(0);
         cr.closePath();
         cr.setSourceColor(this._fillColor);
@@ -201,7 +201,7 @@ class Island extends St.Widget {
         cr.setSource(gradient);
         cr.fill();
 
-        // Brillo de color abajo (la app del banner), recortado a la forma.
+        // Colored glow at the bottom (the banner's app), clipped to the shape.
         if (this._accent) {
             const {red: ar, green: ag, blue: ab} = this._accent;
             const glowHeight = Math.min(h, this._glowHeight);
@@ -217,7 +217,7 @@ class Island extends St.Widget {
             cr.restore();
         }
 
-        // Borde en hombros, lados y abajo (arriba no: ahí "sale" de la pantalla).
+        // Border on shoulders, sides and bottom (not on top: there it "comes out" of the screen).
         if (this._borderWidth > 0) {
             shape(this._borderWidth / 2);
             cr.setSourceColor(this._borderColor);
@@ -228,7 +228,7 @@ class Island extends St.Widget {
         cr.$dispose();
     }
 
-    /** La isla pasa a ser dueña del módulo y lo destruirá con ella. */
+    /** The island becomes the module's owner and will destroy it along with itself. */
     addModule(module) {
         this._modules.push(module);
         module.connectObject(
@@ -240,11 +240,11 @@ class Island extends St.Widget {
     }
 
     /**
-     * Dónde va la isla: centrada en x, con el borde de arriba en y. La isla
-     * se centra sola al colocarse (vfunc_allocate), sea cual sea su ancho.
-     * Antes se recolocaba desde fuera con `notify::width` → set_position(),
-     * es decir, en mitad de la colocación de Clutter, que avisaba con «needs
-     * an allocation» en cada cambio de la compacta (arreglado el 19-11-2026).
+     * Where the island goes: centered on x, with its top edge at y. The island
+     * centers itself when laid out (vfunc_allocate), whatever its width.
+     * It used to be repositioned from outside with `notify::width` → set_position(),
+     * that is, in the middle of Clutter's layout, which warned with "needs
+     * an allocation" on every compact change (fixed on 19-11-2026).
      */
     setAnchor(x, y) {
         if (x === this._anchorX && y === this._anchorY)
@@ -260,22 +260,22 @@ class Island extends St.Widget {
         super.vfunc_allocate(box);
     }
 
-    /** Altura de la fila compacta (la de la barra superior). */
+    /** Height of the compact row (the top bar's). */
     setCompactHeight(height) {
         this._compactBaseHeight = height;
         this._syncCompactHeight(false);
     }
 
-    // Fila compacta alta (dos líneas, docs/09) si el módulo mostrado la pide.
-    // Con la isla contraída y en pantalla, el cambio de alto se anima.
+    // Tall compact row (two lines, docs/09) if the shown module asks for it.
+    // With the island collapsed and on screen, the height change is animated.
     _syncCompactHeight(animate) {
         if (!this._compactBaseHeight)
             return;
         const height = this._compactBaseHeight + (this._compactTall ? this._tallExtra : 0);
         if (this._compactBin.height === height)
             return;
-        // Medir solo si se va a animar (fuera de pantalla, medir obliga a
-        // Clutter a colocar una isla que no está en el escenario).
+        // Measure only if it will animate (off screen, measuring forces
+        // Clutter to lay out an island that is not on the stage).
         const animated = animate && !this._expanded && this.mapped;
         const [startW, startH] = animated ? this._currentSize() : [0, 0];
         this._compactBin.set_height(height);
@@ -289,8 +289,8 @@ class Island extends St.Widget {
             duration: ANIMATION_MS,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onStopped: () => {
-                // Volver a seguir al contenido (salvo si ya se expandió:
-                // entonces manda la animación de expandir/contraer).
+                // Follow the content again (unless it already expanded:
+                // then the expand/collapse animation is in charge).
                 if (!this._expanded && this.get_stage())
                     this.set_size(-1, -1);
             },
@@ -298,14 +298,14 @@ class Island extends St.Widget {
     }
 
     _update() {
-        // Fila compacta: el módulo activo de mayor prioridad.
+        // Compact row: the active module with the highest priority.
         let best = null;
         for (const module of this._modules) {
             if (module.active && (!best || module.priority > best.priority))
                 best = module;
         }
 
-        // Reutilizar actores: solo se cambia el hijo si cambia el módulo.
+        // Reuse actors: the child only changes if the module changes.
         const compact = best?.compactActor ?? null;
         if (compact !== this._shownCompact) {
             this._compactBin.set_child(compact);
@@ -327,8 +327,8 @@ class Island extends St.Widget {
         this._syncCompactVisible();
     }
 
-    // Avisa a cada módulo de si su vista compacta se ve: es la mostrada,
-    // la isla no está expandida y está en pantalla.
+    // Tells each module whether its compact view is visible: it is the shown one,
+    // the island is not expanded and it is on screen.
     _syncCompactVisible() {
         const visible = !this._expanded && this.mapped;
         for (const module of this._modules) {
@@ -337,8 +337,8 @@ class Island extends St.Widget {
         }
     }
 
-    // El módulo de mayor prioridad que pide mostrar un banner (p. ej. una
-    // notificación), o null.
+    // The highest-priority module that asks to show a banner (e.g. a
+    // notification), or null.
     _bannerModule() {
         let best = null;
         for (const module of this._modules) {
@@ -348,11 +348,11 @@ class Island extends St.Widget {
         return best;
     }
 
-    // Qué mostrar en la vista expandida, por orden de preferencia:
-    //   1. un banner (expande la isla sola),
-    //   2. el panel, si está abierto,
-    //   3. con el ratón encima, las secciones de todos los módulos.
-    // Cada entrada: {actor, show(), hide()}. Lista vacía = isla contraída.
+    // What to show in the expanded view, in order of preference:
+    //   1. a banner (expands the island on its own),
+    //   2. the panel, if it is open,
+    //   3. with the pointer over it, the sections of all modules.
+    // Each entry: {actor, show(), hide()}. Empty list = collapsed island.
     _wantedSections() {
         const banner = this._bannerModule();
         if (banner) {
@@ -378,7 +378,7 @@ class Island extends St.Widget {
             }));
     }
 
-    // Decide el estado de la isla a partir de los módulos y del ratón.
+    // Decides the island's state from the modules and the pointer.
     _refresh() {
         const wanted = this._wantedSections();
         this._setAccent(this._bannerModule()?.bannerAccent ?? null);
@@ -393,8 +393,8 @@ class Island extends St.Widget {
         }
     }
 
-    // Pone en la vista expandida las secciones que tocan, en orden.
-    // Solo reordena actores si cambió la lista (no los recrea).
+    // Puts the sections that apply in the expanded view, in order.
+    // Only reorders actors if the list changed (it does not recreate them).
     _syncSections(wanted) {
         const same = wanted.length === this._sections.length &&
             wanted.every((s, i) => s.actor === this._sections[i].actor);
@@ -409,10 +409,10 @@ class Island extends St.Widget {
         }
         this._expandedBox.remove_all_children();
         wanted.forEach((section, i) => {
-            // Una línea sutil entre las secciones del hover (docs/09).
+            // A subtle line between the hover sections (docs/09).
             if (i > 0 && section.fromHover)
                 this._expandedBox.add_child(this._separator(i - 1));
-            // Un actor puede venir de otra vista (p. ej. del panel).
+            // An actor can come from another view (e.g. from the panel).
             section.actor.get_parent()?.remove_child(section.actor);
             this._expandedBox.add_child(section.actor);
         });
@@ -423,7 +423,7 @@ class Island extends St.Widget {
         this._sections = wanted;
     }
 
-    // Separador n.º i: se crea la primera vez y se reutiliza.
+    // Separator no. i: created the first time and reused.
     _separator(i) {
         this._separators[i] ??= new St.Widget({
             style_class: 'agent-notch-section-separator',
@@ -445,15 +445,15 @@ class Island extends St.Widget {
         if (this._panel)
             return;
         this._panel = new NotchPanel(this._modules);
-        // Cambiar de pestaña cambia el tamaño: reajustar la isla.
+        // Changing tabs changes the size: readjust the island.
         this._panel.connect('size-changed', () => {
             if (this._expanded)
                 this._animateToNaturalSize();
         });
     }
 
-    // Un módulo pide su página (p. ej. Super+V → Portapapeles): abrir el
-    // panel en ella, o cerrarlo si ya se estaba viendo.
+    // A module asks for its page (e.g. Super+V → Clipboard): open the
+    // panel on it, or close it if it was already showing.
     _togglePage(module) {
         if (this._panelOpen && this._panel.currentKey === module) {
             this._closePanel();
@@ -480,12 +480,12 @@ class Island extends St.Widget {
         this._refresh();
     }
 
-    // Con el panel abierto, la isla captura ratón y teclado (como los menús de
-    // GNOME, ver ui/grabHelper.js). Sin la captura, los clics sobre ventanas y
-    // escritorio van directos a las apps y la isla no se entera. Solo dura lo
-    // que el panel esté abierto.
-    // El panel se cierra con clic fuera, Esc o al cambiar de aplicación; NO
-    // al sacar el ratón (decidido el 14-11-2026).
+    // With the panel open, the island grabs pointer and keyboard (like GNOME's
+    // menus, see ui/grabHelper.js). Without the grab, clicks on windows and the
+    // desktop go straight to the apps and the island never knows. It only lasts
+    // while the panel is open.
+    // The panel closes with a click outside, Esc or when switching apps; NOT
+    // when the pointer leaves (decided on 14-11-2026).
     _grabInput() {
         if (this._grab)
             return;
@@ -493,7 +493,7 @@ class Island extends St.Widget {
         this._capturedId = this.connect('captured-event', (_actor, event) => {
             const type = event.type();
 
-            // Esc: cerrar.
+            // Esc: close.
             if (type === Clutter.EventType.KEY_PRESS &&
                 event.get_key_symbol() === Clutter.KEY_Escape) {
                 this._closePanel();
@@ -502,7 +502,7 @@ class Island extends St.Widget {
 
             const inside = this.contains(global.stage.get_event_actor(event));
 
-            // Clic fuera: cerrar (y no pasar el clic, como un menú).
+            // Click outside: close (and do not pass the click on, like a menu).
             if (!inside && (type === Clutter.EventType.BUTTON_PRESS ||
                             type === Clutter.EventType.TOUCH_BEGIN)) {
                 this._closePanel();
@@ -512,8 +512,8 @@ class Island extends St.Widget {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        // Cambio de aplicación (p. ej. una notificación que abre su app):
-        // cerrar. Solo se escucha con el panel abierto.
+        // App switch (e.g. a notification that opens its app):
+        // close. Only listened to while the panel is open.
         global.display.connectObject('notify::focus-window',
             () => this._closePanel(), this);
     }
@@ -530,7 +530,7 @@ class Island extends St.Widget {
         }
     }
 
-    // Color del brillo inferior (el de la app del banner), o null.
+    // Color of the bottom glow (the banner's app), or null.
     _setAccent(color) {
         const same = (a, b) => a === b ||
             (a && b && a.red === b.red && a.green === b.green && a.blue === b.blue);
@@ -542,8 +542,8 @@ class Island extends St.Widget {
 
     // --- Hover ------------------------------------------------------------
 
-    // Minimizar: cerrar el panel y la vista del hover. Mientras el ratón siga
-    // encima no se vuelve a expandir (si no, se reabriría al instante).
+    // Minimize: close the panel and the hover view. While the pointer stays
+    // over it, it does not expand again (otherwise it would reopen right away).
     _dismiss() {
         this._clearHoverTimeout();
         this._suppressHover = this.hover;
@@ -581,13 +581,13 @@ class Island extends St.Widget {
         }
     }
 
-    // --- Expandir / contraer ------------------------------------------------
+    // --- Expand / collapse ------------------------------------------------
 
     _expand(wanted) {
         this._expanded = true;
 
-        // Medir ANTES de meter el contenido: después, Clutter da ya el tamaño
-        // expandido y la animación no tendría desde dónde crecer.
+        // Measure BEFORE putting the content in: afterwards, Clutter already gives
+        // the expanded size and the animation would have nothing to grow from.
         const [startW, startH] = this._currentSize();
 
         this._syncSections(wanted);
@@ -597,8 +597,8 @@ class Island extends St.Widget {
         this.add_style_class_name('expanded');
         this._syncCompactVisible();
 
-        // El compacto se va y el contenido aparece mientras la isla crece
-        // (recortado por clip_to_allocation).
+        // The compact view leaves and the content appears while the island grows
+        // (clipped by clip_to_allocation).
         this._compactBin.ease({
             opacity: 0,
             duration: EXPAND_FADE_MS,
@@ -618,19 +618,19 @@ class Island extends St.Widget {
             return;
         this._expanded = false;
 
-        // Medir el tamaño compacto con la vista expandida oculta…
+        // Measure the compact size with the expanded view hidden…
         const [startW, startH] = this._currentSize();
         this._syncCompactVisible();
         this._expandedBox.hide();
         this.remove_style_class_name('expanded');
         const [targetW, targetH] = this._naturalSize();
 
-        // Desde el hover: más despacio, el contenido se desvanece primero y
-        // el compacto aparece después (si no, se ven los dos amontonados).
+        // From the hover: slower, the content fades out first and
+        // the compact view appears later (otherwise both pile up).
         const fromHover = this._sections.some(s => s.fromHover);
         const duration = fromHover ? HOVER_COLLAPSE_MS : ANIMATION_MS;
 
-        // …y animar hasta él con el contenido aún visible (recortado).
+        // …and animate to it with the content still visible (clipped).
         this._expandedBox.show();
         this.set_size(startW, startH);
         if (fromHover) {
@@ -658,17 +658,17 @@ class Island extends St.Widget {
                     return;
                 this._expandedBox.hide();
                 this._expandedBox.opacity = 255;
-                // Avisar a los módulos (p. ej. Sistema deja de leer la RAM).
+                // Tell the modules (e.g. System stops reading the RAM).
                 this._hideSections();
-                // Volver a tamaño natural (sigue al contenido compacto).
+                // Back to natural size (it follows the compact content).
                 this.set_size(-1, -1);
             },
         });
     }
 
-    // Tamaño que se ve ahora en pantalla: la última asignación. A diferencia
-    // de this.width/height, no da el tamaño nuevo si el contenido acaba de
-    // cambiar (ni fuerza a recolocar).
+    // Size currently on screen: the last allocation. Unlike
+    // this.width/height, it does not give the new size if the content just
+    // changed (nor does it force a relayout).
     _currentSize() {
         const box = this.allocation;
         const [w, h] = [box.get_width(), box.get_height()];
@@ -680,7 +680,7 @@ class Island extends St.Widget {
             [startW, startH] = this._currentSize();
         const [targetW, targetH] = this._naturalSize();
         this.set_size(startW, startH);
-        // Mismo tamaño y sin animación en curso: no hay nada que animar.
+        // Same size and no animation running: nothing to animate.
         const animating = this.get_transition('width') || this.get_transition('height');
         if (!animating && Math.abs(targetW - startW) < 1 && Math.abs(targetH - startH) < 1)
             return;
@@ -704,8 +704,8 @@ class Island extends St.Widget {
         this.remove_all_transitions();
         this._releaseInput();
 
-        // El panel suelta los actores de los módulos antes de que ellos
-        // los destruyan.
+        // The panel releases the modules' actors before they
+        // destroy them.
         this._panelOpen = false;
         this._hideSections();
         this._panel?.destroy();

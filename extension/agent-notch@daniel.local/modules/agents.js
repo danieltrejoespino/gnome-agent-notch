@@ -1,45 +1,45 @@
-// Módulo Agentes: estado de las sesiones de Claude Code y otros agentes
-// (Fase 1, pasos 4–6 de docs/10-hoja-de-ruta.md).
+// Agents module: status of Claude Code sessions and other agents
+// (Phase 1, steps 4–6 of docs/10-hoja-de-ruta.md).
 //
-// Los adaptadores escriben un JSON por sesión en
+// The adapters write one JSON per session in
 //     $XDG_RUNTIME_DIR/agent-notch/sessions/<agente>-<sesion>.json
-// (docs/03-formato-estado.md). AGENT_NOTCH_DIR cambia la raíz: el GNOME de
-// prueba usa agent-notch-dev para que scripts/simulate.py no salga en la
-// isla del escritorio real.
+// (docs/03-formato-estado.md). AGENT_NOTCH_DIR changes the root: the test
+// GNOME uses agent-notch-dev so scripts/simulate.py does not show up on the
+// real desktop's island.
 //
 // Vistas:
-//   - Compacta: «● mi-app · Editando main.py», o «● 3 agentes · 1 te
-//     necesita» con varias. Las sesiones que solo esperan no la ocupan.
-//   - Expandida (hover): una fila por sesión (punto · proyecto · acción ·
-//     tiempo), hasta 6. Clic en una fila → trae al frente la ventana de su
-//     terminal, si se sabe cuál es con certeza (si no, no hace nada).
-//   - Pestaña «Agentes» del panel: la misma lista, con todas las sesiones
-//     y desplazamiento; sigue ahí al hacer clic en la isla.
+//   - Compact: "● my-app · Editing main.py", or "● 3 agents · 1 needs
+//     you" with several. Sessions that are only waiting do not take it.
+//   - Expanded (hover): one row per session (dot · project · action ·
+//     time), up to 6. Click on a row → brings its terminal window to the
+//     front, if it is known for sure which one it is (otherwise it does nothing).
+//   - The panel's "Agents" tab: the same list, with all sessions
+//     and scrolling; it is still there when you click the island.
 //
-// Sesiones muertas (docs/03): con PID, cuando ese proceso ya no existe; sin
-// PID, a los 30 min sin novedades. Se quitan y se borra su archivo.
+// Dead sessions (docs/03): with a PID, when that process no longer exists; without
+// a PID, after 30 min without news. They are removed and their file deleted.
 //
 // Consumo:
-//   - Por eventos: Gio.FileMonitor sobre la carpeta, nada de sondeo.
-//   - Ráfagas agrupadas: como mucho una lectura/redibujado cada 100 ms.
-//   - Lecturas asíncronas, canceladas al destruir.
-//   - Temporizadores solo mientras hacen falta: 5 s tras `terminado`;
-//     revisar sesiones muertas cada 30 s solo si hay sesiones; refrescar
-//     los tiempos cada 30 s solo con la lista (hover o pestaña) a la vista.
-//   - Cada lista se crea la primera vez que se ve y reutiliza sus filas.
+//   - Event-driven: Gio.FileMonitor on the folder, no polling.
+//   - Bursts grouped: at most one read/redraw every 100 ms.
+//   - Asynchronous reads, cancelled on destroy.
+//   - Timers only while needed: 5 s after `terminado`;
+//     checking for dead sessions every 30 s only if there are sessions; refreshing
+//     the times every 30 s only with the list (hover or tab) visible.
+//   - Each list is created the first time it is shown and reuses its rows.
 //
-// Animaciones y avisos (paso 7, docs/09-diseno-visual.md):
-//   - En la compacta, ojos en lugar del punto (docs/09, 19-11-2026): cambian
-//     de forma y color con el estado y parpadean una vez al cambiar.
-//   - Pulso de los ojos (opacidad, con ease() en la GPU) mientras piensa o
-//     trabaja (900 ms) o pide atención (500 ms), SOLO con la compacta a la
-//     vista y con las animaciones de GNOME activadas. Si no, ningún bucle.
-//   - `terminado`: ojos contentos y un destello único.
-//   - Al pasar una sesión a `atencion` (una vez por cambio, no en cada
-//     evento): la isla se despliega 5 s con un banner ámbar y suena
-//     `dialog-question` del tema. Clic en el banner → su terminal. Con
-//     «No molestar» no hay banner ni sonido. Las sesiones que ya pedían
-//     atención al activar la extensión (p. ej. al desbloquear) no avisan.
+// Animations and alerts (step 7, docs/09-diseno-visual.md):
+//   - In the compact view, eyes instead of the dot (docs/09, 19-11-2026): they change
+//     shape and color with the state and blink once when it changes.
+//   - Pulse of the eyes (opacity, with ease() on the GPU) while thinking or
+//     working (900 ms) or asking for attention (500 ms), ONLY with the compact view
+//     visible and GNOME's animations on. Otherwise, no loop.
+//   - `terminado`: happy eyes and a single flash.
+//   - When a session goes to `atencion` (once per change, not on every
+//     event): the island opens for 5 s with an amber banner and plays
+//     the theme's `dialog-question`. Click on the banner → its terminal. With
+//     Do Not Disturb there is neither banner nor sound. Sessions that were already
+//     asking for attention when the extension was enabled (e.g. on unlock) do not alert.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -58,29 +58,29 @@ import {
     eyesFor, overview, pickWindow, sameSummary, shortPath, shownState, sortSessions, stateText, summarize,
 } from './agentstate.js';
 
-// Compacta: con algo en marcha gana a la música (10) pero no al
-// temporizador de concentración (20); pidiendo atención gana a todo salvo
-// a los banners de notificaciones (100).
+// Compact: with something running it beats the music (10) but not the
+// focus timer (20); asking for attention it beats everything except
+// notification banners (100).
 const PRIORITY = 15;
 const PRIORITY_ATTENTION = 50;
 const BATCH_MS = 100;
 const REAP_S = 30;
 const AGE_TICK_S = 30;
-const MAX_ROWS = 6;          // en el hover
-const MAX_PAGE_ROWS = 40;    // en la pestaña (con desplazamiento)
+const MAX_ROWS = 6;          // in the hover
+const MAX_PAGE_ROWS = 40;    // in the tab (with scrolling)
 const ICON = 'utilities-terminal-symbolic';
 const PULSE_MS = {pensando: 900, trabajando: 900, atencion: 500};
 const PULSE_OPACITY = 110;
 const FLASH_MS = 180;
 const BANNER_MS = 5000;
 const BANNER_HOVER_RETRY_MS = 1000;
-const ATTENTION_SOUND = 'dialog-question';   // tema Yaru (docs/09)
+const ATTENTION_SOUND = 'dialog-question';   // Yaru theme (docs/09)
 const ATTENTION_RGB = {red: 251, green: 191, blue: 36};   // #fbbf24
 const MAX_ANCESTORS = 16;
 
 const decoder = new TextDecoder();
 const nowSeconds = () => GLib.get_real_time() / 1e6;
-// /proc no bloquea: comprobar si existe un proceso es instantáneo.
+// /proc does not block: checking whether a process exists is instant.
 const pidAlive = pid => GLib.file_test(`/proc/${pid}`, GLib.FileTest.EXISTS);
 
 function sessionsDir() {
@@ -109,43 +109,43 @@ function setTintClass(actor, tint) {
 
 export const AgentsModule = GObject.registerClass(
 class AgentsModule extends NotchModule {
-    // settings: ajustes de agent-notch (sonido, banner y su duración se leen
-    // en el momento del aviso); twoLines: ojos arriba y texto debajo (docs/20).
+    // settings: agent-notch settings (sound, banner and its duration are read
+    // at the moment of the alert); twoLines: eyes on top and text below (docs/20).
     _init({settings = null, twoLines = true} = {}) {
         super._init();
         this._prefs = settings;
         this._twoLines = twoLines;
 
-        this._sessions = new Map();   // nombre de archivo → sesión
-        this._readGen = new Map();    // nombre → nº de la última lectura pedida
-        this._pending = new Set();    // nombres por releer en la próxima tanda
+        this._sessions = new Map();   // file name → session
+        this._readGen = new Map();    // name → no. of the last read requested
+        this._pending = new Set();    // names to reread in the next batch
         this._batchId = 0;
         this._expireId = 0;
         this._reapId = 0;
         this._ageId = 0;
         this._summary = null;
-        this._rowCount = 0;           // sesiones en las listas (para reajustar la isla)
-        this._exp = null;             // lista del hover, al primer uso
-        this._page = null;            // pestaña del panel, al primer uso
-        this._card = null;            // tarjeta de Home, al primer uso
+        this._rowCount = 0;           // sessions in the lists (to readjust the island)
+        this._exp = null;             // hover list, on first use
+        this._page = null;            // panel tab, on first use
+        this._card = null;            // Home card, on first use
         this._cancellable = new Gio.Cancellable();
-        this._pulseMs = 0;            // duración del pulso en marcha (0 = parado)
-        this._banner = null;          // se crea con el primer aviso
-        this._bannerName = null;      // archivo de la sesión del banner
+        this._pulseMs = 0;            // duration of the running pulse (0 = stopped)
+        this._banner = null;          // created with the first alert
+        this._bannerName = null;      // file of the banner's session
         this._bannerSession = null;
         this._bannerId = 0;
 
         this._settings = St.Settings.get();
         this._settings.connectObject('notify::enable-animations', () => this._syncPulse(), this);
-        // «No molestar» de GNOME = show-banners a false.
+        // GNOME's Do Not Disturb = show-banners false.
         this._notifSettings = new Gio.Settings({schema_id: 'org.gnome.desktop.notifications'});
 
         this._buildCompact();
 
         this._dir = Gio.File.new_for_path(sessionsDir());
         try {
-            // Los adaptadores la crean con 0700; si aún no hay ninguno, la
-            // creamos nosotros para poder vigilarla desde ya.
+            // The adapters create it with 0700; if there is none yet,
+            // we create it ourselves so we can watch it right away.
             GLib.mkdir_with_parents(this._dir.get_path(), 0o700);
             this._monitor = this._dir.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, null);
             this._monitor.connectObject('changed', (_m, file, other) => {
@@ -171,7 +171,7 @@ class AgentsModule extends NotchModule {
         return this._compact;
     }
 
-    // Ojos arriba y texto debajo: la isla crece mientras se ve (docs/09).
+    // Eyes on top and text below: the island grows while it is shown (docs/09).
     get tallCompact() {
         return this._twoLines;
     }
@@ -185,8 +185,8 @@ class AgentsModule extends NotchModule {
         return this._exp.actor;
     }
 
-    // Tarjeta de Home (docs/09, revisión del 19-11-2026): siempre, con los
-    // ojos y el resumen; clic → pestaña Agentes.
+    // Home card (docs/09, review of 19-11-2026): always, with the
+    // eyes and the summary; click → Agents tab.
     get homeCard() {
         this._card ??= this._buildCard();
         return this._card.actor;
@@ -205,11 +205,11 @@ class AgentsModule extends NotchModule {
         return ICON;
     }
 
-    // --- Lectura de la carpeta -------------------------------------------------
+    // --- Reading the folder -------------------------------------------------
 
-    // Cualquier evento (CREATED, CHANGES_DONE_HINT, RENAMED, MOVED_IN,
-    // DELETED…) se trata igual: releer ese archivo. Si ya no existe, la
-    // sesión se quita. Así da igual qué eventos mande GLib para un rename.
+    // Any event (CREATED, CHANGES_DONE_HINT, RENAMED, MOVED_IN,
+    // DELETED…) is handled the same: reread that file. If it no longer exists, the
+    // session is removed. That way it does not matter which events GLib sends for a rename.
     _queue(file) {
         const name = file?.get_basename();
         if (!isSessionFile(name) || !file.get_parent()?.equal(this._dir))
@@ -261,10 +261,10 @@ class AgentsModule extends NotchModule {
         });
     }
 
-    // initial: lectura al activar la extensión (no avisa de lo que ya había).
+    // initial: read when the extension is enabled (it does not alert about what was already there).
     _read(name, {initial = false} = {}) {
-        // Si llegan dos lecturas del mismo archivo, solo cuenta la última
-        // pedida (la otra podría traer datos viejos).
+        // If two reads of the same file arrive, only the last one requested
+        // counts (the other could bring old data).
         const gen = (this._readGen.get(name) ?? 0) + 1;
         this._readGen.set(name, gen);
         this._dir.get_child(name).load_contents_async(this._cancellable, (file, res) => {
@@ -275,10 +275,10 @@ class AgentsModule extends NotchModule {
             } catch (e) {
                 if (isCancelled(e))
                     return;
-                // NOT_FOUND: la sesión terminó (o se borró): se quita.
+                // NOT_FOUND: the session ended (or was deleted): it is removed.
             }
             if (!this._dir || this._readGen.get(name) !== gen)
-                return;   // destruido, o hay una lectura más nueva en camino
+                return;   // destroyed, or a newer read is on its way
             this._readGen.delete(name);
             const prev = this._sessions.get(name);
             if (session)
@@ -291,9 +291,9 @@ class AgentsModule extends NotchModule {
         });
     }
 
-    // --- Sesiones muertas --------------------------------------------------------
+    // --- Dead sessions --------------------------------------------------------
 
-    // Quita las sesiones muertas y borra sus archivos. Devuelve si quitó alguna.
+    // Removes dead sessions and deletes their files. Returns whether it removed any.
     _reap() {
         const now = nowSeconds();
         let removed = false;
@@ -305,7 +305,7 @@ class AgentsModule extends NotchModule {
                 try {
                     f.delete_finish(res);
                 } catch {
-                    // Ya no estaba: nada que hacer.
+                    // It was already gone: nothing to do.
                 }
             });
             removed = true;
@@ -313,7 +313,7 @@ class AgentsModule extends NotchModule {
         return removed;
     }
 
-    // Revisión cada 30 s, solo mientras haya sesiones.
+    // Check every 30 s, only while there are sessions.
     _syncReaper() {
         if (this._sessions.size > 0 && !this._reapId) {
             this._reapId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, REAP_S, () => {
@@ -330,17 +330,17 @@ class AgentsModule extends NotchModule {
         }
     }
 
-    // --- Vista compacta ----------------------------------------------------------
+    // --- Compact view ----------------------------------------------------------
 
     _buildCompact() {
-        // Dos líneas (docs/09): ojos arriba al centro, texto debajo. Con el
-        // ajuste agentes-dos-lineas apagado, todo en una línea (docs/20).
+        // Two lines (docs/09): eyes at the top center, text below. With the
+        // agentes-dos-lineas setting off, everything on one line (docs/20).
         this._compact = new St.BoxLayout({
             style_class: this._twoLines ? 'agent-notch-agents' : 'agent-notch-agents una-linea',
             orientation: this._twoLines ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL,
             y_align: Clutter.ActorAlign.CENTER,
         });
-        // Ojos en lugar del punto (docs/09): color y forma según el estado.
+        // Eyes instead of the dot (docs/09): color and shape according to the state.
         this._eyes = new Eyes({x_align: Clutter.ActorAlign.CENTER});
         this._title = makeLabel('agent-notch-agents-title', {y_align: Clutter.ActorAlign.CENTER});
         this._separator = new St.Label({
@@ -363,8 +363,8 @@ class AgentsModule extends NotchModule {
     _render() {
         if (!this._compact)
             return;
-        // Una sesión recién leída puede venir ya muerta (p. ej. tras un
-        // cierre en falso): se quita sin esperar a la próxima revisión.
+        // A freshly read session can already be dead (e.g. after a
+        // false close): it is removed without waiting for the next check.
         this._reap();
 
         const now = nowSeconds();
@@ -373,8 +373,8 @@ class AgentsModule extends NotchModule {
         this._scheduleExpiry(sessions, now);
         this._syncReaper();
 
-        // Cualquier cambio en el número de sesiones cambia el alto del hover
-        // o de la pestaña: la isla tiene que reajustarse.
+        // Any change in the number of sessions changes the height of the hover
+        // or of the tab: the island has to readjust.
         const rowCount = sessions.length;
         const sorted = sortSessions(sessions, now);
         for (const list of [this._exp, this._page?.list]) {
@@ -401,7 +401,7 @@ class AgentsModule extends NotchModule {
                 this._detail.text = summary.detail;
             }
         }
-        // Al terminar, el destello sustituye al parpadeo del cambio de forma.
+        // When finishing, the flash replaces the blink of the shape change.
         const finished = summary?.state === 'terminado' && before?.state !== 'terminado';
         if (summary)
             this._eyes.setExpression(eyesFor(summary.state), {animate: !finished && this.compactVisible});
@@ -409,14 +409,14 @@ class AgentsModule extends NotchModule {
         if (finished)
             this._flash();
 
-        // El banner sobra si su sesión ya no pide atención (se contestó en
-        // la terminal) o desapareció.
+        // The banner is not needed if its session no longer asks for attention (it was
+        // answered in the terminal) or it disappeared.
         if (this._bannerName && this._sessions.get(this._bannerName)?.estado !== 'atencion')
             this._hideBanner();
 
-        // A la isla solo le importa si aparece/desaparece algo, cambia la
-        // prioridad o cambia el alto de la vista expandida; los cambios de
-        // texto los recoloca Clutter solo.
+        // The island only cares whether something appears/disappears, the
+        // priority changes or the height of the expanded view changes; text
+        // changes are laid out again by Clutter on its own.
         const changed = (before === null) !== (summary === null) ||
             before?.state !== summary?.state || rowCount !== this._rowCount;
         this._rowCount = rowCount;
@@ -424,8 +424,8 @@ class AgentsModule extends NotchModule {
             this.emit('changed');
     }
 
-    // `terminado` se ve como `inactivo` a los 5 s: un solo temporizador
-    // hasta el próximo cambio, y ninguno si no hay sesiones terminando.
+    // `terminado` shows as `inactivo` after 5 s: a single timer
+    // until the next change, and none if no sessions are finishing.
     _scheduleExpiry(sessions, now) {
         if (this._expireId) {
             GLib.source_remove(this._expireId);
@@ -441,13 +441,13 @@ class AgentsModule extends NotchModule {
         });
     }
 
-    // --- Animaciones (paso 7) ----------------------------------------------------
+    // --- Animations (step 7) ----------------------------------------------------
 
     _onCompactVisibleChanged() {
         this._syncPulse();
     }
 
-    // Un único bucle de opacidad, y solo mientras aporta algo.
+    // A single opacity loop, and only while it adds something.
     _syncPulse() {
         if (!this._eyes)
             return;
@@ -485,7 +485,7 @@ class AgentsModule extends NotchModule {
         });
     }
 
-    // --- Aviso al pedir atención (paso 7) -----------------------------------------
+    // --- Alert when asking for attention (step 7) -----------------------------------------
 
     get bannerActor() {
         return this._bannerSession ? this._banner : null;
@@ -497,8 +497,8 @@ class AgentsModule extends NotchModule {
 
     _alert(name, session) {
         if (!this._notifSettings.get_boolean('show-banners'))
-            return;   // «No molestar»: solo cambian los ojos
-        // Ajustes de agent-notch (docs/20), leídos ahora: sin señales.
+            return;   // Do Not Disturb: only the eyes change
+        // agent-notch settings (docs/20), read now: no signals.
         if (this._prefs?.get_boolean('sonido-atencion') ?? true) {
             try {
                 global.display.get_sound_player().play_from_theme(
@@ -512,14 +512,14 @@ class AgentsModule extends NotchModule {
     }
 
     _buildBanner() {
-        // Dos líneas, como la compacta (docs/09): ojos arriba, mensaje debajo
-        // (o en una línea, con agentes-dos-lineas apagado, docs/20).
+        // Two lines, like the compact view (docs/09): eyes on top, message below
+        // (or on one line, with agentes-dos-lineas off, docs/20).
         const box = new St.BoxLayout({
             style_class: 'agent-notch-agents-banner-box',
             orientation: this._twoLines ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL,
             x_expand: true,
         });
-        // Ojos muy abiertos en ámbar (docs/09, añadido al aprobar).
+        // Wide-open amber eyes (docs/09, added on approval).
         this._bannerEyes = new Eyes({x_align: Clutter.ActorAlign.CENTER});
         this._bannerEyes.setExpression('muy-abiertos', {animate: false});
         this._bannerTitle = makeLabel('agent-notch-agents-banner-title', {y_align: Clutter.ActorAlign.CENTER});
@@ -562,7 +562,7 @@ class AgentsModule extends NotchModule {
         this.emit('changed');
     }
 
-    // Se va a los 5 s; con el ratón encima, espera a que salga.
+    // It goes away after 5 s; with the pointer over it, it waits until it leaves.
     _scheduleBannerEnd(ms) {
         if (this._bannerId)
             GLib.source_remove(this._bannerId);
@@ -588,11 +588,11 @@ class AgentsModule extends NotchModule {
         this.emit('changed');
     }
 
-    // --- Listas de sesiones (hover y pestaña) -----------------------------------
+    // --- Session lists (hover and tab) -----------------------------------
 
-    // Una lista reutilizable: filas que se crean al hacer falta y se
-    // reutilizan; como mucho `maxRows`, y «y N más» si no caben.
-    // detailed: filas en dos líneas, con la carpeta debajo (pestaña).
+    // A reusable list: rows created when needed and
+    // reused; at most `maxRows`, and "and N more" if they do not fit.
+    // detailed: rows on two lines, with the folder below (tab).
     _newList(maxRows, {detailed = false} = {}) {
         const actor = new St.BoxLayout({
             style_class: 'agent-notch-agents-list',
@@ -612,11 +612,11 @@ class AgentsModule extends NotchModule {
             style_class: 'agent-notch-agents-page',
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
-            // Pegada arriba (el St.Bin del panel solo respeta y_align con y_expand).
+            // Stuck to the top (the panel's St.Bin only follows y_align with y_expand).
             y_expand: true,
             y_align: Clutter.ActorAlign.START,
         });
-        // Cabecera con el resumen (docs/09, revisión del 19-11-2026).
+        // Header with the summary (docs/09, review of 19-11-2026).
         const header = makeLabel('agent-notch-agents-header', {visible: this._sessions.size > 0});
         actor.add_child(header);
         const list = this._newList(MAX_PAGE_ROWS, {detailed: true});
@@ -688,7 +688,7 @@ class AgentsModule extends NotchModule {
             if (row.session)
                 this._focusTerminal(row.session);
         });
-        // Antes de la etiqueta «y N más», que va siempre la última.
+        // Before the "and N more" label, which always goes last.
         list.actor.insert_child_below(row.button, list.more);
         return row;
     }
@@ -771,7 +771,7 @@ class AgentsModule extends NotchModule {
             card.subtitle.text = ov.detail;
     }
 
-    // Los tiempos («12 min») solo se refrescan con alguna lista a la vista.
+    // The times ("12 min") only refresh with some list visible.
     _onViewsChanged(views) {
         const visible = views.has('expanded') || views.has('page');
         if (visible && !this._ageId) {
@@ -786,7 +786,7 @@ class AgentsModule extends NotchModule {
         }
     }
 
-    // --- Clic: traer la terminal de la sesión ------------------------------------
+    // --- Click: bring the session's terminal ------------------------------------
 
     async _focusTerminal(session) {
         if (session.pid === null)
@@ -802,17 +802,17 @@ class AgentsModule extends NotchModule {
         } catch (e) {
             if (isCancelled(e))
                 return;
-            // El proceso terminó mientras subíamos: con lo que haya.
+            // The process ended while we were climbing: go with what we have.
         }
         if (!this._dir)
-            return;   // destruido mientras tanto
+            return;   // destroyed in the meantime
 
         const windows = global.display.list_all_windows()
             .filter(w => w.get_window_type() === Meta.WindowType.NORMAL && !w.is_skip_taskbar())
             .map(w => ({pid: w.get_pid(), title: w.get_title(), window: w}));
         const target = pickWindow(ancestors, windows, session.proyecto);
         if (!target)
-            return;   // no se sabe cuál es: mejor no hacer nada
+            return;   // it is not known which one: better do nothing
         Main.activateWindow(target);
         this.emit('dismiss');
     }

@@ -1,15 +1,15 @@
-// Lógica pura del módulo Agentes: validar los archivos de sesión y decidir
-// qué mostrar. No depende de GNOME Shell, así que se prueba con gjs:
+// Pure logic of the Agents module: validate the session files and decide
+// what to show. It does not depend on GNOME Shell, so it is tested with gjs:
 //     gjs -m scripts/test-agentstate.js
 //
-// Formato de los archivos: docs/03-formato-estado.md.
+// File format: docs/03-formato-estado.md.
 
 export const FORMAT_VERSION = 1;
 
-// De más a menos prioritario (docs/03).
+// From highest to lowest priority (docs/03).
 export const STATES = ['atencion', 'error', 'trabajando', 'pensando', 'terminado', 'inactivo'];
 
-// `terminado` se ve como `inactivo` pasados estos segundos (solo visual).
+// `terminado` shows as `inactivo` after these seconds (visual only).
 export const DONE_VISIBLE_S = 5;
 
 const STATE_TEXT = {
@@ -34,15 +34,15 @@ const text = (value, max) => {
 
 const number = value => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
-/** ¿Es un nombre de archivo de sesión? (los temporales empiezan por punto). */
+/** Is it a session file name? (temporary files start with a dot). */
 export function isSessionFile(name) {
     return typeof name === 'string' && !name.startsWith('.') && name.endsWith('.json');
 }
 
 /**
- * Texto de un archivo de sesión → sesión normalizada, o null si no vale
- * (JSON roto, otra versión del formato, faltan campos obligatorios…).
- * Los campos desconocidos se ignoran.
+ * Session file text → normalized session, or null if it is not valid
+ * (broken JSON, another format version, required fields missing…).
+ * Unknown fields are ignored.
  */
 export function parseSession(raw) {
     let d;
@@ -66,7 +66,7 @@ export function parseSession(raw) {
         agente: d.agente,
         sesion: d.sesion,
         proyecto: text(d.proyecto, 40) ?? '?',
-        cwd: text(d.cwd, 200),   // carpeta, en la pestaña Agentes (docs/09)
+        cwd: text(d.cwd, 200),   // folder, in the Agents tab (docs/09)
         estado: d.estado,
         accion: text(d.accion, 80),
         herramienta: text(d.herramienta, 40),
@@ -76,7 +76,7 @@ export function parseSession(raw) {
     };
 }
 
-/** Estado que se muestra: `terminado` pasa a `inactivo` a los 5 s. */
+/** State shown: `terminado` turns into `inactivo` after 5 s. */
 export function shownState(session, now) {
     if (session.estado === 'terminado' && now - session.actualizado >= DONE_VISIBLE_S)
         return 'inactivo';
@@ -84,9 +84,9 @@ export function shownState(session, now) {
 }
 
 /**
- * Segundos hasta que alguna sesión `terminado` pase a verse como
- * `inactivo`, o null si no hay ninguna pendiente. Para programar UN solo
- * temporizador, y solo mientras haga falta.
+ * Seconds until some `terminado` session starts showing as
+ * `inactivo`, or null if none is pending. To schedule ONE single
+ * timer, and only while needed.
  */
 export function nextChangeIn(sessions, now) {
     let next = null;
@@ -116,13 +116,13 @@ function groupText(state, n) {
 }
 
 /**
- * Qué mostrar en la píldora compacta, o null si no hay nada que mostrar
- * (sin sesiones, o todas esperando).
+ * What to show in the compact pill, or null if there is nothing to show
+ * (no sessions, or all waiting).
  *
- *   1 sesión con algo:  {state, title: 'mi-app', detail: 'Editando main.py'}
- *   varias:             {state, title: '3 agentes', detail: '1 te necesita'}
+ *   1 session doing something: {state, title: 'my-app', detail: 'Editing main.py'}
+ *   several:                   {state, title: '3 agents', detail: '1 needs you'}
  *
- * `state` es el de mayor prioridad (da el color del punto).
+ * `state` is the highest-priority one (it gives the dot's color).
  */
 export function summarize(sessions, now) {
     const busy = [];
@@ -154,12 +154,12 @@ export function summarize(sessions, now) {
 }
 
 /**
- * Resumen de todas las sesiones, para la tarjeta de Home (título + detalle)
- * y la cabecera de la pestaña (`text`) (docs/09, revisión del 19-11-2026):
- *   ninguna: {state: null, title: 'Agents', detail: 'None running', text: 'None running'}
- *   una:     {state: 'trabajando', title: '1 agente', detail: 'trabajando', text: '1 agente · trabajando'}
- *   varias:  {state: 'atencion', title: '3 agentes', detail: '1 te necesita · 2 esperando', text: …}
- * `state` es el de mayor prioridad (da la expresión y el color de los ojos).
+ * Summary of all sessions, for the Home card (title + detail)
+ * and the tab header (`text`) (docs/09, review of 19-11-2026):
+ *   none:    {state: null, title: 'Agents', detail: 'None running', text: 'None running'}
+ *   one:     {state: 'trabajando', title: '1 agent', detail: 'working', text: '1 agent · working'}
+ *   several: {state: 'atencion', title: '3 agents', detail: '1 needs you · 2 waiting', text: …}
+ * `state` is the highest-priority one (it gives the eyes' expression and color).
  */
 export function overview(sessions, now) {
     if (sessions.length === 0)
@@ -177,7 +177,7 @@ export function overview(sessions, now) {
     return {state: states[0], title, detail, text: `${title} · ${detail}`};
 }
 
-/** '/home/ana/proyectos/x' con home '/home/ana' → '~/proyectos/x'. */
+/** '/home/ana/projects/x' with home '/home/ana' → '~/projects/x'. */
 export function shortPath(cwd, home) {
     if (typeof cwd !== 'string' || !cwd)
         return '';
@@ -194,13 +194,13 @@ export function sameSummary(a, b) {
         (a !== null && b !== null && a.state === b.state && a.title === b.title && a.detail === b.detail);
 }
 
-// --- Vista expandida (paso 6) --------------------------------------------
+// --- Expanded view (step 6) --------------------------------------------
 
 export const STALE_S = 30 * 60;
 
-// Etiqueta de cada agente en las filas (paso 15, decidido el 19-11-2026):
-// nombre corto y un tinte propio (clase CSS `agente-<tinte>`). Los que no
-// están aquí salen con su nombre tal cual y el tinte neutro `otro`.
+// Label of each agent in the rows (step 15, decided on 19-11-2026):
+// short name and a tint of its own (CSS class `agente-<tinte>`). Those not
+// listed here show their name as is and the neutral tint `otro`.
 const AGENT_LABELS = {
     'claude-code': {name: 'Claude', tint: 'claude'},
     'opencode': {name: 'OpenCode', tint: 'opencode'},
@@ -210,7 +210,7 @@ const AGENT_LABELS = {
 export const AGENT_TINTS = ['claude', 'opencode', 'otro'];
 const AGENT_NAME_MAX = 12;
 
-/** 'claude-code' → {name: 'Claude', tint: 'claude'}; desconocido → su nombre, tinte 'otro'. */
+/** 'claude-code' → {name: 'Claude', tint: 'claude'}; unknown → its name, tint 'otro'. */
 export function agentLabel(agente) {
     if (Object.hasOwn(AGENT_LABELS, agente))
         return AGENT_LABELS[agente];
@@ -221,8 +221,8 @@ export function agentLabel(agente) {
     };
 }
 
-// Ojos con expresión (docs/09, aprobado el 19-11-2026): la forma de los ojos
-// que sustituyen al punto en la compacta. Las expresiones las dibuja `Eyes`
+// Eyes with expression (docs/09, approved on 19-11-2026): the shape of the eyes
+// that replace the dot in the compact view. The expressions are drawn by `Eyes`
 // (widgets.js).
 export const EYE_EXPRESSIONS = ['abiertos', 'entornados', 'arriba', 'derecha', 'muy-abiertos', 'contentos', 'error'];
 const STATE_EYES = {
@@ -234,23 +234,23 @@ const STATE_EYES = {
     inactivo: 'abiertos',
 };
 
-/** Estado → expresión de los ojos; desconocido → 'abiertos'. */
+/** State → expression of the eyes; unknown → 'abiertos'. */
 export function eyesFor(state) {
     return Object.hasOwn(STATE_EYES, state) ? STATE_EYES[state] : 'abiertos';
 }
 
-/** Texto corto de cada estado, para las filas sin `accion`. */
+/** Short text for each state, for rows without `accion`. */
 export function stateText(state) {
     return STATE_TEXT[state] ?? state;
 }
 
 /**
- * ¿Está muerta? (docs/03, con un matiz decidido el 19-11-2026)
- *   - Con `pid`: muerta solo si ese proceso ya no existe. Un Claude Code
- *     abierto y esperando una hora sigue vivo: no se quita.
- *   - Sin `pid`: muerta si lleva más de 30 min sin novedades y no está
- *     pidiendo atención.
- * `pidAlive(pid)` lo da quien llama (en GNOME: existe /proc/<pid>).
+ * Is it dead? (docs/03, with a nuance decided on 19-11-2026)
+ *   - With `pid`: dead only if that process no longer exists. A Claude Code
+ *     open and waiting for an hour is still alive: it is not removed.
+ *   - Without `pid`: dead if it has gone more than 30 min without news and is not
+ *     asking for attention.
+ * `pidAlive(pid)` is given by the caller (in GNOME: /proc/<pid> exists).
  */
 export function isDead(session, now, pidAlive) {
     if (session.pid !== null)
@@ -258,14 +258,14 @@ export function isDead(session, now, pidAlive) {
     return session.estado !== 'atencion' && now - session.actualizado > STALE_S;
 }
 
-/** Sesiones para la lista: primero las de estado más prioritario, luego las más recientes. */
+/** Sessions for the list: first those with the highest-priority state, then the most recent. */
 export function sortSessions(sessions, now) {
     return [...sessions].sort((a, b) =>
         rank(shownState(a, now)) - rank(shownState(b, now)) ||
         b.actualizado - a.actualizado);
 }
 
-/** Tiempo desde que empezó la sesión: «<1 min», «12 min», «1 h 05». */
+/** Time since the session started: "<1 min", "12 min", "1 h 05". */
 export function formatAge(seconds) {
     const m = Math.floor(Math.max(0, seconds) / 60);
     if (m < 1)
@@ -275,26 +275,26 @@ export function formatAge(seconds) {
     return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
 }
 
-/** PID del padre a partir del contenido de /proc/<pid>/stat, o null. */
+/** Parent PID from the contents of /proc/<pid>/stat, or null. */
 export function parentPid(statText) {
-    // «pid (comm) estado ppid …»: comm puede llevar espacios y paréntesis,
-    // así que se corta tras el ÚLTIMO «)».
+    // "pid (comm) state ppid …": comm can contain spaces and parentheses,
+    // so it is cut after the LAST ")".
     const rest = statText.slice(statText.lastIndexOf(')') + 1).trim().split(/\s+/);
     const ppid = Number(rest[1]);
     return Number.isInteger(ppid) && ppid > 0 ? ppid : null;
 }
 
 /**
- * Ventana de la terminal de una sesión, o null si no se sabe con certeza.
+ * Terminal window of a session, or null if it is not known for sure.
  *
- *   ancestors: PIDs desde el agente hacia arriba (el agente, su shell, la
- *              terminal…), el más cercano primero.
- *   windows:   [{pid, title, window}] de las ventanas normales abiertas.
+ *   ancestors: PIDs from the agent upwards (the agent, its shell, the
+ *              terminal…), the closest first.
+ *   windows:   [{pid, title, window}] of the normal windows open.
  *
- * Se busca el ancestro más cercano que tenga ventanas. Si tiene una, es
- * esa. Si tiene varias (GNOME Terminal y Ptyxis usan un solo proceso para
- * todas), solo vale si exactamente una lleva el nombre del proyecto en el
- * título; si no, null: mejor no hacer nada que traer la ventana equivocada.
+ * It looks for the closest ancestor that has windows. If it has one, it is
+ * that one. If it has several (GNOME Terminal and Ptyxis use a single process for
+ * all of them), it only counts if exactly one has the project name in its
+ * title; otherwise null: better do nothing than bring the wrong window.
  */
 export function pickWindow(ancestors, windows, project) {
     for (const pid of ancestors) {

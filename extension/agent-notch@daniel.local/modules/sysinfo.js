@@ -1,15 +1,15 @@
-// Lectores para la pestaña Sistema (S2). Ver docs/12-modulo-sistema.md.
+// Readers for the System tab (S2). See docs/12-modulo-sistema.md.
 //
-// Todo asíncrono y sin estado propio: system.js decide cuándo llamarlos
-// (solo con la pestaña Sistema visible). Las funciones puras (parse*,
-// format*) no dependen de GNOME y se pueden probar con gjs por separado.
+// All asynchronous and with no state of their own: system.js decides when to call them
+// (only with the System tab visible). The pure functions (parse*,
+// format*) do not depend on GNOME and can be tested with gjs separately.
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 const decoder = new TextDecoder();
 
-/** Lee un archivo pequeño (p. ej. de /proc o /sys) sin bloquear. */
+/** Reads a small file (e.g. from /proc or /sys) without blocking. */
 export function readText(path, cancellable = null) {
     return new Promise((resolve, reject) => {
         Gio.File.new_for_path(path).load_contents_async(cancellable, (file, result) => {
@@ -29,19 +29,19 @@ export function isCancelled(e) {
 
 // --- CPU ---------------------------------------------------------------------
 
-/** Línea `cpu` de /proc/stat → {idle, total} (en ticks). */
+/** `cpu` line of /proc/stat → {idle, total} (in ticks). */
 export function parseCpuStat(text) {
     const line = text.split('\n').find(l => l.startsWith('cpu '));
     if (!line)
         return null;
     const v = line.trim().split(/\s+/).slice(1).map(Number);
-    // user nice system idle iowait irq softirq steal (guest ya va en user)
+    // user nice system idle iowait irq softirq steal (guest is already in user)
     const idle = (v[3] ?? 0) + (v[4] ?? 0);
     const total = v.slice(0, 8).reduce((a, b) => a + (b || 0), 0);
     return {idle, total};
 }
 
-/** Uso de CPU (0–1) entre dos lecturas de parseCpuStat, o null. */
+/** CPU usage (0–1) between two parseCpuStat readings, or null. */
 export function cpuUsage(prev, cur) {
     if (!prev || !cur)
         return null;
@@ -50,12 +50,12 @@ export function cpuUsage(prev, cur) {
     return total > 0 ? Math.min(1, Math.max(0, 1 - idle / total)) : null;
 }
 
-// Sensores de temperatura de la CPU, por preferencia (nombre en hwmon).
+// CPU temperature sensors, by preference (name in hwmon).
 const CPU_SENSORS = ['coretemp', 'k10temp', 'zenpower', 'cpu_thermal', 'acpitz'];
 
 /**
- * Busca (una vez) el archivo de temperatura de la CPU en /sys/class/hwmon.
- * Devuelve la ruta del `temp1_input` del mejor sensor, o null.
+ * Looks up (once) the CPU temperature file in /sys/class/hwmon.
+ * Returns the path of the best sensor's `temp1_input`, or null.
  */
 export async function findCpuSensor(cancellable = null) {
     const dir = Gio.File.new_for_path('/sys/class/hwmon');
@@ -100,11 +100,11 @@ export async function findCpuSensor(cancellable = null) {
     return best;
 }
 
-// --- Disco -------------------------------------------------------------------
+// --- Disk -------------------------------------------------------------------
 
 /**
- * {size, used, free} en bytes del sistema de archivos de `path`, como `df`:
- * `used` sin el espacio reservado para root y `free` el disponible.
+ * {size, used, free} in bytes of the file system of `path`, like `df`:
+ * `used` without the space reserved for root and `free` the available one.
  */
 export function queryDisk(path, cancellable = null) {
     return new Promise((resolve, reject) => {
@@ -125,9 +125,9 @@ export function queryDisk(path, cancellable = null) {
     });
 }
 
-// --- Formatos ----------------------------------------------------------------
+// --- Formats ----------------------------------------------------------------
 
-/** Segundos → «2 h 14 min», «3 d 4 h», «12 min». */
+/** Seconds → "2 h 14 min", "3 d 4 h", "12 min". */
 export function formatDuration(seconds) {
     const s = Math.max(0, Math.floor(seconds));
     const d = Math.floor(s / 86400);
@@ -140,13 +140,13 @@ export function formatDuration(seconds) {
     return `${m} min`;
 }
 
-// Estados de UPower (org.freedesktop.UPower.Device.State).
+// UPower states (org.freedesktop.UPower.Device.State).
 const CHARGING = 1;
 const DISCHARGING = 2;
 const FULLY_CHARGED = 4;
 const PENDING_CHARGE = 5;
 
-/** Texto de la fila de batería a partir de las propiedades de UPower. */
+/** Text of the battery row from UPower's properties. */
 export function formatBattery({percentage, state, timeToEmpty, timeToFull}) {
     const parts = [`${Math.round(percentage)} %`];
     if (state === FULLY_CHARGED || (state === CHARGING && percentage >= 100)) {
@@ -163,7 +163,7 @@ export function formatBattery({percentage, state, timeToEmpty, timeToFull}) {
     return parts.join(' · ');
 }
 
-// Tipo de conexión de NetworkManager → nombre legible.
+// NetworkManager connection type → readable name.
 const CONNECTION_TYPES = {
     '802-11-wireless': 'Wi-Fi',
     '802-3-ethernet': 'Ethernet',
@@ -174,7 +174,7 @@ const CONNECTION_TYPES = {
     'bluetooth': 'Bluetooth',
 };
 
-/** {name, kind, ip} de la conexión principal de un NM.Client, o null. */
+/** {name, kind, ip} of the primary connection of an NM.Client, or null. */
 export function primaryConnection(client) {
     const ac = client?.get_primary_connection?.() ?? null;
     if (!ac)

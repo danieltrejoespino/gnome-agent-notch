@@ -1,4 +1,4 @@
-"""Pruebas de state.py:  python3 -m unittest discover -s adapters/common -v"""
+"""Tests for state.py:  python3 -m unittest discover -s adapters/common -v"""
 
 import json
 import multiprocessing
@@ -36,7 +36,7 @@ class StateTest(unittest.TestCase):
     def mode(self, path):
         return stat.S_IMODE(os.stat(path).st_mode)
 
-    # --- carpetas ---------------------------------------------------------
+    # --- folders ---------------------------------------------------------
 
     def test_carpetas_en_runtime_con_0700(self):
         old = os.umask(0o022)
@@ -78,7 +78,7 @@ class StateTest(unittest.TestCase):
         self.assertTrue(os.path.isdir(os.path.dirname(path)))
         self.assertEqual(self.mode(os.path.dirname(path)), 0o700)
 
-    # --- nombre seguro ----------------------------------------------------
+    # --- safe name ----------------------------------------------------
 
     def test_nombre_seguro(self):
         self.assertEqual(state.safe_name("3f2a-9c1e_X"), "3f2a-9c1e_X")
@@ -96,16 +96,16 @@ class StateTest(unittest.TestCase):
         sessions = os.path.join(self.runtime, "agent-notch", "sessions")
         self.assertEqual(os.path.dirname(path), sessions)
 
-    # --- escritura y lectura ---------------------------------------------
+    # --- writing and reading ---------------------------------------------
 
     def test_escribir_y_leer(self):
         path = state.session_path("claude-code", "abc")
-        data = {"v": 1, "accion": "Editando año.py"}
+        data = {"v": 1, "accion": "Editing año.py"}
         state.write_json(path, data)
         self.assertEqual(state.read_json(path), data)
         self.assertEqual(self.mode(path), 0o600)
         with open(path, encoding="utf-8") as f:
-            self.assertIn("año", f.read())  # sin escapar
+            self.assertIn("año", f.read())  # unescaped
 
     def test_sobrescribir_no_deja_temporales(self):
         path = state.session_path("claude-code", "abc")
@@ -141,7 +141,7 @@ class StateTest(unittest.TestCase):
         reads = 0
         while any(w.is_alive() for w in writers):
             with open(path, encoding="utf-8") as f:
-                json.loads(f.read())  # falla si está a medias
+                json.loads(f.read())  # fails if it is half-written
             reads += 1
         for w in writers:
             w.join()
@@ -149,14 +149,14 @@ class StateTest(unittest.TestCase):
         self.assertGreater(reads, 10)
         self.assertEqual(os.listdir(os.path.dirname(path)), ["claude-code-abc.json"])
 
-    # --- borrado ----------------------------------------------------------
+    # --- removal ----------------------------------------------------------
 
     def test_borrar(self):
         path = state.session_path("claude-code", "abc")
         state.write_json(path, {})
         state.remove(path)
         self.assertFalse(os.path.exists(path))
-        state.remove(path)  # otra vez: sin error
+        state.remove(path)  # again: no error
 
 
 if __name__ == "__main__":

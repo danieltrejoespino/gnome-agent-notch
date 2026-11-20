@@ -1,16 +1,16 @@
-// Módulo Actualización: botón «Actualizar a vN» en la barra de pestañas del
-// panel, una fila en el hover y un puntito junto a los ojos en reposo, solo
-// mientras haya una versión nueva (docs/18, aprobado el 19-11-2026).
+// Update module: an "Update to vN" button in the panel's tab bar,
+// a row in the hover and a dot next to the eyes at rest, only
+// while there is a new version (docs/18, approved on 19-11-2026).
 //
-// - Se entera por ~/.local/state/agent-notch/update.json, que escribe
-//   services/updater/update_check.py; lo vigila con Gio.FileMonitor (sin
-//   sondeo) y SOLO si el código en marcha es una release vN (con main o una
-//   copia local no vigila nada). La versión en marcha es la del metadata.json
-//   (version-name, la escribe install.sh), que GNOME lee una vez por sesión.
-// - Instalar: llama a dev.agentnotch.Updater.Instalar() por D-Bus (la
-//   extensión no lanza procesos, Regla 2); el progreso vuelve por update.json.
-// - Al terminar: «Cerrar sesión para terminar» abre el diálogo de GNOME.
-// - Los actores se crean la primera vez que hacen falta y se reutilizan.
+// - It learns about it through ~/.local/state/agent-notch/update.json, written by
+//   services/updater/update_check.py; it watches it with Gio.FileMonitor (no
+//   polling) and ONLY if the running code is a vN release (with main or a
+//   local copy it watches nothing). The running version is the one in metadata.json
+//   (version-name, written by install.sh), which GNOME reads once per session.
+// - Install: calls dev.agentnotch.Updater.Instalar() over D-Bus (the
+//   extension does not launch processes, Rule 2); progress comes back through update.json.
+// - When done: "Log out to finish" opens GNOME's dialog.
+// - The actors are created the first time they are needed and reused.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -25,7 +25,7 @@ import {readText, isCancelled} from './sysinfo.js';
 import {buttonText, sameView, updateView, versionKey} from './updatestate.js';
 import {makeLabel} from './widgets.js';
 
-const PRIORITY = -50;   // en el hover, debajo de lo demás
+const PRIORITY = -50;   // in the hover, below the rest
 const BATCH_MS = 100;
 const ICON = 'software-update-available-symbolic';
 const STATE_NAME = 'update.json';
@@ -39,9 +39,9 @@ class UpdateModule extends NotchModule {
         super._init();
         this._view = null;
         this._running = typeof running === 'string' ? running.trim() : null;
-        this._starting = false;    // Instalar() pedido, aún sin noticias
-        this._pill = null;         // botón de la barra de pestañas
-        this._row = null;          // fila del hover
+        this._starting = false;    // Instalar() requested, no news yet
+        this._pill = null;         // tab bar button
+        this._row = null;          // hover row
         this._monitor = null;
         this._batchId = 0;
         this._cancellable = new Gio.Cancellable();
@@ -51,7 +51,7 @@ class UpdateModule extends NotchModule {
             this._watch();
     }
 
-    /** ¿Hay una versión nueva que ofrecer? (lo usa la mascota). */
+    /** Is there a new version to offer? (used by the mascot). */
     get available() {
         return this._view !== null;
     }
@@ -74,7 +74,7 @@ class UpdateModule extends NotchModule {
         return this._pill.actor;
     }
 
-    // --- Vigilar update.json -------------------------------------------------
+    // --- Watching update.json -------------------------------------------------
 
     _watch() {
         try {
@@ -108,12 +108,12 @@ class UpdateModule extends NotchModule {
             .then(text => this._apply(updateView(text, this._running)))
             .catch(e => {
                 if (!isCancelled(e))
-                    this._apply(null);   // no existe: nada que ofrecer
+                    this._apply(null);   // it does not exist: nothing to offer
             });
     }
 
     _apply(view) {
-        // Cualquier noticia del servicio sustituye al «Actualizando…» local.
+        // Any news from the service replaces the local "Updating…".
         const was = this._starting;
         this._starting = false;
         if (sameView(view, this._view)) {
@@ -123,11 +123,11 @@ class UpdateModule extends NotchModule {
         }
         this._view = view;
         this._render();
-        // La isla reajusta su tamaño (el texto cambia) y la mascota su puntito.
+        // The island readjusts its size (the text changes) and the mascot its dot.
         this.emit('changed');
     }
 
-    // --- Actores ------------------------------------------------------------------
+    // --- Actors ------------------------------------------------------------------
 
     _buildPill() {
         const label = new St.Label({
@@ -208,7 +208,7 @@ class UpdateModule extends NotchModule {
         setStateClass(row.actor, view.state);
     }
 
-    // --- Acciones -------------------------------------------------------------------
+    // --- Actions -------------------------------------------------------------------
 
     _activate() {
         const state = this._view?.state;
@@ -234,9 +234,9 @@ class UpdateModule extends NotchModule {
             });
     }
 
-    // El diálogo de cerrar sesión de GNOME (pide confirmación).
-    // ✅ SystemActions.activateLogout() existe en GNOME 50 (verificado el
-    // 19-11-2026 en misc/systemActions.js).
+    // GNOME's log out dialog (it asks for confirmation).
+    // ✅ SystemActions.activateLogout() exists in GNOME 50 (verified on
+    // 19-11-2026 in misc/systemActions.js).
     _logout() {
         try {
             SystemActions.getDefault().activateLogout();

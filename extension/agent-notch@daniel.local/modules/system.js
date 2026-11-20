@@ -1,14 +1,14 @@
-// Módulo Sistema: RAM y swap como `free -h`, en la vista expandida, en una
-// tarjeta de Home y en su propia pestaña del panel. La pestaña (S2) muestra
-// además CPU y temperatura, disco, batería, red, IP pública (con botón),
-// tiempo encendido y versión del sistema, y la velocidad de internet bajo
-// demanda (la mide un servicio D-Bus aparte, docs/16-velocidad-internet.md).
-// Ver docs/12-modulo-sistema.md.
+// System module: RAM and swap like `free -h`, in the expanded view, in a
+// Home card and in its own panel tab. The tab (S2) also shows
+// CPU and temperature, disk, battery, network, public IP (with a button),
+// uptime and the system version, and the internet speed on
+// demand (measured by a separate D-Bus service, docs/16-velocidad-internet.md).
+// See docs/12-modulo-sistema.md.
 //
-// Consumo: la memoria no avisa cuando cambia, así que hay que consultarla,
-// pero SOLO mientras se ve alguna de sus vistas, cada 2 s y de forma
-// asíncrona. Lo de la pestaña solo se lee (y sus señales solo se escuchan)
-// mientras la pestaña se ve. Con la isla quieta no hay nada en marcha.
+// Cost: memory does not notify when it changes, so it has to be polled,
+// but ONLY while one of its views is visible, every 2 s and
+// asynchronously. The tab's data is only read (and its signals only listened to)
+// while the tab is visible. With the island idle nothing is running.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -25,10 +25,10 @@ import {NotchModule} from './module.js';
 import {Bar, makeLabel} from './widgets.js';
 import * as Info from './sysinfo.js';
 
-const PRIORITY = 0;          // debajo de la música
+const PRIORITY = 0;          // below the music
 const REFRESH_SECONDS = 2;
 const MEMINFO = '/proc/meminfo';
-const DISK_EVERY_TICKS = 5;  // disco: cada 10 s
+const DISK_EVERY_TICKS = 5;  // disk: every 10 s
 const PUBLIC_IP_URL = 'https://api.ipify.org';
 const PUBLIC_IP_TIMEOUT_S = 5;
 const IP_RE = /^[0-9a-fA-F:.]{3,45}$/;
@@ -36,8 +36,8 @@ const IP_RE = /^[0-9a-fA-F:.]{3,45}$/;
 const UPowerProxy = Gio.DBusProxy.makeProxyWrapper(
     loadInterfaceXML('org.freedesktop.UPower.Device'));
 
-// Test de velocidad: servicio aparte (services/speedtest/speedtest.py) que
-// el D-Bus arranca al llamar a Start y que se cierra solo al terminar.
+// Speed test: a separate service (services/speedtest/speedtest.py) that
+// D-Bus starts when Start is called and that quits on its own when done.
 const SPEED_BUS_NAME = 'dev.agentnotch.SpeedTest';
 const SPEED_OBJECT_PATH = '/dev/agentnotch/SpeedTest';
 const SpeedTestProxy = Gio.DBusProxy.makeProxyWrapper(`
@@ -58,15 +58,15 @@ function formatMbps(mbps) {
     return `${mbps < 10 ? mbps.toFixed(1) : Math.round(mbps)} Mbps`;
 }
 
-// Identificador de la red actual (para olvidar la velocidad medida en otra).
-// ⚠️ Interno de GNOME 50, igual que en _watchNetwork().
+// Identifier of the current network (to forget the speed measured on another one).
+// ⚠️ GNOME 50 internal, same as in _watchNetwork().
 function currentNetworkId() {
     const client = Main.panel.statusArea.quickSettings?._network?._client;
     return client?.primary_connection?.get_uuid?.() ?? null;
 }
 
-// Como `free -h` (procps-ng 4): unidades binarias; un decimal por debajo
-// de 10 y entero (truncado) a partir de 10.  Ej.: 3.4Gi, 899Mi, 14Gi, 0B
+// Like `free -h` (procps-ng 4): binary units; one decimal below
+// 10 and an integer (truncated) from 10 up.  E.g.: 3.4Gi, 899Mi, 14Gi, 0B
 export function formatBytes(bytes) {
     if (bytes <= 0)
         return '0B';
@@ -82,8 +82,8 @@ export function formatBytes(bytes) {
     return value < 10 ? `${value.toFixed(1)}${units[i]}` : `${Math.floor(value)}${units[i]}`;
 }
 
-// Devuelve {memTotal, memUsed, swapTotal, swapUsed} en bytes.
-// usado = MemTotal − MemAvailable (igual que `free` en procps-ng 4).
+// Returns {memTotal, memUsed, swapTotal, swapUsed} in bytes.
+// used = MemTotal − MemAvailable (same as `free` in procps-ng 4).
 export function parseMeminfo(text) {
     const kb = {};
     for (const line of text.split('\n')) {
@@ -103,7 +103,7 @@ export function parseMeminfo(text) {
     };
 }
 
-// Una fila: «RAM   3.4Gi / 14Gi» + barra de uso.
+// A row: "RAM   3.4Gi / 14Gi" + usage bar.
 const UsageRow = GObject.registerClass(
 class UsageRow extends St.BoxLayout {
     _init(name) {
@@ -132,13 +132,13 @@ class UsageRow extends St.BoxLayout {
         this.setText(`${formatBytes(used)} / ${formatBytes(total)}`, fraction);
     }
 
-    // Texto libre + fracción de la barra (0–1).
+    // Free text + bar fraction (0–1).
     setText(text, fraction) {
         if (this._value.text !== text)
             this._value.text = text;
         this._bar.setFraction(fraction);
 
-        // Color según el uso: normal, alto (≥ 75 %), crítico (≥ 90 %).
+        // Color by usage: normal, high (≥ 75 %), critical (≥ 90 %).
         const level = fraction >= 0.9 ? 'critical' : fraction >= 0.75 ? 'high' : null;
         for (const cls of ['high', 'critical']) {
             if (cls === level)
@@ -149,7 +149,7 @@ class UsageRow extends St.BoxLayout {
     }
 });
 
-// RAM + swap (la fila de swap solo si hay swap).
+// RAM + swap (the swap row only if there is swap).
 const UsageView = GObject.registerClass(
 class UsageView extends St.BoxLayout {
     _init(styleClass) {
@@ -165,7 +165,7 @@ class UsageView extends St.BoxLayout {
         this.add_child(this._swap);
     }
 
-    // Devuelve true si cambió la visibilidad de la swap (cambia el tamaño).
+    // Returns true if the swap's visibility changed (the size changes).
     update({memTotal, memUsed, swapTotal, swapUsed}) {
         this._ram.set(memUsed, memTotal);
         const hasSwap = swapTotal > 0;
@@ -178,7 +178,7 @@ class UsageView extends St.BoxLayout {
     }
 });
 
-// Fila de dato: «Nombre      valor» (+ un widget opcional a la derecha).
+// Data row: "Name      value" (+ an optional widget on the right).
 const InfoRow = GObject.registerClass(
 class InfoRow extends St.BoxLayout {
     _init(name, extra = null) {
@@ -203,7 +203,7 @@ class InfoRow extends St.BoxLayout {
     }
 });
 
-// Pestaña Sistema: RAM/swap, CPU, disco y datos del equipo.
+// System tab: RAM/swap, CPU, disk and machine data.
 const SystemPage = GObject.registerClass(
 class SystemPage extends St.BoxLayout {
     _init(onPublicIp, onSpeedTest) {
@@ -261,28 +261,28 @@ export const SystemModule = GObject.registerClass(
 class SystemModule extends NotchModule {
     _init() {
         super._init();
-        this._exp = null;          // vistas: se crean al primer uso
+        this._exp = null;          // views: created on first use
         this._card = null;
         this._page = null;
-        this._last = null;         // última lectura (para vistas recién creadas)
+        this._last = null;         // last reading (for freshly created views)
         this._timerId = 0;
         this._cancellable = null;
         this._file = Gio.File.new_for_path(MEMINFO);
 
-        // Pestaña (S2): solo activo mientras se ve.
+        // Tab (S2): only active while visible.
         this._pageActive = false;
         this._pageCancellable = null;
         this._ticks = 0;
         this._cpuPrev = null;
-        this._sensorPath = undefined;   // undefined = sin buscar; null = no hay
-        this._uptimeBase = null;        // {seconds, at (µs monotónicos)}
+        this._sensorPath = undefined;   // undefined = not looked up yet; null = there is none
+        this._uptimeBase = null;        // {seconds, at (monotonic µs)}
         this._osText = null;
         this._upower = null;
         this._nmClient = null;
         this._ipCancellable = null;
 
-        // Velocidad: proxy solo mientras se mide; el resultado, hasta que
-        // cambie la red.
+        // Speed: proxy only while measuring; the result, until the
+        // network changes.
         this._speedProxy = null;
         this._speedSignals = [];
         this._speedText = '';
@@ -294,7 +294,7 @@ class SystemModule extends NotchModule {
         return PRIORITY;
     }
 
-    // Sin vista compacta: la RAM solo aparece al expandir.
+    // No compact view: the RAM only shows when expanding.
     get active() {
         return false;
     }
@@ -340,8 +340,8 @@ class SystemModule extends NotchModule {
         return view;
     }
 
-    // Leer la RAM mientras se vea cualquiera de las vistas; lo demás, solo
-    // con la pestaña visible.
+    // Read the RAM while any of the views is visible; the rest, only
+    // with the tab visible.
     _onViewsChanged(views) {
         if (views.has('page') && this._page)
             this._startPage();
@@ -358,8 +358,8 @@ class SystemModule extends NotchModule {
         if (this._timerId)
             return;
         this._refresh();
-        // timeout_add_seconds agrupa los despertares con otros del sistema
-        // (mejor para la batería que un temporizador en milisegundos).
+        // timeout_add_seconds groups the wakeups with others from the system
+        // (better for the battery than a millisecond timer).
         this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, REFRESH_SECONDS, () => {
             this._refresh();
             if (this._pageActive)
@@ -378,7 +378,7 @@ class SystemModule extends NotchModule {
     }
 
     _refresh() {
-        if (this._cancellable)   // ya hay una lectura en curso
+        if (this._cancellable)   // a reading is already in progress
             return;
         const cancellable = new Gio.Cancellable();
         this._cancellable = cancellable;
@@ -400,18 +400,18 @@ class SystemModule extends NotchModule {
 
     _show(info) {
         this._last = info;
-        // El tamaño de la isla no cambia al actualizar los números, así que
-        // no se emite 'changed' (evita recalcular el diseño cada 2 s)...
+        // The island's size does not change when the numbers update, so
+        // 'changed' is not emitted (avoids recomputing the layout every 2 s)...
         let resized = false;
         for (const view of [this._exp, this._card, this._page]) {
             if (view)
                 resized = view.update(info) || resized;
         }
         if (resized)
-            this.emit('changed');  // ...salvo si aparece o desaparece la swap.
+            this.emit('changed');  // ...unless the swap appears or disappears.
     }
 
-    // --- Pestaña Sistema (S2) -------------------------------------------------
+    // --- System tab (S2) -------------------------------------------------
 
     _startPage() {
         if (this._pageActive)
@@ -422,7 +422,7 @@ class SystemModule extends NotchModule {
         this._cpuPrev = null;
         this._page.cpu.setText('measuring…', 0);
 
-        // Velocidad medida en otra red: ya no vale.
+        // Speed measured on another network: no longer valid.
         if (!this._speedProxy && this._speedText && this._speedNetwork !== currentNetworkId())
             this._setSpeed('');
 
@@ -444,14 +444,14 @@ class SystemModule extends NotchModule {
         this._upower?.disconnectObject(this);
         this._nmClient?.disconnectObject(this);
         this._nmClient = null;
-        // La IP pública se olvida al cerrar la pestaña.
+        // The public IP is forgotten when the tab closes.
         this._page?.publicIp.setValue('');
         if (this._page)
             this._page.publicIpButton.visible = true;
     }
 
-    // Cada 2 s con la pestaña visible: CPU, temperatura, red, tiempo
-    // encendido y, si toca, el disco.
+    // Every 2 s with the tab visible: CPU, temperature, network,
+    // uptime and, when due, the disk.
     async _refreshPage(withDisk) {
         const cancellable = this._pageCancellable;
         const page = this._page;
@@ -474,7 +474,7 @@ class SystemModule extends NotchModule {
             const cur = Info.parseCpuStat(stat);
             const usage = Info.cpuUsage(this._cpuPrev, cur);
             this._cpuPrev = cur;
-            // Hasta la segunda lectura no hay uso (docs/09: «…» parecía «_»).
+            // Until the second reading there is no usage (docs/09: "…" looked like "_").
             const parts = [usage === null ? 'measuring…' : `${Math.round(usage * 100)} %`];
             if (temp !== null)
                 parts.push(`${Math.round(Number(temp) / 1000)} °C`);
@@ -484,8 +484,8 @@ class SystemModule extends NotchModule {
             this._showUptime();
 
             if (withDisk) {
-                // Como `df -h`: «usado / tamaño» y la barra con el Use% de
-                // df, usado / (usado + disponible).
+                // Like `df -h`: "used / size" and the bar with df's
+                // Use%, used / (used + available).
                 const {size, used, free} = await Info.queryDisk('/', cancellable);
                 page.disk.setText(`${formatBytes(used)} / ${formatBytes(size)}`,
                     used + free > 0 ? used / (used + free) : 0);
@@ -532,8 +532,8 @@ class SystemModule extends NotchModule {
             Info.formatDuration(seconds + (GLib.get_monotonic_time() - at) / 1e6));
     }
 
-    // Batería: proxy de UPower (creado una vez, asíncrono); sus cambios
-    // solo se escuchan con la pestaña visible.
+    // Battery: UPower proxy (created once, asynchronous); its changes
+    // are only listened to with the tab visible.
     _watchBattery() {
         if (!this._upower) {
             this._upower = new UPowerProxy(Gio.DBus.system, 'org.freedesktop.UPower',
@@ -555,7 +555,7 @@ class SystemModule extends NotchModule {
         const p = this._upower;
         if (!page || !p)
             return;
-        const present = Boolean(p.IsPresent) && p.Type === 2;   // 2 = batería
+        const present = Boolean(p.IsPresent) && p.Type === 2;   // 2 = battery
         if (present) {
             page.battery.setValue(Info.formatBattery({
                 percentage: p.Percentage ?? 0,
@@ -567,12 +567,12 @@ class SystemModule extends NotchModule {
         this._setRowVisible(page.battery, present);
     }
 
-    // Red: el NM.Client que ya tiene abierto GNOME.
-    // ⚠️ Interno de GNOME 50: Main.panel.statusArea.quickSettings._network._client
+    // Network: the NM.Client GNOME already has open.
+    // ⚠️ GNOME 50 internal: Main.panel.statusArea.quickSettings._network._client
     _watchNetwork() {
         this._nmClient = Main.panel.statusArea.quickSettings?._network?._client ?? null;
         this._nmClient?.connectObject('notify::primary-connection', () => {
-            // Otra red: la IP pública y la velocidad medidas ya no valen.
+            // Another network: the public IP and the measured speed are no longer valid.
             this._cancelSpeedTest();
             this._setSpeed('');
             this._ipCancellable?.cancel();
@@ -600,7 +600,7 @@ class SystemModule extends NotchModule {
         this._setRowVisible(page.network, true);
     }
 
-    // IP pública: UNA petición pequeña, solo al pulsar «Consultar».
+    // Public IP: ONE small request, only when pressing "Check".
     _queryPublicIp() {
         const page = this._page;
         if (!page || this._ipCancellable)
@@ -614,7 +614,7 @@ class SystemModule extends NotchModule {
         const message = Soup.Message.new('GET', PUBLIC_IP_URL);
         session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, cancellable, (s, res) => {
             if (this._ipCancellable !== cancellable)
-                return;   // cancelada (pestaña cerrada o cambio de red)
+                return;   // cancelled (tab closed or network change)
             this._ipCancellable = null;
             let text = null;
             try {
@@ -633,7 +633,7 @@ class SystemModule extends NotchModule {
         });
     }
 
-    // --- Velocidad de internet (docs/16-velocidad-internet.md) ----------------
+    // --- Internet speed (docs/16-velocidad-internet.md) ----------------
 
     _toggleSpeedTest() {
         if (this._speedProxy)
@@ -647,11 +647,11 @@ class SystemModule extends NotchModule {
         this._speedDown = null;
         this._setSpeed('Testing…');
 
-        // Proxy asíncrono; el servicio lo arranca el D-Bus al llamar a Start.
+        // Asynchronous proxy; D-Bus starts the service when Start is called.
         const proxy = new SpeedTestProxy(Gio.DBus.session, SPEED_BUS_NAME, SPEED_OBJECT_PATH,
             (p, error) => {
                 if (this._speedProxy !== p)
-                    return;   // cancelado mientras se creaba
+                    return;   // cancelled while it was being created
                 if (error) {
                     this._speedFailed(error.message);
                     return;
@@ -687,7 +687,7 @@ class SystemModule extends NotchModule {
 
     _speedFailed(message) {
         this._releaseSpeedProxy();
-        // Cloudflare limita los tests muy seguidos (HTTP 429).
+        // Cloudflare limits tests run too close together (HTTP 429).
         if (message === 'rate-limited') {
             this._setSpeed('Too many tests in a row; wait a few minutes');
             return;
@@ -701,8 +701,8 @@ class SystemModule extends NotchModule {
         if (!proxy)
             return;
         this._releaseSpeedProxy();
-        // El servicio se cierra al recibir Cancel (y también si GNOME Shell
-        // desaparece del bus).
+        // The service quits when it gets Cancel (and also if GNOME Shell
+        // leaves the bus).
         proxy.CancelRemote(() => {});
         this._setSpeed('');
     }
@@ -726,7 +726,7 @@ class SystemModule extends NotchModule {
         this._page.speedButton.label = this._speedProxy ? 'Cancel' : 'Test';
     }
 
-    // Mostrar u ocultar una fila cambia el tamaño: avisar a la isla.
+    // Showing or hiding a row changes the size: tell the island.
     _setRowVisible(row, visible) {
         if (row.visible === visible)
             return;

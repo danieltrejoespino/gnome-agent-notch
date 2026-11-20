@@ -1,8 +1,8 @@
-/* ── Isla ─────────────────────────────────────────── */
+/* ── Island ─────────────────────────────────────────── */
 
-/* La forma (hombros cóncavos, vidrio, borde) la dibuja island.js con Cairo
-   a partir de estas propiedades -agent-notch-*. Sin sombras ni desenfoque
-   (docs/13-rediseno.md). El padding lateral incluye el ancho del hombro. */
+/* The shape (concave shoulders, glass, border) is drawn by island.js with Cairo
+   from these -agent-notch-* properties. No shadows or blur
+   (docs/13-rediseno.md). The side padding includes the shoulder's width. */
 .agent-notch-island {
   -agent-notch-fill: rgba(30, 30, 36, 0.78);
   -agent-notch-highlight: rgba(255, 255, 255, 0.07);
@@ -10,9 +10,9 @@
   -agent-notch-border-width: 1px;
   -agent-notch-shoulder: 10px;
   -agent-notch-radius: 14px;
-  -agent-notch-glow-height: 36px;   /* brillo de color del banner */
+  -agent-notch-glow-height: 36px;   /* the banner's colored glow */
   -agent-notch-glow-opacity: 0.45;
-  -agent-notch-tall-extra: 20px;    /* fila compacta en dos líneas (Agentes, docs/09) */
+  -agent-notch-tall-extra: 20px;    /* compact row on two lines (Agents, docs/09) */
   min-width: 200px;
   color: #f5f5f5;
   font-size: 10pt;
@@ -22,21 +22,21 @@
   -agent-notch-border: rgba(255, 255, 255, 0.28);
 }
 
-/* Sin ningún módulo activo: píldora pequeña y vacía. */
+/* With no active module: a small, empty pill. */
 .agent-notch-island.minimal {
   min-width: 130px;
 }
 
-/* Expandida (al pasar el ratón): más opaca (legible sobre cualquier fondo)
-   y más redondeada. */
+/* Expanded (on hover): more opaque (readable over any background)
+   and rounder. */
 .agent-notch-island.expanded {
   -agent-notch-fill: rgba(22, 22, 28, 0.9);
   -agent-notch-border: rgba(255, 255, 255, 0.2);
   -agent-notch-radius: 24px;
 }
 
-/* El padding va en la capa de contenido (el fondo ocupa toda la isla).
-   El lateral incluye el ancho del hombro. */
+/* The padding goes on the content layer (the background fills the whole island).
+   The side one includes the shoulder's width. */
 .agent-notch-content {
   padding: 0 26px;            /* 10px hombro + 16px */
 }
@@ -45,15 +45,15 @@
   padding: 0 28px 16px 28px;  /* 10px hombro + 18px */
 }
 
-/* Secciones de los módulos, apiladas. Va superpuesta a la fila compacta
-   (que se desvanece), así que empieza arriba: el padding deja sitio a los
-   hombros. */
+/* The modules' sections, stacked. It overlaps the compact row
+   (which fades out), so it starts at the top: the padding leaves room for the
+   shoulders. */
 .agent-notch-expanded {
   padding-top: 14px;
   spacing: 14px;
 }
 
-/* ── Módulo Música ────────────────────────────────── */
+/* ── Music module ────────────────────────────────── */
 
 .agent-notch-music {
   spacing: 8px;
@@ -68,12 +68,12 @@
   font-weight: bold;
 }
 
-/* Carátula mini en lugar del icono de la app (cargada a este tamaño). */
+/* Mini cover instead of the app icon (loaded at this size). */
 .agent-notch-music-icon.cover {
   icon-size: 18px;
 }
 
-/* Barritas: el alto real lo da scale_y (animado con ease()). */
+/* Bars: the real height is given by scale_y (animated with ease()). */
 .agent-notch-bars {
   spacing: 2px;
   height: 12px;
@@ -90,14 +90,14 @@
   background-color: #6a6a6a;
 }
 
-/* En pausa: atenuado. */
+/* Paused: dimmed. */
 .agent-notch-music.paused {
   color: #8a8a8a;
 }
 
-/* Vista expandida (hover, M4): tarjeta con la carátula de fondo.
-   Tamaño fijo: el icono de la carátula mide lo mismo que el ancho
-   (ver CoverBackdrop en modules/widgets.js). */
+/* Expanded view (hover, M4): card with the cover as background.
+   Fixed size: the cover icon is as wide as the card
+   (see CoverBackdrop in modules/widgets.js). */
 
 .agent-notch-music-hero {
   border-radius: 14px;
@@ -116,15 +116,15 @@
   height: 150px;
 }
 
-/* Oscurecido sobre la carátula para leer el texto. */
+/* Darkening over the cover to read the text. */
 .agent-notch-music-hero-dim {
   background-gradient-direction: vertical;
   background-gradient-start: rgba(10, 10, 14, 0.55);
   background-gradient-end: rgba(10, 10, 14, 0.78);
 }
 
-/* Bordes que funden la carátula con la isla (mismo color que el relleno
-   de la isla expandida): así no se ven esquinas rectas. */
+/* Edges that blend the cover with the island (same color as the expanded
+   island's fill): that way no square corners show. */
 .agent-notch-music-hero-fade.left,
 .agent-notch-music-hero-fade.right {
   width: 44px;
@@ -200,7 +200,7 @@
   padding-top: 2px;
 }
 
-/* Onda fija: color de lo reproducido y de lo que queda. */
+/* Fixed wave: color of the played part and of what is left. */
 .agent-notch-wave {
   height: 26px;
   -agent-notch-wave-color: #e5484d;
@@ -242,9 +242,9 @@
   icon-size: 18px;
 }
 
-/* Aleatorio, repetir, abrir reproductor: sin fondo; encendidos, del
-   color de la onda. */
-/* Varios reproductores: iconos para elegir cuál se ve. */
+/* Shuffle, repeat, open player: no background; when on, in the
+   wave's color. */
+/* Several players: icons to pick which one is shown. */
 .agent-notch-music-hero-players {
   spacing: 2px;
   padding-right: 4px;
@@ -329,7 +329,7 @@
   icon-size: 16px;
 }
 
-/* ── Módulo Sistema ───────────────────────────────── */
+/* ── System module ───────────────────────────────── */
 
 .agent-notch-system {
   spacing: 10px;
@@ -370,7 +370,7 @@
   background-color: #f87171;
 }
 
-/* ── Módulo Notificaciones (banner) ───────────────── */
+/* ── Notifications module (banner) ───────────────── */
 
 .agent-notch-banner {
   min-width: 380px;
@@ -405,11 +405,11 @@
   color: #c8c8c8;
 }
 
-/* ── Panel con pestañas (D3) ──────────────────────── */
+/* ── Panel with tabs (D3) ──────────────────────── */
 
 .agent-notch-panel {
   spacing: 10px;
-  width: 520px;   /* fijo en todas las pestañas (docs/09, revisión del 19-11-2026) */
+  width: 520px;   /* fixed on every tab (docs/09, review of 19-11-2026) */
 }
 
 .agent-notch-panel-date {
@@ -475,7 +475,7 @@
   spacing: 10px;
 }
 
-/* Filas de la cuadrícula 2 × 2 de Home. */
+/* Rows of Home's 2 × 2 grid. */
 .agent-notch-home-row {
   spacing: 10px;
 }
@@ -521,7 +521,7 @@
   background-color: #ffffff;
 }
 
-/* Página de música */
+/* Music page */
 
 .agent-notch-music-page {
   spacing: 18px;
@@ -537,8 +537,8 @@
   color: #8a8a8a;
 }
 
-/* Degradado sobre el borde derecho de la carátula: la funde con el panel
-   (mismo color que el relleno de la isla expandida). */
+/* Gradient over the cover's right edge: blends it with the panel
+   (same color as the expanded island's fill). */
 .agent-notch-music-page-fade {
   width: 40px;
   background-gradient-direction: horizontal;
@@ -586,7 +586,7 @@
   padding: 8px;
 }
 
-/* Tarjeta y página del módulo Sistema */
+/* System module card and page */
 
 .agent-notch-system.agent-notch-card {
   min-width: 180px;
@@ -597,7 +597,7 @@
   padding-top: 8px;
 }
 
-/* Pestaña Sistema ampliada (S2) */
+/* Extended System tab (S2) */
 
 .agent-notch-system-page {
   min-width: 380px;
@@ -643,7 +643,7 @@
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* ── Módulo Concentración (D4) ────────────────────── */
+/* ── Focus module (D4) ────────────────────── */
 
 .agent-notch-focus-compact {
   spacing: 8px;
@@ -698,11 +698,11 @@
   spacing: 6px;
 }
 
-/* ── Ojos con expresión (docs/09) ─────────────────── */
+/* ── Eyes with expression (docs/09) ─────────────────── */
 
-/* Los dibuja `Eyes` (widgets.js) con Cairo: medidas en unidades de 1/12 del
-   alto. Círculos, distintos de los óvalos verticales de Mochi/Coucou. El
-   color es `color`. */
+/* Drawn by `Eyes` (widgets.js) with Cairo: sizes in units of 1/12 of the
+   height. Circles, unlike Mochi/Coucou's vertical ovals. The
+   color is `color`. */
 .agent-notch-face {
   width: 30px;
   height: 12px;
@@ -711,7 +711,7 @@
 
 .agent-notch-face.mascota { color: #dbeafe; }
 
-/* ── Módulo Portapapeles (C1) ─────────────────────── */
+/* ── Clipboard module (C1) ─────────────────────── */
 
 .agent-notch-clipboard-page {
   spacing: 8px;
@@ -732,7 +732,7 @@
 
 .agent-notch-clipboard-search:focus {
   border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: none;   /* sin el anillo de acento de GNOME (naranja en Ubuntu) */
+  box-shadow: none;   /* without GNOME's accent ring (orange on Ubuntu) */
 }
 
 .agent-notch-clipboard-search StLabel.hint-text {
@@ -749,7 +749,7 @@
   spacing: 6px;
 }
 
-/* «Limpiar»: borra el historial, los fijados se quedan. */
+/* "Clear": clears the history, pinned items stay. */
 .agent-notch-clipboard-clear {
   border-radius: 99px;
   padding: 6px;
@@ -831,12 +831,12 @@
   color: #8a8a8a;
 }
 
-/* ── Módulo Agentes (Fase 1) ──────────────────────── */
+/* ── Agents module (Phase 1) ──────────────────────── */
 
-/* Compacta: «● mi-app · Editando main.py». Colores por estado: docs/09.
-   Sin animaciones todavía (pulso del punto: paso 7 de la hoja de ruta). */
-/* Compacta en dos líneas (docs/09): ojos arriba al centro, texto debajo.
-   El padding superior separa los ojos del borde de la pantalla. */
+/* Compact: "● my-app · Editing main.py". Colors per state: docs/09.
+   The dot's pulse (step 7 of the roadmap) is animated from agents.js. */
+/* Compact view on two lines (docs/09): eyes at the top center, text below.
+   The top padding keeps the eyes away from the screen edge. */
 .agent-notch-agents {
   spacing: 4px;
   padding-top: 6px;
@@ -878,7 +878,7 @@
   color: #fbbf24;
 }
 
-/* Vista expandida (paso 6): una fila por sesión. Clic → su terminal. */
+/* Expanded view (step 6): one row per session. Click → its terminal. */
 .agent-notch-agents-list {
   spacing: 2px;
   min-width: 360px;
@@ -913,8 +913,8 @@
   font-weight: bold;
 }
 
-/* Etiqueta del agente (paso 15): tinte propio, distinto de los colores de
-   estado del punto. Desconocidos: gris neutro. */
+/* Agent label (step 15): a tint of its own, unlike the dot's state
+   colors. Unknown ones: neutral gray. */
 .agent-notch-agents-row-tag {
   font-size: 8.5pt;
   font-weight: bold;
@@ -959,8 +959,8 @@
   color: #8a8a8a;
 }
 
-/* Pestaña «Agentes» del panel: la misma lista que el hover, con todas las
-   sesiones y desplazamiento. */
+/* The panel's "Agents" tab: the same list as the hover, with all the
+   sessions and scrolling. */
 .agent-notch-agents-page {
   min-width: 380px;
 }
@@ -989,8 +989,8 @@
   color: #8a8a8a;
 }
 
-/* Banner al pedir atención (paso 7): la isla se despliega 5 s.
-   El brillo ámbar de abajo lo pinta la isla (bannerAccent). */
+/* Banner when asking for attention (step 7): the island opens for 5 s.
+   The amber glow at the bottom is painted by the island (bannerAccent). */
 .agent-notch-agents-banner {
   min-width: 320px;
   border-radius: 14px;
@@ -1002,7 +1002,7 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Dos líneas, como la compacta: ojos arriba al centro, mensaje debajo. */
+/* Two lines, like the compact view: eyes at the top center, message below. */
 .agent-notch-agents-banner-box {
   spacing: 6px;
 }
@@ -1027,8 +1027,8 @@
   color: #fbbf24;
 }
 
-/* Pestaña «Docker» del panel (docs/19-modulo-docker.md): contenedores por
-   proyecto de Compose, con iniciar/detener por fila y por grupo. */
+/* The panel's "Docker" tab (docs/19-modulo-docker.md): containers per
+   Compose project, with start/stop per row and per group. */
 .agent-notch-docker-page {
   min-width: 420px;
 }
@@ -1163,9 +1163,9 @@
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* ── Actualización (docs/18) ─────────────────────── */
+/* ── Update (docs/18) ─────────────────────── */
 
-/* Botón al final de la barra de pestañas, solo con versión nueva. */
+/* Button at the end of the tab bar, only with a new version. */
 .agent-notch-update-pill {
   border-radius: 99px;
   padding: 5px 12px;
@@ -1213,7 +1213,7 @@
 .estado-error .agent-notch-update-icon { color: #f87171; }
 .agent-notch-update-pill .agent-notch-update-icon { color: #f5f5f5; }
 
-/* Fila del hover. */
+/* Hover row. */
 .agent-notch-update-row {
   spacing: 8px;
   padding: 6px 10px;
@@ -1252,7 +1252,7 @@
   background-color: rgba(248, 113, 113, 0.25);
 }
 
-/* Puntito junto a los ojos en reposo. */
+/* Dot next to the eyes at rest. */
 .agent-notch-mascot {
   spacing: 6px;
 }
@@ -1264,16 +1264,16 @@
   background-color: #60a5fa;
 }
 
-/* ── Revisión de diseño del 19-11-2026 (docs/09) ─── */
+/* ── Design review of 19-11-2026 (docs/09) ─── */
 
-/* Línea entre las secciones del hover. */
+/* Line between the hover sections. */
 .agent-notch-section-separator {
   height: 1px;
   margin: 6px 4px;
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Tarjeta de Agentes en Home: ojos + «Agentes» + resumen. */
+/* Agents card on Home: eyes + "Agents" + summary. */
 .agent-notch-agents-card-box {
   spacing: 12px;
 }
@@ -1291,7 +1291,7 @@
 .agent-notch-agents-card.estado-terminado  .agent-notch-face { color: #34d399; }
 .agent-notch-agents-card.estado-error      .agent-notch-face { color: #f87171; }
 
-/* Pestaña Agentes: cabecera con el resumen y filas en dos líneas. */
+/* Agents tab: header with the summary and rows on two lines. */
 .agent-notch-agents-header {
   font-size: 9pt;
   color: #c8c8c8;
@@ -1306,12 +1306,12 @@
   font-family: monospace;
   font-size: 8.5pt;
   color: #8a8a8a;
-  padding-left: 15px;   /* alineada con el proyecto, después del punto */
+  padding-left: 15px;   /* aligned with the project, after the dot */
 }
 
-/* ── Preferencias (docs/20) ───────────────────────── */
+/* ── Preferences (docs/20) ───────────────────────── */
 
-/* Agentes en una línea (ajuste agentes-dos-lineas apagado). */
+/* Agents on one line (agentes-dos-lineas setting off). */
 .agent-notch-agents.una-linea {
   spacing: 7px;
   padding-top: 0;

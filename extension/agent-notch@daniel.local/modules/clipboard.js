@@ -1,18 +1,18 @@
-// Módulo Portapapeles: historial de lo copiado (solo texto), con búsqueda y
-// fijados, en una pestaña del panel. Super+V la abre; al elegir una entrada
-// se copia y se pega sola. Ver docs/15-modulo-portapapeles.md.
+// Clipboard module: history of what was copied (text only), with search and
+// pinned items, in a panel tab. Super+V opens it; picking an entry
+// copies it and pastes it on its own. See docs/15-modulo-portapapeles.md.
 //
 // Consumo:
-//   - Por eventos: la señal 'owner-changed' de Meta.Selection avisa de cada
-//     copia; no hay temporizadores ni sondeo.
-//   - Historial en RAM con tope (50 textos de hasta 256 KB). Solo los
-//     fijados van a disco, con escritura asíncrona y atómica.
-//   - La página se crea la primera vez que se abre; sus filas se reutilizan
-//     y solo se redibujan mientras se ve.
+//   - Event-driven: Meta.Selection's 'owner-changed' signal reports each
+//     copy; there are no timers or polling.
+//   - History in RAM with a cap (50 texts of up to 256 KB). Only the
+//     pinned items go to disk, written asynchronously and atomically.
+//   - The page is created the first time it opens; its rows are reused
+//     and only redrawn while it is visible.
 //
-// Super+V: GNOME lo usa para su panel de notificaciones (toggle-message-tray,
-// junto con Super+M). Se cambia el manejador de ese atajo SOLO dentro del
-// proceso (nada en dconf): V → portapapeles; lo demás → lo de siempre.
+// Super+V: GNOME uses it for its notification panel (toggle-message-tray,
+// together with Super+M). The handler of that shortcut is changed ONLY inside the
+// process (nothing in dconf): V → clipboard; anything else → as usual.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -28,24 +28,24 @@ import {ensureActorVisibleInScrollView} from 'resource:///org/gnome/shell/misc/a
 import {NotchModule} from './module.js';
 import {makeLabel} from './widgets.js';
 
-const PRIORITY = -10;               // pestaña después de las demás
+const PRIORITY = -10;               // tab after the others
 const ICON = 'edit-paste-symbolic';
 const MAX_HISTORY = 50;
 const MAX_PINNED = 50;
-const MAX_TEXT_LENGTH = 256 * 1024; // caracteres; más largo no se guarda
-const PREVIEW_LENGTH = 200;         // lo que se muestra de cada texto
-const PASTE_DELAY_MS = 60;          // que el foco vuelva a la app antes de pegar
+const MAX_TEXT_LENGTH = 256 * 1024; // characters; longer is not stored
+const PREVIEW_LENGTH = 200;         // what is shown of each text
+const PASTE_DELAY_MS = 60;          // let the focus go back to the app before pasting
 
 const KEYBINDING = 'toggle-message-tray';
 const KEYBINDING_SCHEMA = 'org.gnome.shell.keybindings';
 const KEYBINDING_MODES = Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW |
     Shell.ActionMode.POPUP;
 
-// Convención de los gestores de contraseñas (KeePassXC y otros): no guardar.
+// Password managers' convention (KeePassXC and others): do not store.
 const SECRET_MIMETYPE = 'x-kde-passwordManagerHint';
 const TEXT_MIMETYPES = ['text/plain;charset=utf-8', 'text/plain', 'UTF8_STRING', 'STRING', 'TEXT'];
 
-// En las terminales se pega con Ctrl+Shift+V.
+// In terminals, paste is Ctrl+Shift+V.
 const TERMINAL_HINTS = ['terminal', 'ptyxis', 'console', 'kgx', 'kitty', 'alacritty',
     'foot', 'wezterm', 'ghostty', 'xterm', 'tilix', 'terminator', 'konsole', 'blackbox'];
 
@@ -67,15 +67,15 @@ function isTerminal(window) {
 
 export const ClipboardModule = GObject.registerClass(
 class ClipboardModule extends NotchModule {
-    // shortcut: tomar Super+V (ajuste atajo-portapapeles, docs/20).
+    // shortcut: take Super+V (atajo-portapapeles setting, docs/20).
     _init({shortcut = true} = {}) {
         super._init();
         this._shortcut = shortcut;
 
-        this._history = [];      // textos, el más reciente primero
-        this._pinned = [];       // textos fijados, en el orden en que se fijaron
-        this._items = [];        // lo que se ve ahora (tras filtrar)
-        this._rows = [];         // filas reutilizables de la página
+        this._history = [];      // texts, the most recent first
+        this._pinned = [];       // pinned texts, in the order they were pinned
+        this._items = [];        // what is visible now (after filtering)
+        this._rows = [];         // reusable rows of the page
         this._selected = 0;
         this._page = null;
         this._pasteId = 0;
@@ -113,13 +113,13 @@ class ClipboardModule extends NotchModule {
         if (!views.has('page'))
             return;
         if (this._entry.text)
-            this._entry.text = '';   // dispara _render() vía text-changed
+            this._entry.text = '';   // triggers _render() through text-changed
         else
             this._render();
         this._entry.grab_key_focus();
     }
 
-    // --- Copias -------------------------------------------------------------
+    // --- Copies -------------------------------------------------------------
 
     _onOwnerChanged(type, source) {
         if (type !== Meta.SelectionType.SELECTION_CLIPBOARD || !source)
@@ -149,7 +149,7 @@ class ClipboardModule extends NotchModule {
         this._render();
     }
 
-    // Elegir una entrada: copiarla, cerrar el panel y pegarla en la app.
+    // Picking an entry: copy it, close the panel and paste it into the app.
     _choose(text) {
         this._remember(text);
         this._clipboard.set_text(St.ClipboardType.CLIPBOARD, text);
@@ -182,13 +182,13 @@ class ClipboardModule extends NotchModule {
             this._keyboard.notify_keyval(time, key, Clutter.KeyState.RELEASED);
     }
 
-    // --- Fijados --------------------------------------------------------------
+    // --- Pinned items --------------------------------------------------------------
 
     _togglePin(text) {
         const i = this._pinned.indexOf(text);
         if (i >= 0) {
             this._pinned.splice(i, 1);
-            // Que no desaparezca de golpe: vuelve al historial.
+            // So it does not vanish suddenly: it goes back to the history.
             if (!this._history.includes(text))
                 this._history.unshift(text);
         } else {
@@ -220,8 +220,8 @@ class ClipboardModule extends NotchModule {
         });
     }
 
-    // Escritura asíncrona y atómica (replace_contents usa un archivo temporal),
-    // con permisos 0600. Las ráfagas se agrupan: como mucho una en curso.
+    // Asynchronous, atomic write (replace_contents uses a temporary file),
+    // with 0600 permissions. Bursts are grouped: at most one in progress.
     _savePinned() {
         if (this._saving) {
             this._saveAgain = true;
@@ -282,7 +282,7 @@ class ClipboardModule extends NotchModule {
             });
     }
 
-    // Devolver a GNOME su atajo tal cual lo registra ui/windowManager.js.
+    // Give GNOME its shortcut back exactly as ui/windowManager.js registers it.
     _restoreKeybinding() {
         Main.wm.removeKeybinding(KEYBINDING);
         Main.wm.addKeybinding(KEYBINDING,
@@ -291,15 +291,15 @@ class ClipboardModule extends NotchModule {
             Main.wm._toggleCalendar.bind(Main.wm));
     }
 
-    // --- Página ---------------------------------------------------------------
+    // --- Page ---------------------------------------------------------------
 
     _buildPage() {
         const page = new St.BoxLayout({
             style_class: 'agent-notch-clipboard-page',
             orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
-            // Pegada arriba aunque haya pocas filas (BinLayout solo respeta
-            // y_align si el hijo tiene y_expand).
+            // Stuck to the top even with few rows (BinLayout only follows
+            // y_align if the child has y_expand).
             y_expand: true,
             y_align: Clutter.ActorAlign.START,
         });
@@ -317,7 +317,7 @@ class ClipboardModule extends NotchModule {
         });
         this._entry.clutter_text.connect('key-press-event', (_actor, event) => this._onKeyPress(event));
 
-        // Buscador + «Limpiar»: borra el historial pero no los fijados.
+        // Search box + "Clear": clears the history but not the pinned items.
         const toolbar = new St.BoxLayout({style_class: 'agent-notch-clipboard-toolbar', x_expand: true});
         toolbar.add_child(this._entry);
         this._clearButton = new St.Button({
@@ -356,11 +356,11 @@ class ClipboardModule extends NotchModule {
         return page;
     }
 
-    // Borra el historial; los fijados se quedan (como en Windows).
+    // Clears the history; pinned items stay (like on Windows).
     _clearHistory() {
         this._history = [];
         this._selected = 0;
-        this._entry.text = '';   // dispara _render() vía text-changed
+        this._entry.text = '';   // triggers _render() through text-changed
         this._render();
         this._entry.grab_key_focus();
     }
@@ -417,8 +417,8 @@ class ClipboardModule extends NotchModule {
         return row;
     }
 
-    // Recalcula lo que se ve. Con la página cerrada no hace nada: se
-    // recalcula al abrirla (_onViewsChanged).
+    // Recomputes what is visible. With the page closed it does nothing: it is
+    // recomputed when it opens (_onViewsChanged).
     _render() {
         if (!this._page || !this.visibleViews.has('page'))
             return;
@@ -466,7 +466,7 @@ class ClipboardModule extends NotchModule {
             this._clearButton.add_style_pseudo_class('insensitive');
 
         const empty = this._items.length === 0;
-        // Menos o más filas (buscar, limpiar, copiar): la isla se reajusta.
+        // Fewer or more rows (search, clear, copy): the island readjusts.
         if (this._shownCount !== undefined && this._shownCount !== this._items.length) {
             this._shownCount = this._items.length;
             this.emit('changed');

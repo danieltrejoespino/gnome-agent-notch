@@ -1,18 +1,18 @@
-"""Bus de archivos de agent-notch: lo comparten todos los adaptadores.
+"""agent-notch file bus: shared by all the adapters.
 
-Formato y ubicación en docs/03-formato-estado.md; arquitectura en
+Format and location in docs/03-formato-estado.md; architecture in
 docs/02-arquitectura.md.
 
     $XDG_RUNTIME_DIR/agent-notch/
-    ├── sessions/<agente>-<sesion>.json   estado de cada sesión (Fase 1)
-    ├── requests/<id>.json                peticiones de permiso (Fase 2)
-    └── responses/<id>.json               respuestas de la isla (Fase 2)
+    ├── sessions/<agente>-<sesion>.json   state of each session (Phase 1)
+    ├── requests/<id>.json                permission requests (Phase 2)
+    └── responses/<id>.json               the island's answers (Phase 2)
 
-Sin $XDG_RUNTIME_DIR se usa ~/.cache/agent-notch/. Las carpetas se crean
-con permisos 0700 y los archivos con 0600.
+Without $XDG_RUNTIME_DIR, ~/.cache/agent-notch/ is used. Folders are created
+with 0700 permissions and files with 0600.
 
-Los hooks se lanzan en cada evento del agente y deben terminar en menos de
-100 ms: este módulo solo importa os, json y re (nada de pathlib).
+The hooks run on every agent event and must finish in under
+100 ms: this module only imports os, json and re (no pathlib).
 """
 
 import json
@@ -21,7 +21,7 @@ import re
 
 FORMAT_VERSION = 1
 
-# Ordenados de más a menos prioritario para la píldora compacta (docs/03).
+# Sorted from highest to lowest priority for the compact pill (docs/03).
 STATES = ("atencion", "error", "trabajando", "pensando", "terminado", "inactivo")
 
 _UNSAFE = re.compile(r"[^A-Za-z0-9_-]")
@@ -29,11 +29,11 @@ _MAX_NAME = 80
 
 
 def base_dir():
-    """Raíz del bus. No la crea.
+    """Root of the bus. It does not create it.
 
-    AGENT_NOTCH_DIR la cambia: el GNOME de prueba (scripts/dev-shell.sh) y
-    scripts/simulate.py usan $XDG_RUNTIME_DIR/agent-notch-dev, para que las
-    sesiones de prueba no salgan en la isla del escritorio real.
+    AGENT_NOTCH_DIR changes it: the test GNOME (scripts/dev-shell.sh) and
+    scripts/simulate.py use $XDG_RUNTIME_DIR/agent-notch-dev, so the
+    test sessions do not show up on the real desktop's island.
     """
     override = os.environ.get("AGENT_NOTCH_DIR")
     if override:
@@ -46,11 +46,11 @@ def base_dir():
 
 
 def ensure_dir(sub):
-    """Crea <base>/<sub> (y <base>) con permisos 0700 y devuelve la ruta."""
+    """Creates <base>/<sub> (and <base>) with 0700 permissions and returns the path."""
     root = base_dir()
     path = os.path.join(root, sub)
-    # El padre (~/.cache en un usuario nuevo) puede no existir: con sus
-    # permisos normales, que no son cosa nuestra.
+    # The parent (~/.cache for a new user) may not exist: with its
+    # normal permissions, which are not our business.
     os.makedirs(os.path.dirname(root), exist_ok=True)
     for d in (root, path):
         try:
@@ -58,24 +58,24 @@ def ensure_dir(sub):
         except FileExistsError:
             pass
         else:
-            os.chmod(d, 0o700)  # mkdir aplica la umask; chmod no
+            os.chmod(d, 0o700)  # mkdir applies the umask; chmod does not
     return path
 
 
 def safe_name(text):
-    """Deja solo [A-Za-z0-9_-] para usarlo en un nombre de archivo."""
+    """Keeps only [A-Za-z0-9_-] to use it in a file name."""
     cleaned = _UNSAFE.sub("_", str(text or ""))[:_MAX_NAME]
     return cleaned or "desconocida"
 
 
 def session_path(agent, session_id):
-    """Ruta de sessions/<agente>-<sesion>.json, creando la carpeta."""
+    """Path of sessions/<agente>-<sesion>.json, creating the folder."""
     name = "%s-%s.json" % (safe_name(agent), safe_name(session_id))
     return os.path.join(ensure_dir("sessions"), name)
 
 
 def read_json(path):
-    """El objeto JSON de path, o {} si no existe, está roto o no es un objeto."""
+    """The JSON object at path, or {} if it does not exist, is broken or is not an object."""
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -85,12 +85,12 @@ def read_json(path):
 
 
 def write_json(path, data):
-    """Escribe data en path de forma atómica.
+    """Writes data to path atomically.
 
-    Primero en un temporal oculto de la misma carpeta (.<nombre>.<pid>.tmp,
-    único por proceso para que dos hooks a la vez no se pisen) y luego
-    os.replace: quien lee ve el archivo anterior o el nuevo, nunca uno a
-    medias. La extensión ignora los nombres que empiezan por punto.
+    First to a hidden temporary file in the same folder (.<name>.<pid>.tmp,
+    unique per process so two hooks at once do not step on each other) and then
+    os.replace: readers see the old file or the new one, never a
+    half-written one. The extension ignores names starting with a dot.
     """
     folder, name = os.path.split(path)
     tmp = os.path.join(folder, ".%s.%d.tmp" % (name, os.getpid()))
@@ -109,7 +109,7 @@ def write_json(path, data):
 
 
 def remove(path):
-    """Borra path; no pasa nada si ya no existe."""
+    """Removes path; nothing happens if it no longer exists."""
     try:
         os.unlink(path)
     except FileNotFoundError:

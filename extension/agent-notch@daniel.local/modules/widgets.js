@@ -1,4 +1,4 @@
-// Piezas de interfaz compartidas por los módulos.
+// Interface pieces shared by the modules.
 
 import Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
@@ -7,17 +7,17 @@ import Graphene from 'gi://Graphene';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
-// Barritas quietas: altura relativa (scale_y) en reposo.
+// Bars at rest: relative height (scale_y) when idle.
 const REST_SCALE = 0.35;
 
-/** Etiqueta de una línea que se corta con "…" si no cabe. */
+/** One-line label that is cut with "…" if it does not fit. */
 export function makeLabel(styleClass, params = {}) {
     const label = new St.Label({style_class: styleClass, ...params});
     label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
     return label;
 }
 
-/** Segundos → "m:ss" (o "h:mm:ss"; con padMinutes, "mm:ss"). */
+/** Seconds → "m:ss" (or "h:mm:ss"; with padMinutes, "mm:ss"). */
 export function formatTime(seconds, {padMinutes = false} = {}) {
     const s = Math.max(0, Math.floor(seconds));
     const h = Math.floor(s / 3600);
@@ -29,15 +29,15 @@ export function formatTime(seconds, {padMinutes = false} = {}) {
 }
 
 /**
- * Barra de progreso/uso: un fondo con un relleno de ancho proporcional.
+ * Progress/usage bar: a track with a fill of proportional width.
  *
- * El relleno se coloca en vfunc_allocate y la barra no pide tamaño según el
- * relleno (su ancho preferido es 0 + CSS; el alto sale del CSS).
- * ⚠️ NO cambiar el tamaño del relleno desde `notify::width`: el relleno
- * cambiaba el tamaño preferido de la barra, que cambiaba su ancho… y en las
- * tarjetas de Home (Sistema → Home) Clutter no salía nunca del bucle de
- * diseño: GNOME Shell entero se congelaba (13-11-2026).
- * ⚠️ Con Clutter.BinLayout + x_align START, GNOME 50 centraba el relleno.
+ * The fill is placed in vfunc_allocate and the bar does not ask for a size based on the
+ * fill (its preferred width is 0 + CSS; the height comes from the CSS).
+ * ⚠️ Do NOT resize the fill from `notify::width`: the fill
+ * changed the bar's preferred size, which changed its width… and in the
+ * Home cards (System → Home) Clutter never left the layout
+ * loop: the whole of GNOME Shell froze (13-11-2026).
+ * ⚠️ With Clutter.BinLayout + x_align START, GNOME 50 centered the fill.
  */
 export const Bar = GObject.registerClass(
 class Bar extends St.Widget {
@@ -86,10 +86,10 @@ class Bar extends St.Widget {
 });
 
 /**
- * Carátula como fondo: la imagen ocupa todo el ancho (cuadrada) y se recorta
- * arriba y abajo. El tamaño sale SOLO del CSS (width/height fijos y el
- * icon-size del icono igual al ancho), nunca del hijo: así no hay bucles de
- * diseño (ver Bar).
+ * Cover as background: the image takes the full width (square) and is cropped
+ * at the top and bottom. The size comes ONLY from the CSS (fixed width/height and the
+ * icon's icon-size equal to the width), never from the child: that way there are no layout
+ * loops (see Bar).
  */
 export const CoverBackdrop = GObject.registerClass(
 class CoverBackdrop extends St.Widget {
@@ -121,11 +121,11 @@ class CoverBackdrop extends St.Widget {
 });
 
 /**
- * Barra de progreso con una onda FIJA sobre la parte reproducida y un
- * círculo para arrastrar. Solo se redibuja cuando cambia la fracción (una
- * vez por segundo como mucho mientras suena), nunca por fotogramas.
- * Colores en CSS: -agent-notch-wave-color y -agent-notch-wave-track.
- * Emite 'seek' (fracción 0–1) al soltar tras un clic o un arrastre.
+ * Progress bar with a FIXED wave over the played part and a
+ * knob to drag. It only redraws when the fraction changes (at most
+ * once a second while playing), never per frame.
+ * Colors in CSS: -agent-notch-wave-color and -agent-notch-wave-track.
+ * Emits 'seek' (fraction 0–1) on release after a click or a drag.
  */
 export const WaveProgress = GObject.registerClass({
     Signals: {'seek': {param_types: [GObject.TYPE_DOUBLE]}},
@@ -214,8 +214,8 @@ export const WaveProgress = GObject.registerClass({
         const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
         const r = this._knobRadius();
         const lineWidth = 4 * scale;
-        const cy = h - r - scale;                 // la línea va abajo, la onda encima
-        const amp = Math.max(0, cy - r * 0.2);    // alto máximo de la onda
+        const cy = h - r - scale;                 // the line goes at the bottom, the wave above it
+        const amp = Math.max(0, cy - r * 0.2);    // maximum height of the wave
         const x0 = r;
         const x1 = w - r;
         const f = this._dragFraction ?? this._fraction;
@@ -227,7 +227,7 @@ export const WaveProgress = GObject.registerClass({
         cr.setLineCap(Cairo.LineCap.ROUND);
         cr.setLineWidth(lineWidth);
 
-        // Parte que queda.
+        // Remaining part.
         if (px < x1) {
             rgba(track);
             cr.moveTo(px, cy);
@@ -236,8 +236,8 @@ export const WaveProgress = GObject.registerClass({
         }
 
         if (px > x0) {
-            // Onda fija: una "colina" suave que sube y baja sobre la parte
-            // reproducida, con los extremos a ras de la línea.
+            // Fixed wave: a gentle "hill" that rises and falls over the
+            // played part, with its ends level with the line.
             const period = 110 * scale;
             const taper = 14 * scale;
             cr.moveTo(x0, cy);
@@ -257,7 +257,7 @@ export const WaveProgress = GObject.registerClass({
             cr.stroke();
         }
 
-        // Círculo: relleno del color con aro blanco.
+        // Knob: filled with the color, with a white ring.
         cr.arc(px, cy, r - 1.5 * scale, 0, 2 * Math.PI);
         rgba(color);
         cr.fillPreserve();
@@ -270,9 +270,9 @@ export const WaveProgress = GObject.registerClass({
 });
 
 /**
- * Barritas de ecualizador para la vista compacta. Animadas con ease() en
- * bucle SOLO mientras setAnimating(true) y GNOME no tenga "reducir
- * animaciones"; si no, quietas y bajas (sin ningún trabajo por fotograma).
+ * Equalizer bars for the compact view. Animated with ease() in a
+ * loop ONLY while setAnimating(true) and GNOME does not have "reduce
+ * animations"; otherwise still and low (no work at all per frame).
  */
 export const EqualizerBars = GObject.registerClass(
 class EqualizerBars extends St.BoxLayout {
@@ -282,7 +282,7 @@ class EqualizerBars extends St.BoxLayout {
             y_align: Clutter.ActorAlign.CENTER,
             ...params,
         });
-        // [altura máxima (escala), duración de medio ciclo en ms]
+        // [maximum height (scale), half-cycle duration in ms]
         this._specs = [[1, 430], [0.7, 560], [0.9, 350]];
         this._bars = this._specs.map(() => {
             const bar = new St.Widget({
@@ -343,34 +343,34 @@ class EqualizerBars extends St.BoxLayout {
     }
 });
 
-// Ajuste animar-ojos (docs/20): lo pone extension.js al crear la isla.
+// animar-ojos setting (docs/20): set by extension.js when creating the island.
 let eyeAnimations = true;
 
-/** Encender o apagar el parpadeo, pulso y destello de los ojos. */
+/** Turn the blink, pulse and flash of the eyes on or off. */
 export function setEyeAnimations(on) {
     eyeAnimations = Boolean(on);
 }
 
-/** ¿Animar los ojos? (ajuste de agent-notch y «reducir animaciones» de GNOME). */
+/** Animate the eyes? (agent-notch setting and GNOME's "reduce animations"). */
 export function eyesAnimate() {
     return eyeAnimations && St.Settings.get().enable_animations;
 }
 
-// Ojos: medidas en "unidades" (1/12 del alto), así valen a cualquier escala.
-const EYE_GAP = 9;          // del centro a cada ojo
-const EYE_R = 4;            // radio normal
-const EYE_R_WIDE = 5.5;     // muy abiertos
-const EYE_LOOK = 2;         // desplazamiento al mirar arriba o a la derecha
-const EYE_STROKE = 1.8;     // grosor de ^ ^ y × ×
-const BLINK_MS = 75;        // cada mitad del parpadeo
+// Eyes: sizes in "units" (1/12 of the height), so they work at any scale.
+const EYE_GAP = 9;          // from the center to each eye
+const EYE_R = 4;            // normal radius
+const EYE_R_WIDE = 5.5;     // wide open
+const EYE_LOOK = 2;         // offset when looking up or to the right
+const EYE_STROKE = 1.8;     // stroke of ^ ^ and × ×
+const BLINK_MS = 75;        // each half of the blink
 
 /**
- * Ojos con expresión (docs/09, aprobado el 19-11-2026): los de la mascota y
- * los que sustituyen al punto en Agentes. Dos ojos dibujados con Cairo según
- * `expression` (ver EYE_EXPRESSIONS en agentstate.js); el color es el `color`
- * CSS de su clase. Solo se repinta al cambiar de expresión o de estilo, nunca
- * por fotogramas. Al cambiar de expresión parpadea una vez (scale_y con
- * ease(), en la GPU), salvo con «reducir animaciones» o fuera de pantalla.
+ * Eyes with expression (docs/09, approved on 19-11-2026): the mascot's and
+ * the ones that replace the dot in Agents. Two eyes drawn with Cairo according to
+ * `expression` (see EYE_EXPRESSIONS in agentstate.js); the color is the CSS
+ * `color` of its class. It only repaints when the expression or the style changes, never
+ * per frame. When the expression changes it blinks once (scale_y with
+ * ease(), on the GPU), except with "reduce animations" or off screen.
  */
 export const Eyes = GObject.registerClass(
 class Eyes extends St.DrawingArea {
@@ -400,14 +400,14 @@ class Eyes extends St.DrawingArea {
             this.queue_repaint();
             return;
         }
-        // Se cierran, se pinta la forma nueva con el ojo cerrado y se abren.
+        // They close, the new shape is painted with the eye closed and they open.
         this.ease({
             scale_y: 0.1,
             duration: BLINK_MS,
             mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
                 if (gen !== this._blinkGen)
-                    return;   // lo sustituyó otro cambio
+                    return;   // replaced by another change
                 this.queue_repaint();
                 this.ease({
                     scale_y: 1,
@@ -455,7 +455,7 @@ class Eyes extends St.DrawingArea {
             cr.arc(cx, cy, EYE_R_WIDE * u, 0, 2 * Math.PI);
             cr.fill();
             break;
-        case 'entornados':   // óvalo aplastado, algo más abajo
+        case 'entornados':   // flattened oval, a bit lower
             cr.save();
             cr.translate(cx, cy + u);
             cr.scale(1, 0.4);

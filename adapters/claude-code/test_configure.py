@@ -1,4 +1,4 @@
-"""Pruebas de configure.py, lanzándolo como un usuario (proceso aparte).
+"""Tests for configure.py, running it like a user would (separate process).
 
     python3 -m unittest discover -s adapters/claude-code -v
 """
@@ -68,11 +68,11 @@ class ConfigureTest(unittest.TestCase):
         self.assertEqual(data["theme"], "dark")
         self.assertEqual(data["permissions"], {"allow": ["Bash(ls)"]})
         self.assertEqual(data["hooks"]["PreCompact"], [OTHER_HOOK])
-        # El otro hook sigue primero; el nuestro va detrás.
+        # The other hook stays first; ours goes after it.
         self.assertEqual(data["hooks"]["PreToolUse"][0], OTHER_HOOK)
         self.assertEqual(len(data["hooks"]["PreToolUse"]), 2)
         self.assertEqual(os.stat(self.settings).st_mode & 0o777, 0o644)
-        # Copia de seguridad con el contenido de antes.
+        # Backup copy with the previous content.
         with open(self.settings + ".agent-notch.bak", encoding="utf-8") as f:
             self.assertNotIn(configure.MARKER, f.read())
 
@@ -84,7 +84,7 @@ class ConfigureTest(unittest.TestCase):
         self.assertEqual(self.read(), before)
 
     def test_install_sustituye_otra_ruta(self):
-        # Un hook de agent-notch que apunta a otro sitio (p. ej. un repo clonado).
+        # An agent-notch hook that points elsewhere (e.g. a cloned repo).
         old = {"hooks": [{"type": "command",
                           "command": "exec python3 /repo/gnome-agent-notch/adapters/claude-code/hook.py"}]}
         self.write({"hooks": {"Stop": [OTHER_HOOK, old]}})
@@ -123,7 +123,7 @@ class ConfigureTest(unittest.TestCase):
         self.assertEqual(self.read(), {"theme": "dark"})
 
     def test_uninstall_solo_su_ruta(self):
-        # Desinstalar la copia instalada no quita el hook de un repo clonado.
+        # Uninstalling the installed copy does not remove a cloned repo's hook.
         self.run_cfg("install", "--hook", HOOK)
         self.run_cfg("uninstall", "--hook", "/otra/agent-notch/adapters/claude-code/hook.py")
         self.run_cfg("status")
@@ -142,10 +142,10 @@ class ConfigureTest(unittest.TestCase):
         with open(HOOK, encoding="utf-8") as src, open(other, "w", encoding="utf-8") as dst:
             dst.write(src.read())
         self.run_cfg("install")
-        self.run_cfg("install", "--hook", other)   # sustituye al anterior: otro cambio
+        self.run_cfg("install", "--hook", other)   # replaces the previous one: another change
         self.run_cfg("uninstall", "--hook", other)
         with open(bak, encoding="utf-8") as f:
-            self.assertEqual(json.load(f), original)   # no la pisan los cambios siguientes
+            self.assertEqual(json.load(f), original)   # later changes do not overwrite it
         self.assertEqual(self.read(), original)
 
     def test_original_vacio_con_datos_no_se_borra(self):
@@ -160,10 +160,10 @@ class ConfigureTest(unittest.TestCase):
         self.assertIn("was not in", p.stdout)
         self.assertFalse(os.path.exists(self.settings))
 
-    # --- el comando -------------------------------------------------------------
+    # --- the command -------------------------------------------------------------
 
     def test_comando_sin_hook_sale_con_0(self):
-        # Si hook.py desaparece, Claude Code no debe ver un 2 (= bloquear).
+        # If hook.py goes missing, Claude Code must not see a 2 (= block).
         cmd = configure.hook_command(os.path.join(self.tmp.name, "borrado", "hook.py"))
         p = subprocess.run(["sh", "-c", cmd], input=b"{}", capture_output=True, timeout=10)
         self.assertEqual(p.returncode, 0)
@@ -181,7 +181,7 @@ class ConfigureTest(unittest.TestCase):
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         self.assertEqual(data["estado"], "pensando")
-        # Gracias a `exec`, el padre de hook.py es quien lanzó `sh` (este test).
+        # Thanks to `exec`, hook.py's parent is whoever launched `sh` (this test).
         self.assertEqual(data["pid"], os.getpid())
 
     def test_comando_con_espacios(self):

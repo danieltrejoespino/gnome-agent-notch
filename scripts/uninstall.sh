@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Desinstala agent-notch: deja el equipo como antes de scripts/install.sh.
+# Uninstalls agent-notch: leaves the machine as it was before scripts/install.sh.
 #
 #   ~/.local/share/agent-notch/uninstall.sh
 #   curl -fsSL https://raw.githubusercontent.com/danieltrejoespino/gnome-agent-notch/main/scripts/uninstall.sh | bash
@@ -15,8 +15,8 @@ main() {
 
     say() { printf '\033[1m[agent-notch]\033[0m %s\n' "$*"; }
 
-    # Desactivar: primero en la sesión en marcha y, por si GNOME no la
-    # conoce, quitándola de la lista de extensiones activas.
+    # Disable: first in the running session and, in case GNOME does not
+    # know it, by removing it from the list of enabled extensions.
     gnome-extensions disable "$UUID" 2>/dev/null || true
     if command -v gsettings >/dev/null; then
         local list new
@@ -36,22 +36,22 @@ main() {
         say "Removed $EXT_DIR"
     fi
 
-    # Quitar el hook de Claude Code ANTES de borrar hook.py (el de un repo
-    # clonado, si lo hay, se deja). Si quedara, su comando sale con 0 al no
-    # encontrar hook.py, pero mejor no dejar restos.
+    # Remove the Claude Code hook BEFORE deleting hook.py (a cloned repo's
+    # one, if any, is left alone). If it stayed, its command exits with 0 when it does not
+    # find hook.py, but better not to leave leftovers.
     local configure="$APP_DIR/adapters/claude-code/configure.py"
     if [ -f "$configure" ]; then
         python3 -I "$configure" uninstall ||
             say "Could not remove the Claude Code hook: check ~/.claude/settings.json"
     fi
-    # Plugin de OpenCode (solo el cargador que apunta a esta copia).
+    # OpenCode plugin (only the loader that points to this copy).
     configure="$APP_DIR/adapters/opencode/configure.py"
     if [ -f "$configure" ]; then
         python3 -I "$configure" uninstall ||
             say "Could not remove the OpenCode plugin: check ~/.config/opencode/plugins/agent-notch.js"
     fi
 
-    # Aviso de versión nueva (systemd del usuario).
+    # New-version notice (user systemd).
     local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
     if [ -f "$UNIT_DIR/agent-notch-update.timer" ]; then
         systemctl --user disable --now agent-notch-update.timer >/dev/null 2>&1 || true
@@ -61,7 +61,7 @@ main() {
         say "Removed the new-version notice."
     fi
     rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/agent-notch"
-    # Ajustes de la ventana de preferencias (docs/20).
+    # Settings of the preferences window (docs/20).
     dconf reset -f /org/gnome/shell/extensions/agent-notch/ 2>/dev/null || true
 
     rm -f "$DBUS_DIR/dev.agentnotch.SpeedTest.service" \
@@ -69,8 +69,8 @@ main() {
           "$DBUS_DIR/dev.agentnotch.Updater.service"
     say "Removed the D-Bus services."
 
-    # $APP_DIR también guarda los fijados del portapapeles; el temporizador
-    # de concentración deja su estado en la carpeta temporal de la sesión.
+    # $APP_DIR also keeps the clipboard's pinned items; the focus
+    # timer leaves its state in the session's temporary folder.
     local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch"
     rm -rf "$APP_DIR" "$runtime"
     say "Removed $APP_DIR"

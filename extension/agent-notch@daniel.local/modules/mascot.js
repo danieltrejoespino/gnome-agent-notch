@@ -1,11 +1,11 @@
-// Módulo Mascota: un par de ojos en la isla en reposo (cuando ningún otro
-// módulo tiene nada que mostrar). Ver docs/13-rediseno.md (etapa D4) y
-// docs/09 (ojos con expresión, aprobado el 19-11-2026).
+// Mascot module: a pair of eyes on the island at rest (when no other
+// module has anything to show). See docs/13-rediseno.md (stage D4) and
+// docs/09 (eyes with expression, approved on 19-11-2026).
 //
-// Diseño propio (no el de Coucou/Mochi, que no está bajo licencia MIT).
-// Abiertos sin agentes; entornados si solo hay sesiones esperando. Con una
-// versión nueva de agent-notch, un puntito azul fijo al lado (docs/18).
-// Reacciona a la señal `changed` de Agentes y Actualización: sin temporizadores.
+// Our own design (not Coucou/Mochi's, which is not under the MIT license).
+// Open without agents; half-closed if there are only waiting sessions. With a
+// new agent-notch version, a fixed blue dot next to them (docs/18).
+// Reacts to the `changed` signal of Agents and Update: no timers.
 
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
@@ -14,7 +14,7 @@ import St from 'gi://St';
 import {NotchModule} from './module.js';
 import {Eyes} from './widgets.js';
 
-const PRIORITY = -100;   // solo si no hay nada más
+const PRIORITY = -100;   // only if there is nothing else
 
 export const MascotModule = GObject.registerClass(
 class MascotModule extends NotchModule {
@@ -40,8 +40,8 @@ class MascotModule extends NotchModule {
         this._sync();
     }
 
-    // Si Agentes tiene algo en marcha, su vista tapa a la mascota; aquí
-    // solo queda el caso de sesiones que esperan.
+    // If Agents has something running, its view covers the mascot; here
+    // only the case of waiting sessions is left.
     _sync() {
         const waiting = this._agents?.hasExpanded ?? false;
         this._eyes.setExpression(waiting ? 'entornados' : 'abiertos', {animate: this.compactVisible});
@@ -56,7 +56,7 @@ class MascotModule extends NotchModule {
         return true;
     }
 
-    // Es la vista "de reposo": la isla mantiene su tamaño mínimo.
+    // It is the "resting" view: the island keeps its minimal size.
     get minimal() {
         return true;
     }

@@ -1,17 +1,17 @@
-// Panel grande con pestañas (docs/13-rediseno.md, etapa D3).
+// Large panel with tabs (docs/13-rediseno.md, stage D3).
 //
-//   VIE 13 NOV
+//   FRI 13 NOV
 //   ┌──────────────────────────────┐
-//   │  página actual               │   Home: reloj grande + tarjetas
-//   └──────────────────────────────┘   Música, Sistema…: página del módulo
-//   [⌂ HOME] [♪] [▤]                    pestañas
+//   │  current page                │   Home: big clock + cards
+//   └──────────────────────────────┘   Music, System…: the module's page
+//   [⌂ HOME] [♪] [▤]                    tabs
 //
-// La isla lo crea la primera vez que se hace clic y llama a open()/close().
+// The island creates it on the first click and calls open()/close().
 //
-// Consumo: con el panel cerrado no hace nada. Abierto, el reloj es el de
-// GNOME (GnomeDesktop.WallClock: avisa una vez por minuto y respeta el
-// formato 12/24 h de Ajustes); cada módulo trabaja solo mientras su vista
-// se ve (setHomeVisible / setPageVisible).
+// Cost: with the panel closed it does nothing. Open, the clock is GNOME's
+// (GnomeDesktop.WallClock: it notifies once a minute and follows the
+// 12/24 h format from Settings); each module only works while its view
+// is visible (setHomeVisible / setPageVisible).
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -20,11 +20,11 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 const HOME = 'home';
-const HOME_COLUMNS = 2;   // tarjetas de Home por fila (docs/09)
+const HOME_COLUMNS = 2;   // Home cards per row (docs/09)
 
 const byPriority = (a, b) => b.priority - a.priority;
 
-// Saca un actor de su padre actual (si lo tiene) para poder ponerlo en otro.
+// Takes an actor out of its current parent (if any) so it can go into another.
 function detach(actor) {
     actor.get_parent()?.remove_child(actor);
 }
@@ -39,21 +39,21 @@ export const NotchPanel = GObject.registerClass({
             x_expand: true,
         });
 
-        this._modules = modules;   // la lista de la isla (no se copia)
+        this._modules = modules;   // the island's list (not copied)
         this._currentKey = HOME;
-        this._shownModule = null;  // módulo cuya página/tarjetas se ven
+        this._shownModule = null;  // module whose page/cards are visible
         this._homeModules = [];
         this._isOpen = false;
         this._clock = null;
-        this._home = null;         // se crea al primer uso
+        this._home = null;         // created on first use
         this._tabs = new Map();    // key -> {button, label}
-        this._extraActors = null;  // actores de los módulos al final de las pestañas
+        this._extraActors = null;  // module actors at the end of the tabs
 
-        // Cabecera: fecha.
+        // Header: date.
         this._date = new St.Label({style_class: 'agent-notch-panel-date'});
         this.add_child(this._date);
 
-        // Página actual.
+        // Current page.
         this._pageBin = new St.Bin({
             style_class: 'agent-notch-panel-page',
             x_expand: true,
@@ -62,7 +62,7 @@ export const NotchPanel = GObject.registerClass({
         });
         this.add_child(this._pageBin);
 
-        // Pestañas.
+        // Tabs.
         this._tabBar = new St.BoxLayout({
             style_class: 'agent-notch-tabs',
             x_align: Clutter.ActorAlign.CENTER,
@@ -76,12 +76,12 @@ export const NotchPanel = GObject.registerClass({
         return this._isOpen;
     }
 
-    /** Página actual: HOME o el módulo cuya página se ve. */
+    /** Current page: HOME or the module whose page is visible. */
     get currentKey() {
         return this._currentKey;
     }
 
-    /** Ir a la página de un módulo (o a HOME); si está cerrado, al abrir. */
+    /** Go to a module's page (or HOME); if closed, when it opens. */
     selectPage(key) {
         if (this._isOpen)
             this._showPage(key);
@@ -114,15 +114,15 @@ export const NotchPanel = GObject.registerClass({
         this._clock = null;
     }
 
-    // --- Pestañas -------------------------------------------------------------
+    // --- Tabs -------------------------------------------------------------
 
     _pageModules() {
         return this._modules.filter(m => m.pageTitle).sort(byPriority);
     }
 
     _buildTabs() {
-        // Los módulos no cambian mientras la extensión está activa: se
-        // construyen una vez.
+        // The modules do not change while the extension is enabled: they are
+        // built once.
         if (this._tabs.size > 0)
             return;
 
@@ -130,7 +130,7 @@ export const NotchPanel = GObject.registerClass({
         for (const module of this._pageModules())
             this._addTab(module, module.pageTitle, module.pageIcon);
 
-        // Lo que los módulos añaden al final (p. ej. «Actualizar», docs/18).
+        // What the modules add at the end (e.g. "Update", docs/18).
         this._extraActors = this._modules.map(m => m.tabBarActor).filter(Boolean);
         for (const actor of this._extraActors)
             this._tabBar.add_child(actor);
@@ -158,7 +158,7 @@ export const NotchPanel = GObject.registerClass({
         this._tabs.set(key, {button, label});
     }
 
-    // --- Páginas --------------------------------------------------------------
+    // --- Pages --------------------------------------------------------------
 
     _showPage(key) {
         if (!this._isOpen)
@@ -207,9 +207,9 @@ export const NotchPanel = GObject.registerClass({
         });
         home.add_child(this._bigClock);
 
-        // Cuadrícula de 2 columnas iguales (docs/09, revisión del 19-11-2026):
-        // con el ancho fijo del panel no caben 4 tarjetas en una fila. Filas
-        // con `homogeneous` (columnas alineadas); se crean una vez.
+        // Grid of 2 equal columns (docs/09, review of 19-11-2026):
+        // with the panel's fixed width 4 cards do not fit in one row. Rows
+        // with `homogeneous` (aligned columns); created once.
         this._cards = new St.BoxLayout({
             style_class: 'agent-notch-home-cards',
             orientation: Clutter.Orientation.VERTICAL,
@@ -226,8 +226,8 @@ export const NotchPanel = GObject.registerClass({
         this._pageBin.set_child(this._home);
         this._updateClock();
 
-        // Tarjetas de los módulos, por prioridad (los actores son de los
-        // módulos: se reutilizan, no se recrean).
+        // Module cards, by priority (the actors belong to the
+        // modules: reused, not recreated).
         this._clearCards();
         this._homeModules = this._modules.filter(m => m.homeCard).sort(byPriority);
         this._homeModules.forEach((module, i) => {
@@ -251,14 +251,14 @@ export const NotchPanel = GObject.registerClass({
         return row;
     }
 
-    // Suelta las tarjetas (son de los módulos) y quita las filas del panel.
+    // Releases the cards (they belong to the modules) and removes the panel's rows.
     _clearCards() {
         for (const row of this._cardRows ?? [])
             row.remove_all_children();
         this._cards?.remove_all_children();
     }
 
-    // --- Reloj y fecha ----------------------------------------------------------
+    // --- Clock and date ----------------------------------------------------------
 
     _updateClock() {
         if (!this._clock)
@@ -270,11 +270,11 @@ export const NotchPanel = GObject.registerClass({
             this._date.text = date;
     }
 
-    // Señal 'destroy' (no un destroy() sobrescrito: Clutter no lo llama al
-    // destruir a los hijos de la isla).
+    // 'destroy' signal (not an overridden destroy(): Clutter does not call it when
+    // destroying the island's children).
     _onDestroy() {
         this.close();
-        // Soltar los actores de los módulos: son de ellos, no del panel.
+        // Release the modules' actors: they are theirs, not the panel's.
         this._pageBin.set_child(null);
         for (const actor of this._extraActors ?? [])
             this._tabBar.remove_child(actor);

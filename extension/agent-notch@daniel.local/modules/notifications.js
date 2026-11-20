@@ -1,18 +1,18 @@
-// Módulo Notificaciones: muestra en la isla, como un banner, las
-// notificaciones que GNOME mostraría como aviso emergente.
-// Ver docs/13-rediseno.md (etapa D2).
+// Notifications module: shows on the island, as a banner, the
+// notifications GNOME would show as a popup.
+// See docs/13-rediseno.md (stage D2).
 //
-// - Escucha `notification-request-banner` de cada fuente: la misma señal que
-//   usa GNOME, con sus mismos filtros (No molestar, apps silenciadas,
-//   urgencia baja). Las notificaciones siguen apareciendo en el calendario.
-// - Mientras está activo, oculta los avisos de GNOME (`bannerBlocked`), que
-//   saldrían en el mismo sitio. disable() lo deja como estaba.
-// - Al mostrar una notificación hace lo mismo que GNOME: la marca como vista
-//   (`acknowledged`) y reproduce su sonido.
+// - Listens to each source's `notification-request-banner`: the same signal
+//   GNOME uses, with the same filters (Do Not Disturb, muted apps,
+//   low urgency). Notifications still show up in the calendar.
+// - While active, it hides GNOME's popups (`bannerBlocked`), which
+//   would show in the same place. disable() leaves it as it was.
+// - When showing a notification it does the same as GNOME: marks it as seen
+//   (`acknowledged`) and plays its sound.
 //
-// Consumo: por eventos. El único temporizador es el que oculta el banner,
-// y solo existe mientras hay uno en pantalla. El color de cada app se
-// calcula una vez (icono de 16 px) y se guarda.
+// Cost: event-driven. The only timer is the one that hides the banner,
+// and it only exists while one is on screen. Each app's color is
+// computed once (16 px icon) and stored.
 
 import Clutter from 'gi://Clutter';
 import GdkPixbuf from 'gi://GdkPixbuf';
@@ -27,8 +27,8 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import {NotchModule} from './module.js';
 
-const PRIORITY = 100;            // un banner gana a todo
-const SHOW_MS = 5000;            // tiempo en pantalla (las críticas: hasta el clic)
+const PRIORITY = 100;            // a banner beats everything
+const SHOW_MS = 5000;            // time on screen (critical ones: until clicked)
 const RESUME_AFTER_HOVER_MS = 2000;
 const FALLBACK_ICON = 'preferences-system-notifications-symbolic';
 const MAX_COLOR_CACHE = 64;
@@ -39,10 +39,10 @@ function makeLabel(styleClass, xExpand = false) {
     return label;
 }
 
-// Color "de marca" de un icono: el tono dominante. Agrupa los píxeles en
-// 12 tonos, dando más peso a los saturados y opacos (ignora blancos, negros
-// y transparentes), y devuelve la media del grupo con más peso. Así un
-// icono de varios colores (p. ej. Chrome) no da un marrón mezclado.
+// "Brand" color of an icon: the dominant hue. Groups the pixels into
+// 12 hues, giving more weight to saturated and opaque ones (ignores whites, blacks
+// and transparent ones), and returns the average of the heaviest group. That way a
+// multicolored icon (e.g. Chrome) does not give a muddy brown.
 function averageIconColor(pixbuf) {
     const n = pixbuf.get_n_channels();
     if (n < 3)
@@ -78,7 +78,7 @@ function averageIconColor(pixbuf) {
         }
     }
     const best = sums.reduce((a, b) => (b.w > a.w ? b : a));
-    if (best.w < 0.5)   // icono gris/monocromo: sin color propio
+    if (best.w < 0.5)   // gray/monochrome icon: no color of its own
         return null;
     return {
         red: Math.round(best.r / best.w),
@@ -87,13 +87,13 @@ function averageIconColor(pixbuf) {
     };
 }
 
-// Color estable a partir de un texto (para apps sin icono de color).
+// Stable color from a text (for apps without a colored icon).
 function hashColor(text) {
     const palette = [
         {red: 96, green: 165, blue: 250},   // azul
         {red: 167, green: 139, blue: 250},  // violeta
         {red: 52, green: 211, blue: 153},   // verde
-        {red: 251, green: 191, blue: 36},   // ámbar
+        {red: 251, green: 191, blue: 36},   // amber
         {red: 244, green: 114, blue: 182},  // rosa
         {red: 45, green: 212, blue: 191},   // turquesa
     ];
@@ -112,12 +112,12 @@ class NotificationsModule extends NotchModule {
         this._current = null;
         this._accent = null;
         this._timeoutId = 0;
-        this._banner = null;        // se crea con la primera notificación
+        this._banner = null;        // created with the first notification
         this._colors = new Map();   // app -> color
         this._iconTheme = null;
 
-        // Ocultar los avisos de GNOME mientras la isla los sustituye.
-        // (MessageTray solo tiene setter público: se lee el campo interno.)
+        // Hide GNOME's popups while the island replaces them.
+        // (MessageTray only has a public setter: the internal field is read.)
         this._previousBannerBlocked = Main.messageTray._bannerBlocked ?? false;
         Main.messageTray.bannerBlocked = true;
 
@@ -145,7 +145,7 @@ class NotificationsModule extends NotchModule {
             (_source, notification) => this._onRequestBanner(notification), this);
     }
 
-    // Mismos filtros que MessageTray._onNotificationRequestBanner (GNOME 50).
+    // Same filters as MessageTray._onNotificationRequestBanner (GNOME 50).
     _onRequestBanner(notification) {
         if (notification.acknowledged)
             return;
@@ -155,7 +155,7 @@ class NotificationsModule extends NotchModule {
             notification.urgency !== MessageTray.Urgency.CRITICAL)
             return;
 
-        // Se actualizó la que está en pantalla: refrescar y alargar el tiempo.
+        // The one on screen was updated: refresh it and extend its time.
         if (notification === this._current) {
             this._fill(notification);
             this._startTimer(SHOW_MS);
@@ -184,7 +184,7 @@ class NotificationsModule extends NotchModule {
             const notification = this._current;
             this._buildBanner();
             this._fill(notification);
-            // Igual que GNOME al mostrar un aviso.
+            // Same as GNOME when showing a popup.
             notification.acknowledged = true;
             notification.playSound();
             if (notification.urgency !== MessageTray.Urgency.CRITICAL)
@@ -194,7 +194,7 @@ class NotificationsModule extends NotchModule {
         this.emit('changed');
     }
 
-    // Termina la notificación en pantalla y pasa a la siguiente.
+    // Ends the notification on screen and moves on to the next one.
     _dismissCurrent({activate = false} = {}) {
         const notification = this._current;
         if (!notification)
@@ -220,7 +220,7 @@ class NotificationsModule extends NotchModule {
         }
     }
 
-    // --- Temporizador -----------------------------------------------------
+    // --- Timer -----------------------------------------------------
 
     _startTimer(ms) {
         this._clearTimer();
@@ -238,7 +238,7 @@ class NotificationsModule extends NotchModule {
         }
     }
 
-    // Con el ratón encima el banner no se va (como en GNOME).
+    // With the pointer over it the banner does not go away (like in GNOME).
     _onBannerHover() {
         if (!this._current || this._current.urgency === MessageTray.Urgency.CRITICAL)
             return;
@@ -248,9 +248,9 @@ class NotificationsModule extends NotchModule {
             this._startTimer(RESUME_AFTER_HOVER_MS);
     }
 
-    // --- Vista ------------------------------------------------------------
+    // --- View ------------------------------------------------------------
 
-    // Icono · Título ··· App
+    // Icon · Title ··· App
     //         Mensaje
     _buildBanner() {
         if (this._banner)
@@ -294,8 +294,8 @@ class NotificationsModule extends NotchModule {
 
     _fill(notification) {
         const source = notification.source;
-        // Si el icono no existe en el tema (p. ej. una app snap cuyo icono no
-        // está instalado), usar el genérico: si no, St muestra uno de "roto".
+        // If the icon does not exist in the theme (e.g. a snap app whose icon is not
+        // installed), use the generic one: otherwise St shows a "broken" one.
         let gicon = notification.gicon ?? source?.icon ?? null;
         if (!this._iconExists(gicon))
             gicon = null;
@@ -322,7 +322,7 @@ class NotificationsModule extends NotchModule {
         this._accent = this._colorFor(source?.title ?? '', gicon);
     }
 
-    // --- Color por app ------------------------------------------------------
+    // --- Color per app ------------------------------------------------------
 
     _colorFor(appName, gicon) {
         const key = `${appName}|${gicon?.to_string() ?? ''}`;
@@ -340,7 +340,7 @@ class NotificationsModule extends NotchModule {
     _iconExists(gicon) {
         if (!gicon)
             return false;
-        // Archivos e imágenes en memoria: se dan por buenos.
+        // Files and in-memory images: taken as valid.
         if (!(gicon instanceof Gio.ThemedIcon))
             return true;
         try {
@@ -382,7 +382,7 @@ class NotificationsModule extends NotchModule {
         this._current = null;
         this._queue = [];
 
-        // Las que quedaron sin mostrar las mostrará GNOME como siempre.
+        // The ones left unshown will be shown by GNOME as always.
         Main.messageTray.bannerBlocked = this._previousBannerBlocked;
 
         this._banner?.destroy();

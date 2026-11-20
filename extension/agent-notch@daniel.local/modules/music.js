@@ -1,22 +1,22 @@
-// Módulo Música: muestra lo que suena en cualquier reproductor MPRIS.
-// Ver docs/11-modulo-musica.md y docs/13-rediseno.md (D3).
+// Music module: shows what is playing on any MPRIS player.
+// See docs/11-modulo-musica.md and docs/13-rediseno.md (D3).
 //
-// Vistas (cada una se crea la primera vez que se usa):
-//   - compacta:  carátula mini (o icono de la app) · Título — Artista ·
-//     barritas (animadas SOLO si suena y la compacta se ve)
-//   - expandida (hover, M4): tarjeta con la carátula de fondo oscurecida,
-//     salida de audio, icono · Título • Artista, barra con onda fija que se
-//     puede arrastrar, tiempos y 🔀 ⏮ ⏯ ⏭ 🔁
-//   - tarjeta de Home: carátula mini · título · artista · ⏯
-//   - página:    carátula grande fundida con el panel, barra de progreso
+// Views (each one is created the first time it is used):
+//   - compact:  mini cover (or the app icon) · Title — Artist ·
+//     bars (animated ONLY while playing and the compact view is visible)
+//   - expanded (hover, M4): card with the darkened cover as background,
+//     audio output, icon · Title • Artist, bar with a fixed wave that can be
+//     dragged, times and 🔀 ⏮ ⏯ ⏭ 🔁
+//   - Home card: mini cover · title · artist · ⏯
+//   - page:    big cover blended into the panel, progress bar
 //
-// Consumo: sin sondeo. Solo reacciona a las señales de los reproductores y
-// reutiliza el lector MPRIS que ya tiene abierto el calendario de GNOME.
-// La barra de progreso es la única excepción: avanza con un temporizador de
-// 1 s SOLO con la página o el hover visibles y la música sonando, y se
-// sincroniza con el reproductor (una llamada D-Bus) cada 5 s o al cambiar de
-// canción. Aleatorio, repetir y la salida de audio solo se leen y escuchan
-// mientras se ve el hover.
+// Cost: no polling. It only reacts to the players' signals and
+// reuses the MPRIS reader that GNOME's calendar already has open.
+// The progress bar is the only exception: it advances with a 1 s timer
+// ONLY with the page or the hover visible and music playing, and it
+// syncs with the player (one D-Bus call) every 5 s or when the song
+// changes. Shuffle, repeat and the audio output are only read and listened to
+// while the hover is visible.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -38,11 +38,11 @@ const RESYNC_EVERY_TICKS = 5;
 const MPRIS_PATH = '/org/mpris/MediaPlayer2';
 const PLAYER_IFACE = 'org.mpris.MediaPlayer2.Player';
 const PROPS_IFACE = 'org.freedesktop.DBus.Properties';
-// Orden al pulsar 🔁: no repetir → toda la lista → una canción.
+// Order when pressing 🔁: no repeat → whole list → one song.
 const LOOP_NEXT = {None: 'Playlist', Playlist: 'Track', Track: 'None'};
 
-// Al cerrarse un reproductor, GNOME anula su proxy un instante antes de
-// emitir 'player-removed': leer sus propiedades entonces lanzaría un error.
+// When a player closes, GNOME clears its proxy a moment before
+// emitting 'player-removed': reading its properties then would throw an error.
 function safe(read, fallback) {
     try {
         return read();
@@ -55,24 +55,24 @@ function isPlaying(player) {
     return safe(() => player.status === 'Playing', false);
 }
 
-// Duración de la pista en µs (0 si el reproductor no la da).
-// ⚠️ Interno de GNOME 50: MprisPlayer no la expone; se lee del proxy.
+// Track length in µs (0 if the player does not give it).
+// ⚠️ GNOME 50 internal: MprisPlayer does not expose it; it is read from the proxy.
 function trackLength(player) {
     return safe(() => Number(player._playerProxy?.Metadata?.['mpris:length']?.deepUnpack() ?? 0), 0);
 }
 
-// trackid de la pista (para SetPosition). ⚠️ Interno de GNOME 50: del proxy.
+// trackid of the track (for SetPosition). ⚠️ GNOME 50 internal: from the proxy.
 function trackId(player) {
     return safe(() => player._playerProxy?.Metadata?.['mpris:trackid']?.deepUnpack() ?? null, null);
 }
 
-// Partes de una vista; update() rellena las que existan.
+// Parts of a view; update() fills in the ones that exist.
 class TrackView {
     constructor({actor, cover = null, title = null, artist = null, player = null,
         playIcon = null, prev = null, next = null, appIcon = null, dot = null,
         coverLayers = null}) {
-        // coverLayers: capas que solo tienen sentido con carátula (la
-        // carátula misma incluida); sin carátula se ocultan.
+        // coverLayers: layers that only make sense with a cover (the
+        // cover itself included); without a cover they are hidden.
         Object.assign(this, {actor, cover, title, artist, player, playIcon, prev, next,
             appIcon, dot, coverLayers});
         this.coverUrl = null;
@@ -98,7 +98,7 @@ class TrackView {
                 this.appIcon.icon_name = FALLBACK_ICON;
         }
 
-        // La carátula solo se vuelve a cargar si cambia la URL.
+        // The cover is only reloaded if the URL changes.
         if (this.cover) {
             const url = current?.trackCoverUrl || '';
             if (url !== this.coverUrl) {
@@ -137,32 +137,32 @@ class MusicModule extends NotchModule {
     _init() {
         super._init();
 
-        // player -> {playing, order}; `order` crece cada vez que un
-        // reproductor empieza a sonar, para elegir el más reciente.
+        // player -> {playing, order}; `order` grows every time a
+        // player starts playing, to pick the most recent one.
         this._players = new Map();
         this._order = 0;
         this._current = null;
-        // Reproductor elegido a mano en el hover: {player, order}. Manda
-        // hasta que otro empiece a sonar después de elegirlo.
+        // Player picked by hand in the hover: {player, order}. It rules
+        // until another one starts playing after it was picked.
         this._manual = null;
         this._playerButtons = new Map();   // player -> St.Button (hover)
         this._compactCoverUrl = null;
 
-        this._exp = null;       // TrackView, se crean al primer uso
+        this._exp = null;       // TrackView, created on first use
         this._card = null;
         this._page = null;
 
-        // Progreso (solo con la página o el hover visibles). Cada vista con
-        // barra: {box, bar, elapsed, end, total}; `total` = mostrar la
-        // duración (hover) en lugar de lo que falta (página).
+        // Progress (only with the page or the hover visible). Each view with a
+        // bar: {box, bar, elapsed, end, total}; `total` = show the
+        // length (hover) instead of the time left (page).
         this._progressViews = [];
         this._positionUs = 0;
         this._ticks = 0;
         this._tickId = 0;
         this._positionCancellable = null;
 
-        // Aleatorio / repetir (solo con el hover visible). null = el
-        // reproductor no lo admite (se oculta el botón).
+        // Shuffle / repeat (only with the hover visible). null = the
+        // player does not support it (the button is hidden).
         this._shuffle = null;
         this._loop = null;
         this._extrasPlayer = null;
@@ -172,8 +172,8 @@ class MusicModule extends NotchModule {
 
         this._buildCompact();
 
-        // ⚠️ Interno de GNOME 50: el lector del calendario. Si cambia de
-        // sitio en otra versión, creamos uno propio (un poco más de memoria).
+        // ⚠️ GNOME 50 internal: the calendar's reader. If it moves
+        // in another version, we create our own (a bit more memory).
         this._source =
             Main.panel.statusArea.dateMenu?._messageList?._messageView?._mediaSource ??
             new MprisSource();
@@ -231,7 +231,7 @@ class MusicModule extends NotchModule {
         return 'folder-music-symbolic';
     }
 
-    // --- Construcción de vistas --------------------------------------------
+    // --- Building the views --------------------------------------------
 
     _buildCompact() {
         this._compact = new St.BoxLayout({
@@ -257,7 +257,7 @@ class MusicModule extends NotchModule {
         this._syncBars();
     }
 
-    // Barritas animadas solo si suena y la compacta se ve.
+    // Animated bars only while playing and the compact view is visible.
     _syncBars() {
         this._bars?.setAnimating(this.compactVisible &&
             this._current !== null && isPlaying(this._current));
@@ -291,14 +291,14 @@ class MusicModule extends NotchModule {
             child: cover,
             y_align: Clutter.ActorAlign.CENTER,
         });
-        // Clic en la carátula: abrir el reproductor.
+        // Click on the cover: open the player.
         button.connect('clicked', () => this._current?.raise());
         return [button, cover];
     }
 
-    // Tarjeta del hover: carátula de fondo oscurecida y, encima,
-    //   salida de audio ·································· abrir reproductor
-    //               icono · Título • Artista
+    // Hover card: darkened cover as background and, on top,
+    //   audio output ·································· open player
+    //               icon · Title • Artist
     //   ～～～～～～～～～～●─────────────────────────
     //   01:01                                                     03:18
     //            🔀      ⏮      ⏯      ⏭      🔁
@@ -308,7 +308,7 @@ class MusicModule extends NotchModule {
             layout_manager: new Clutter.BinLayout(),
         });
 
-        // Capas: carátula · oscurecido · bordes fundidos con la isla · contenido.
+        // Layers: cover · darkening · edges blended with the island · content.
         const backdrop = new CoverBackdrop({
             style_class: 'agent-notch-music-hero-backdrop',
             x_expand: true,
@@ -348,7 +348,7 @@ class MusicModule extends NotchModule {
         });
         actor.add_child(content);
 
-        // Arriba: salida de audio · abrir reproductor.
+        // Top: audio output · open player.
         const top = new St.BoxLayout({style_class: 'agent-notch-music-hero-top', x_expand: true});
         this._outputBox = new St.BoxLayout({
             style_class: 'agent-notch-music-hero-output-box',
@@ -365,8 +365,8 @@ class MusicModule extends NotchModule {
         this._outputBox.add_child(this._outputIcon);
         this._outputBox.add_child(this._outputLabel);
         top.add_child(this._outputBox);
-        top.add_child(new St.Widget({x_expand: true}));   // empuja lo demás a la derecha
-        // Varios reproductores: un icono por cada uno para elegir cuál ver.
+        top.add_child(new St.Widget({x_expand: true}));   // pushes the rest to the right
+        // Several players: one icon each to pick which one to see.
         this._playersBox = new St.BoxLayout({
             style_class: 'agent-notch-music-hero-players',
             y_align: Clutter.ActorAlign.CENTER,
@@ -382,7 +382,7 @@ class MusicModule extends NotchModule {
         top.add_child(raise);
         content.add_child(top);
 
-        // Icono de la app · Título • Artista
+        // App icon · Title • Artist
         const line = new St.BoxLayout({
             style_class: 'agent-notch-music-hero-line',
             x_align: Clutter.ActorAlign.CENTER,
@@ -405,7 +405,7 @@ class MusicModule extends NotchModule {
         line.add_child(artist);
         content.add_child(line);
 
-        // Onda + tiempos.
+        // Wave + times.
         const progressBox = new St.BoxLayout({
             style_class: 'agent-notch-music-hero-progress',
             orientation: Clutter.Orientation.VERTICAL,
@@ -448,7 +448,7 @@ class MusicModule extends NotchModule {
         return this._exp;
     }
 
-    // Botón pequeño (🔀 / 🔁 / abrir): se ilumina con la clase `on`.
+    // Small button (🔀 / 🔁 / open): lights up with the `on` class.
     _extraButton(iconName, action) {
         const icon = new St.Icon({icon_name: iconName});
         const button = new St.Button({
@@ -462,7 +462,7 @@ class MusicModule extends NotchModule {
         return [button, icon];
     }
 
-    // Tarjeta de Home: carátula mini · título/artista · ⏯
+    // Home card: mini cover · title/artist · ⏯
     _buildCard() {
         const actor = new St.BoxLayout({style_class: 'agent-notch-card agent-notch-music-card'});
         const [coverButton, cover] = this._coverButton(
@@ -488,12 +488,12 @@ class MusicModule extends NotchModule {
         return new TrackView({actor, cover, title, artist, playIcon});
     }
 
-    // Página: carátula grande que se funde con el panel · artista ·
-    // título · barra de progreso · controles
+    // Page: big cover that blends into the panel · artist ·
+    // title · progress bar · controls
     _buildPage() {
         const actor = new St.BoxLayout({style_class: 'agent-notch-music-page'});
 
-        // La carátula con un degradado encima en su borde derecho.
+        // The cover with a gradient on top at its right edge.
         const coverStack = new St.Widget({
             style_class: 'agent-notch-music-page-cover-stack',
             layout_manager: new Clutter.BinLayout(),
@@ -525,7 +525,7 @@ class MusicModule extends NotchModule {
         info.add_child(title);
         info.add_child(player);
 
-        // Progreso: barra + 0:54 ······ -2:21
+        // Progress: bar + 0:54 ······ -2:21
         const progressBox = new St.BoxLayout({
             style_class: 'agent-notch-music-progress',
             orientation: Clutter.Orientation.VERTICAL,
@@ -550,7 +550,7 @@ class MusicModule extends NotchModule {
             playIcon: c.playIcon, prev: c.prev, next: c.next});
     }
 
-    // --- Reproductores ------------------------------------------------------
+    // --- Players ------------------------------------------------------
 
     _addPlayer(player) {
         if (this._players.has(player))
@@ -571,7 +571,7 @@ class MusicModule extends NotchModule {
         this._update();
     }
 
-    // Clic en el icono de un reproductor en el hover.
+    // Click on a player's icon in the hover.
     _selectPlayer(player) {
         if (!this._players.has(player))
             return;
@@ -579,8 +579,8 @@ class MusicModule extends NotchModule {
         this._update();
     }
 
-    // Iconos de los reproductores en el hover (solo si hay más de uno).
-    // Se crean y destruyen solo cuando aparece o se va un reproductor.
+    // Player icons in the hover (only if there is more than one).
+    // They are only created and destroyed when a player appears or leaves.
     _syncPlayerButtons() {
         if (!this._playersBox)
             return;
@@ -627,9 +627,9 @@ class MusicModule extends NotchModule {
         this._update();
     }
 
-    // 0) el elegido a mano en el hover, mientras ningún otro empiece a
-    //    sonar después; 1) el que suena (el más reciente); 2) si no, el
-    //    último que sonó.
+    // 0) the one picked by hand in the hover, as long as no other one starts
+    //    playing afterwards; 1) the one playing (the most recent); 2) otherwise, the
+    //    last one that played.
     _choosePlayer() {
         if (this._manual) {
             const {player, order} = this._manual;
@@ -662,11 +662,11 @@ class MusicModule extends NotchModule {
         if (player) {
             const artists = player.trackArtists?.join(', ') ?? '';
             const text = artists ? `${player.trackTitle} — ${artists}` : player.trackTitle;
-            // Solo tocar el texto si cambió (evita recalcular el diseño).
+            // Only touch the text if it changed (avoids recomputing the layout).
             if (this._label.text !== text)
                 this._label.text = text;
 
-            // Carátula mini si la hay (cargada a 18 px); si no, el icono de la app.
+            // Mini cover if there is one (loaded at 18 px); otherwise, the app icon.
             const coverUrl = player.trackCoverUrl || '';
             if (coverUrl) {
                 if (coverUrl !== this._compactCoverUrl) {
@@ -699,15 +699,15 @@ class MusicModule extends NotchModule {
         this.emit('changed');
     }
 
-    // --- Progreso (página u hover visibles) ---------------------------------
+    // --- Progress (page or hover visible) ---------------------------------
 
     _onViewsChanged(views) {
         this._updateProgress({resync: true});
         this._updateExtras(views.has('expanded'));
     }
 
-    // Arranca o para el temporizador según haga falta y, si se pide,
-    // vuelve a preguntar la posición al reproductor.
+    // Starts or stops the timer as needed and, if asked,
+    // asks the player for the position again.
     _updateProgress({resync = false} = {}) {
         if (this._progressViews.length === 0)
             return;
@@ -716,7 +716,7 @@ class MusicModule extends NotchModule {
         const length = player ? trackLength(player) : 0;
         for (const view of this._progressViews)
             view.box.visible = length > 0;
-        // Sin barra, la tarjeta del hover es más baja (sin hueco).
+        // Without a bar, the hover card is shorter (no gap).
         if (length > 0)
             this._exp?.actor.remove_style_class_name('no-progress');
         else
@@ -746,8 +746,8 @@ class MusicModule extends NotchModule {
         this._showProgress();
     }
 
-    // Llamada D-Bus asíncrona al reproductor actual.
-    // ⚠️ Interno de GNOME 50: el nombre D-Bus está en `_busName`.
+    // Asynchronous D-Bus call to the current player.
+    // ⚠️ GNOME 50 internal: the D-Bus name is in `_busName`.
     _call(iface, method, params, replyType, cancellable, onReply = null) {
         const busName = this._current?._busName;
         if (!busName)
@@ -759,7 +759,7 @@ class MusicModule extends NotchModule {
                 try {
                     reply = connection.call_finish(result);
                 } catch {
-                    return;   // cancelado o el reproductor no lo admite
+                    return;   // cancelled or the player does not support it
                 }
                 try {
                     onReply?.(reply);
@@ -769,7 +769,7 @@ class MusicModule extends NotchModule {
             });
     }
 
-    // Posición real del reproductor (Properties.Get de MPRIS).
+    // Real position of the player (MPRIS Properties.Get).
     _syncPosition() {
         const player = this._current;
         if (!player?._busName)
@@ -791,7 +791,7 @@ class MusicModule extends NotchModule {
             });
     }
 
-    // Clic o arrastre en la onda: saltar a esa posición (SetPosition).
+    // Click or drag on the wave: jump to that position (SetPosition).
     _seek(fraction) {
         const player = this._current;
         const length = player ? trackLength(player) : 0;
@@ -823,9 +823,9 @@ class MusicModule extends NotchModule {
         }
     }
 
-    // --- Aleatorio, repetir y salida de audio (solo con el hover visible) ---
+    // --- Shuffle, repeat and audio output (only with the hover visible) ---
 
-    // Empieza o deja de escuchar al reproductor actual y al mezclador.
+    // Starts or stops listening to the current player and the mixer.
     _updateExtras(visible) {
         const player = visible && this._exp ? this._current : null;
 
@@ -858,7 +858,7 @@ class MusicModule extends NotchModule {
             this._showExtras();
         }
 
-        // Salida de audio: el mezclador que ya tiene abierto GNOME.
+        // Audio output: the mixer GNOME already has open.
         const wantMixer = visible && this._exp !== null;
         if (wantMixer && !this._mixer) {
             this._mixer = getMixerControl();
@@ -907,7 +907,7 @@ class MusicModule extends NotchModule {
     _toggleShuffle() {
         if (this._shuffle === null)
             return;
-        // Se ve al instante; PropertiesChanged lo confirma (o lo corrige).
+        // Shows right away; PropertiesChanged confirms it (or corrects it).
         this._shuffle = !this._shuffle;
         this._showExtras();
         this._setPlayerProperty('Shuffle', new GLib.Variant('b', this._shuffle));

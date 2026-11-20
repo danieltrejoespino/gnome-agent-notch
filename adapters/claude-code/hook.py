@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Adaptador de Claude Code para agent-notch (docs/04-adaptador-claude-code.md).
+"""Claude Code adapter for agent-notch (docs/04-adaptador-claude-code.md).
 
-Claude Code lo lanza en cada evento con un JSON por stdin. Traduce el evento
-al formato común (docs/03-formato-estado.md) y lo escribe en
+Claude Code runs it on every event with a JSON on stdin. It translates the event
+into the common format (docs/03-formato-estado.md) and writes it to
 sessions/claude-code-<sesion>.json.
 
-Reglas de la Fase 1:
-- Sale SIEMPRE con 0 (el 2 bloquearía a Claude Code) y no imprime nada en
-  stdout (en algunos eventos se añadiría al contexto de Claude).
-- Termina en menos de 100 ms: solo importa os, sys, json, time y re.
+Phase 1 rules:
+- It ALWAYS exits with 0 (2 would block Claude Code) and prints nothing on
+  stdout (on some events it would be added to Claude's context).
+- It finishes in under 100 ms: it only imports os, sys, json, time and re.
 
-configure.py lo añade a settings.json con `exec python3 hook.py`: así el
-padre de este proceso es Claude Code y os.getppid() sirve para que la isla
-detecte sesiones muertas.
+configure.py adds it to settings.json with `exec python3 hook.py`: that way the
+parent of this process is Claude Code and os.getppid() lets the island
+detect dead sessions.
 """
 
 import json
@@ -28,19 +28,19 @@ MAX_ACTION = 60
 MAX_COMMAND = 40
 MAX_PATTERN = 30
 
-# Tipos de Notification que de verdad necesitan al usuario. idle_prompt y los
-# demás no cambian el estado (docs/04).
+# Notification types that really need the user. idle_prompt and the
+# others do not change the state (docs/04).
 ATTENTION_NOTIFICATIONS = ("permission_prompt", "elicitation_dialog", "agent_needs_input")
 
 
 def clip(text, limit):
-    """Una línea, sin espacios de sobra, recortada con «…»."""
+    """One line, without extra spaces, cut with "…"."""
     text = " ".join(str(text or "").split())
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
 def describe(tool, inp):
-    """Frase corta de lo que hace la herramienta, sin contenidos (docs/03)."""
+    """Short phrase of what the tool does, without contents (docs/03)."""
     if not isinstance(inp, dict):
         inp = {}
 
@@ -99,14 +99,14 @@ def handle(ev):
         estado, tool = "error", None
         accion = clip(ev.get("last_assistant_message") or "Error", MAX_ACTION)
     else:
-        return  # SubagentStop, PreCompact…: sin cambio
+        return  # SubagentStop, PreCompact…: no change
 
     now = time.time()
     cwd = str(ev.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or "")
     data = {
         "v": state.FORMAT_VERSION,
         "agente": AGENT,
-        "sesion": state.safe_name(ev.get("session_id")),  # igual que en el nombre del archivo
+        "sesion": state.safe_name(ev.get("session_id")),  # same as in the file name
         "proyecto": os.path.basename(cwd.rstrip("/")) or "?",
         "cwd": cwd,
         "estado": estado,
@@ -123,8 +123,8 @@ def main():
     try:
         handle(json.loads(sys.stdin.read()))
     except Exception:
-        # Nunca molestar a Claude Code. Para depurar a mano:
-        # AGENT_NOTCH_DEBUG=1 muestra el error en stderr.
+        # Never bother Claude Code. To debug by hand:
+        # AGENT_NOTCH_DEBUG=1 shows the error on stderr.
         if os.environ.get("AGENT_NOTCH_DEBUG"):
             import traceback
             traceback.print_exc(file=sys.stderr)

@@ -1,4 +1,4 @@
-// Pruebas del adaptador de OpenCode, con el Bun que trae OpenCode:
+// Tests for the OpenCode adapter, with the Bun that ships with OpenCode:
 //     BUN_BE_BUN=1 ~/.opencode/bin/opencode test adapters/opencode
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-test("recorrido de una sesión", () => {
+test("a session's path", () => {
   const t = tracker();
   created(t);
   let d = read("ses_1");
@@ -45,7 +45,7 @@ test("recorrido de una sesión", () => {
   expect(files()).toEqual([]);
 });
 
-test("dos herramientas a la vez: sigue trabajando hasta que acaban las dos", () => {
+test("two tools at once: keeps working until both finish", () => {
   const t = tracker();
   created(t);
   t.handle("session.tool.input.started", { sessionID: "ses_1", id: "a", name: "read" });
@@ -56,7 +56,7 @@ test("dos herramientas a la vez: sigue trabajando hasta que acaban las dos", () 
   expect(read("ses_1").estado).toBe("pensando");
 });
 
-test("errores e interrupciones", () => {
+test("errors and interruptions", () => {
   const t = tracker();
   created(t);
   t.handle("session.execution.failed", { sessionID: "ses_1" });
@@ -65,12 +65,12 @@ test("errores e interrupciones", () => {
   expect(read("ses_1")).toMatchObject({ estado: "inactivo", accion: null });
 });
 
-test("permisos y preguntas", () => {
+test("permissions and questions", () => {
   const t = tracker();
   created(t);
   t.handle("permission.asked", { sessionID: "ses_1", action: "bash", resources: ["rm x"] });
   expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Asks permission: bash" });
-  // Una herramienta que acaba mientras tanto no quita la atención.
+  // A tool that finishes in the meantime does not clear the attention.
   t.handle("session.tool.success", { sessionID: "ses_1", id: "zz" });
   expect(read("ses_1").estado).toBe("atencion");
   t.handle("permission.replied", { sessionID: "ses_1" });
@@ -81,7 +81,7 @@ test("permisos y preguntas", () => {
   expect(read("ses_1").estado).toBe("pensando");
 });
 
-test("subagentes: no salen aparte y su atención sube a la principal", () => {
+test("subagents: not shown separately and their attention goes up to the main one", () => {
   const t = tracker();
   created(t);
   t.handle("session.tool.input.started", { sessionID: "ses_1", id: "s", name: "subagent" });
@@ -97,7 +97,7 @@ test("subagentes: no salen aparte y su atención sube a la principal", () => {
   expect(files()).toEqual(["opencode-ses_1.json"]);
 });
 
-test("eventos raros o sin sesión no rompen ni escriben", () => {
+test("odd events or events without a session neither break nor write", () => {
   const t = tracker();
   t.handle("session.text.delta", { sessionID: "x", delta: "hola" });
   t.handle("algo.nuevo", {});
@@ -105,7 +105,7 @@ test("eventos raros o sin sesión no rompen ni escriben", () => {
   expect(files()).toEqual([]);
 });
 
-test("sin cambios no reescribe; con PID nuevo sí", () => {
+test("no changes, no rewrite; with a new PID, yes", () => {
   const t = tracker();
   created(t);
   const file = path.join(tmp, "sessions", "opencode-ses_1.json");
@@ -116,7 +116,7 @@ test("sin cambios no reescribe; con PID nuevo sí", () => {
   expect(ino2).not.toBe(ino);
   t.handle("session.execution.started", { sessionID: "ses_1" });
   expect(fs.statSync(file).ino).toBe(ino2);
-  // La interfaz aparece: se busca como mucho cada 10 s.
+  // The interface appears: it is looked up at most every 10 s.
   pidOf = () => 4242;
   now += 3;
   t.handle("session.execution.started", { sessionID: "ses_1" });
@@ -126,7 +126,7 @@ test("sin cambios no reescribe; con PID nuevo sí", () => {
   expect(read("ses_1").pid).toBe(4242);
 });
 
-test("archivos privados y sin temporales", () => {
+test("private files and no temporaries", () => {
   const t = tracker();
   created(t, "../../etc/x");
   expect(files()).toEqual(["opencode-______etc_x.json"]);
@@ -136,7 +136,7 @@ test("archivos privados y sin temporales", () => {
   expect(files()).toEqual([]);
 });
 
-test("textos", () => {
+test("texts", () => {
   expect(describe("bash", { command: "npm test\n  --watch" })).toBe("Running npm test --watch");
   expect(describe("bash", { command: "echo " + "a".repeat(100) })).toBe("Running echo " + "a".repeat(34) + "…");
   expect(describe("edit", { filePath: "/x/y/z.ts" })).toBe("Editing z.ts");
@@ -149,13 +149,13 @@ test("textos", () => {
   expect(safeName("")).toBe("desconocida");
 });
 
-test("carpeta del bus", () => {
+test("bus folder", () => {
   expect(baseDir({ AGENT_NOTCH_DIR: "/x" })).toBe("/x");
   expect(baseDir({ XDG_RUNTIME_DIR: tmp })).toBe(path.join(tmp, "agent-notch"));
   expect(baseDir({ XDG_RUNTIME_DIR: "/no/existe", XDG_CACHE_HOME: "/c" })).toBe("/c/agent-notch");
 });
 
-test("findClientPid con un /proc falso", () => {
+test("findClientPid with a fake /proc", () => {
   const proc = path.join(tmp, "proc");
   const proj = fs.mkdtempSync(path.join(tmp, "proj-"));
   const other = fs.mkdtempSync(path.join(tmp, "otro-"));
@@ -164,26 +164,26 @@ test("findClientPid con un /proc falso", () => {
     fs.writeFileSync(path.join(proc, String(pid), "cmdline"), argv.join("\0") + "\0");
     fs.symlinkSync(cwd, path.join(proc, String(pid), "cwd"));
   };
-  fake(10, ["/home/u/.opencode/bin/opencode", "serve", "--service"], proj);  // el servicio
-  fake(11, ["/bin/bash", "-c", "opencode"], proj);                           // no es opencode
-  fake(12, ["/home/u/.opencode/bin/opencode"], other);                       // otra carpeta
+  fake(10, ["/home/u/.opencode/bin/opencode", "serve", "--service"], proj);  // the service
+  fake(11, ["/bin/bash", "-c", "opencode"], proj);                           // not opencode
+  fake(12, ["/home/u/.opencode/bin/opencode"], other);                       // another folder
   fs.mkdirSync(path.join(proc, "self"));
   expect(findClientPid(proj, proc)).toBe(null);
-  fake(13, ["/home/u/.opencode/bin/opencode"], proj);                        // la interfaz
+  fake(13, ["/home/u/.opencode/bin/opencode"], proj);                        // the interface
   expect(findClientPid(proj, proc)).toBe(13);
-  fake(14, ["opencode", "run", "hola"], proj);                               // otra más: ambiguo
+  fake(14, ["opencode", "run", "hola"], proj);                               // one more: ambiguous
   expect(findClientPid(proj, proc)).toBe(null);
   expect(findClientPid("", proc)).toBe(null);
   expect(findClientPid(proj, "/no/existe")).toBe(null);
 });
 
-test("plugin: sin API de eventos devuelve un cierre que no hace nada", async () => {
+test("plugin: without an events API it returns a close that does nothing", async () => {
   expect(plugin.id).toBe("agent-notch");
   const dispose = await plugin.setup({});
   await dispose();
 });
 
-test("plugin: consume eventos y al cerrarse borra sus sesiones", async () => {
+test("plugin: consumes events and removes its sessions when closing", async () => {
   process.env.AGENT_NOTCH_DIR = tmp;
   const events = [
     { type: "session.created", data: { sessionID: "ses_9", location: { directory: "/x/proj" } } },

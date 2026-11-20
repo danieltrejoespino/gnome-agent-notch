@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# Lanza un GNOME de prueba en una ventana con la extensión activada.
-# Tu escritorio real no se toca. Requiere: sudo apt install mutter-dev-bin
+# Starts a test GNOME in a window with the extension enabled.
+# Your real desktop is not touched. Requires: sudo apt install mutter-dev-bin
 #
-# El GNOME de prueba tiene su propio D-Bus, aislado del escritorio real:
-# las apps que ya tienes abiertas (Chrome…) y los snaps (Spotify) no se ven
-# dentro. Para probar la música usa scripts/fake-player.py.
+# The test GNOME has its own D-Bus, isolated from the real desktop:
+# the apps you already have open (Chrome…) and snaps (Spotify) do not show
+# inside. To try the music, use scripts/fake-player.py.
 #
-# Su monitor es virtual: AGENT_NOTCH_DDC_ANY=1 hace que la barra de brillo
-# de Ajustes rápidos salga para cualquier monitor DDC/CI que encuentre
-# ddcutil (el real), aunque Mutter no lo vea (docs/17-brillo-monitor.md).
+# Its monitor is virtual: AGENT_NOTCH_DDC_ANY=1 makes the Quick Settings
+# brightness slider show for any DDC/CI monitor that ddcutil finds
+# (the real one), even if Mutter does not see it (docs/17-brillo-monitor.md).
 set -euo pipefail
 
 UUID="agent-notch@daniel.local"
 BUS_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev-bus"
-# Bus de archivos propio (sesiones de agentes): lo que escribe
-# scripts/simulate.py no sale en la isla del escritorio real.
+# Its own file bus (agent sessions): what scripts/simulate.py writes
+# does not show up on the real desktop's island.
 DEV_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev"
 
 "$(dirname "$0")/dev-link.sh"
 
-# Activa la extensión dentro del GNOME de prueba en cuanto arranque y deja
-# la dirección de su D-Bus en BUS_FILE para scripts/fake-player.py.
+# Enables the extension inside the test GNOME as soon as it starts and leaves
+# the address of its D-Bus in BUS_FILE for scripts/fake-player.py.
 dbus-run-session bash -c "
     echo \"\$DBUS_SESSION_BUS_ADDRESS\" > '$BUS_FILE'
     trap \"rm -f '$BUS_FILE'\" EXIT

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Reproductor de música falso (MPRIS) para probar la isla.
+"""Fake music player (MPRIS) to try the island.
 
-Se anuncia como reproductor en el D-Bus del GNOME de prueba (el que abre
-scripts/dev-shell.sh), sin reproducir audio. Responde a Play/Pause/Next/
-Previous/SetPosition/Seek y a Shuffle/LoopStatus como un reproductor real.
+It announces itself as a player on the test GNOME's D-Bus (the one
+scripts/dev-shell.sh opens), without playing any audio. It answers Play/Pause/Next/
+Previous/SetPosition/Seek and Shuffle/LoopStatus like a real player.
 
-Uso:
-    scripts/fake-player.py           # canción fija, controlable desde la isla
-    scripts/fake-player.py --auto 5  # además cambia de canción cada 5 s
-    scripts/fake-player.py --name b  # un segundo reproductor a la vez (otro nombre D-Bus)
-    Ctrl+C para cerrarlo (la isla debe volver a quedar mínima).
+Usage:
+    scripts/fake-player.py           # fixed song, controllable from the island
+    scripts/fake-player.py --auto 5  # also changes song every 5 s
+    scripts/fake-player.py --name b  # a second player at the same time (another D-Bus name)
+    Ctrl+C to close it (the island must go back to minimal).
 
-Comandos mientras corre (escribir y Enter):  p = play/pausa · n = siguiente · b = anterior
+Commands while it runs (type and Enter):  p = play/pause · n = next · b = previous
 """
 
 import argparse
@@ -29,7 +29,7 @@ BUS_FILE = os.environ.get(
 BUS_NAME = "org.mpris.MediaPlayer2.agentnotchfake"
 OBJECT_PATH = "/org/mpris/MediaPlayer2"
 
-# (título, artistas, color de la carátula o None = sin carátula, duración en s o 0 = desconocida)
+# (title, artists, cover color or None = no cover, length in s or 0 = unknown)
 TRACKS = [
     ("Test song", ["Artist One"], ("#7c3aed", "#ec4899"), 180),
     ("A rather long title to check that the island cuts it with an ellipsis",
@@ -50,7 +50,7 @@ COVER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256">
 
 
 def write_covers(name=""):
-    """Genera una carátula SVG por pista (en RAM, en $XDG_RUNTIME_DIR)."""
+    """Generates an SVG cover per track (in RAM, in $XDG_RUNTIME_DIR)."""
     os.makedirs(COVER_DIR, exist_ok=True)
     urls = []
     for i, (_t, _a, colors, _len) in enumerate(TRACKS):
@@ -65,7 +65,7 @@ def write_covers(name=""):
 
 
 def remove_covers(name=""):
-    """Borra las carátulas de este reproductor (y la carpeta si queda vacía)."""
+    """Removes this player's covers (and the folder if it ends up empty)."""
     if not os.path.isdir(COVER_DIR):
         return
     for f in os.listdir(COVER_DIR):
@@ -125,7 +125,7 @@ class FakePlayer:
         self.status = "Playing"
         self.shuffle = False
         self.loop_status = "None"
-        # Posición simulada: acumulado + tiempo desde que empezó a sonar.
+        # Simulated position: accumulated + time since it started playing.
         self.position_us = 0
         self.playing_since = GLib.get_monotonic_time()
         self.node = Gio.DBusNodeInfo.new_for_xml(INTROSPECTION)
@@ -133,7 +133,7 @@ class FakePlayer:
         for iface in self.node.interfaces:
             register(OBJECT_PATH, iface, self._on_call, self._on_get, self._on_set)
 
-    # --- estado -----------------------------------------------------------
+    # --- state -----------------------------------------------------------
     def metadata(self):
         title, artists, _colors, length = TRACKS[self.index]
         data = {
@@ -187,7 +187,7 @@ class FakePlayer:
         title, artists, _colors, _len = TRACKS[self.index]
         print(f"  [{self.status}] {title} — {', '.join(artists)}", flush=True)
 
-    # --- acciones ---------------------------------------------------------
+    # --- actions ---------------------------------------------------------
     def next(self, step=1):
         self.index = (self.index + step) % len(TRACKS)
         self.position_us = 0
@@ -195,7 +195,7 @@ class FakePlayer:
         self.notify("Metadata")
 
     def set_status(self, status):
-        self.position_us = self.position()       # congelar lo que llevaba
+        self.position_us = self.position()       # freeze what it had
         self.playing_since = GLib.get_monotonic_time()
         if status == "Stopped":
             self.position_us = 0
@@ -254,7 +254,7 @@ class FakePlayer:
 
 
 def connect():
-    """Conecta al D-Bus del GNOME de prueba, nunca al de tu escritorio real."""
+    """Connects to the test GNOME's D-Bus, never to your real desktop's."""
     try:
         with open(BUS_FILE) as f:
             address = f.read().strip()

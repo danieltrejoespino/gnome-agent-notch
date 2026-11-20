@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""Añade o quita el hook de agent-notch en la configuración de Claude Code.
+"""Adds or removes the agent-notch hook in Claude Code's configuration.
 
-    configure.py install     añade el hook (si ya estaba, lo deja al día)
-    configure.py uninstall   lo quita
-    configure.py status      dice si está (código 0 = sí, 1 = no)
+    configure.py install     adds the hook (if it was already there, updates it)
+    configure.py uninstall   removes it
+    configure.py status      tells whether it is there (exit code 0 = yes, 1 = no)
 
-Edita ~/.claude/settings.json ($CLAUDE_CONFIG_DIR/settings.json si está
-definida). Solo toca las entradas de este hook: las demás (otros hooks,
-permisos, ajustes…) quedan igual. La primera vez que lo cambia guarda una
-copia del original en settings.json.agent-notch.bak (no se vuelve a pisar),
-y escribe de forma atómica. Si al quitar el hook no queda nada (el archivo
-lo creó install), borra settings.json y esa copia: no deja rastro.
+Edits ~/.claude/settings.json ($CLAUDE_CONFIG_DIR/settings.json if it is
+set). It only touches this hook's entries: the rest (other hooks,
+permissions, settings…) stay the same. The first time it changes it, it saves a
+copy of the original in settings.json.agent-notch.bak (never overwritten again),
+and writes atomically. If nothing is left after removing the hook (the file
+was created by install), it deletes settings.json and that copy: it leaves no trace.
 
---hook RUTA elige qué hook.py usar; por defecto, el que está junto a este
-script. Así sirve tanto la copia instalada
-(~/.local/share/agent-notch/adapters/) como un repo clonado.
+--hook PATH picks which hook.py to use; by default, the one next to this
+script. That way it works both for the installed copy
+(~/.local/share/agent-notch/adapters/) and for a cloned repo.
 
-El comando comprueba que hook.py existe antes de lanzarlo: si se borra (p. ej.
-al desinstalar agent-notch sin quitar el hook), python3 saldría con 2 y
-Claude Code lo tomaría como «bloquear», en cada herramienta y cada prompt.
+The command checks that hook.py exists before running it: if it is deleted (e.g.
+when uninstalling agent-notch without removing the hook), python3 would exit with 2 and
+Claude Code would take it as "block", on every tool and every prompt.
 """
 
 import argparse
@@ -28,14 +28,14 @@ import shlex
 import shutil
 import sys
 
-# Los eventos que traduce hook.py (docs/04).
+# The events hook.py translates (docs/04).
 EVENTS = (
     "SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse",
     "PostToolUse", "PostToolUseFailure", "Notification", "PermissionRequest",
     "Stop", "StopFailure",
 )
 TIMEOUT_S = 5
-# Así se reconocen las entradas de agent-notch, apunten a donde apunten.
+# This is how agent-notch's entries are recognized, wherever they point.
 MARKER = "adapters/claude-code/hook.py"
 
 
@@ -47,14 +47,14 @@ def settings_path():
 def hook_command(hook):
     """[ -f hook ] || exit 0; exec python3 hook
 
-    `exec`: el padre de hook.py es Claude Code (os.getppid() en hook.py).
+    `exec`: the parent of hook.py is Claude Code (os.getppid() in hook.py).
     """
     q = shlex.quote(hook)
     return "[ -f %s ] || exit 0; exec /usr/bin/python3 %s" % (q, q)
 
 
 def is_ours(group, hook=None):
-    """¿Es un grupo de hooks de agent-notch (de `hook`, o de cualquiera)?"""
+    """Is it a group of agent-notch hooks (of `hook`, or of any)?"""
     hooks = group.get("hooks") if isinstance(group, dict) else None
     if not isinstance(hooks, list) or not hooks:
         return False
@@ -68,7 +68,7 @@ def is_ours(group, hook=None):
 
 
 def load(path):
-    """Ajustes actuales ({} si no hay archivo). Sale con error si no son JSON."""
+    """Current settings ({} if there is no file). Exits with an error if they are not JSON."""
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -86,11 +86,11 @@ def backup_path(path):
 
 
 def save(path, data):
-    """Copia de seguridad y escritura atómica, con los permisos que tuviera.
+    """Backup copy and atomic write, keeping whatever permissions it had.
 
-    La copia se hace solo si no existe: así guarda el original de antes de
-    agent-notch y no la versión de un cambio anterior (instalar y luego
-    desinstalar la pisaba con la que llevaba el hook).
+    The copy is only made if it does not exist: that way it keeps the original from before
+    agent-notch and not the version of an earlier change (installing and then
+    uninstalling overwrote it with the one that had the hook).
     """
     folder = os.path.dirname(path)
     os.makedirs(folder, exist_ok=True)
@@ -115,7 +115,7 @@ def save(path, data):
 
 
 def without_ours(data, hook=None):
-    """Copia de data sin los grupos de agent-notch. Devuelve (data, cuántos)."""
+    """Copy of data without the agent-notch groups. Returns (data, how many)."""
     hooks = data.get("hooks")
     if not isinstance(hooks, dict):
         return data, 0
@@ -138,7 +138,7 @@ def without_ours(data, hook=None):
 
 
 def with_ours(data, hook):
-    """data con el hook en cada evento (quitando antes cualquier otro de agent-notch)."""
+    """data with the hook on each event (removing any other agent-notch one first)."""
     data, _ = without_ours(data)
     hooks = data.get("hooks")
     if hooks is None:
@@ -204,8 +204,8 @@ def main(argv=None):
 
     new, removed = without_ours(data, hook)
     if removed and not new:
-        # Solo quedaba el hook: el archivo lo creó install. Sin rastro, ni
-        # siquiera la copia si tampoco guarda nada del usuario.
+        # Only the hook was left: the file was created by install. No trace, not
+        # even the copy if it does not keep anything of the user's either.
         os.unlink(path)
         bak = backup_path(path)
         if os.path.exists(bak) and not without_ours(load(bak))[0]:

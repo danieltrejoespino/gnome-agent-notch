@@ -1,24 +1,24 @@
-// Adaptador de OpenCode 2 para agent-notch (docs/08-otros-agentes.md).
+// OpenCode 2 adapter for agent-notch (docs/08-otros-agentes.md).
 //
-// Plugin de OpenCode: traduce sus eventos al formato común
-// (docs/03-formato-estado.md) y escribe sessions/opencode-<sesion>.json.
-// Se instala en ~/.config/opencode/plugins/ (lo hace configure.py).
+// OpenCode plugin: translates its events into the common format
+// (docs/03-formato-estado.md) and writes sessions/opencode-<sesion>.json.
+// It is installed in ~/.config/opencode/plugins/ (configure.py does it).
 //
-// ✅ Verificado el 19-11-2026 con OpenCode 2.2.6:
-//   - El plugin se exporta como {id, setup}; OpenCode llama a setup(ctx) en su
-//     SERVICIO de fondo (`opencode serve --service`), no en la terminal, y
-//     ese servicio sigue vivo al cerrar OpenCode. El PID útil es el de la
-//     INTERFAZ: un proceso `opencode` (sin `serve`) cuya carpeta de trabajo
-//     es la de la sesión. Se busca en /proc (findClientPid); si hay dos en la
-//     misma carpeta no se sabe cuál es y no se pone (la sesión se da por
-//     muerta a los 30 min sin novedades, docs/03). Con ese PID, la isla quita
-//     la sesión al cerrar la terminal y el clic la trae al frente.
-//   - Eventos: ctx.event.subscribe() → {type, data}. Las sesiones de
-//     subagentes traen parentID: no se muestran aparte, su estado de atención
-//     sube a la sesión principal.
+// ✅ Verified on 19-11-2026 with OpenCode 2.2.6:
+//   - The plugin is exported as {id, setup}; OpenCode calls setup(ctx) in its
+//     background SERVICE (`opencode serve --service`), not in the terminal, and
+//     that service stays alive after closing OpenCode. The useful PID is the
+//     INTERFACE's: an `opencode` process (without `serve`) whose working directory
+//     is the session's. It is looked up in /proc (findClientPid); if there are two in the
+//     same folder it is not known which one it is and it is not set (the session is
+//     considered dead after 30 min without news, docs/03). With that PID, the island removes
+//     the session when the terminal closes and a click brings it to the front.
+//   - Events: ctx.event.subscribe() → {type, data}. Subagent
+//     sessions carry parentID: they are not shown separately, their attention state
+//     goes up to the main session.
 //
-// Reglas (docs/02): nunca romper OpenCode (todo en try/catch), escritura
-// atómica, sin contenidos (solo nombres de archivo y comandos recortados).
+// Rules (docs/02): never break OpenCode (everything in try/catch), atomic
+// writes, no contents (only file names and trimmed commands).
 
 import fs from "node:fs";
 import os from "node:os";
@@ -31,7 +31,7 @@ const MAX_COMMAND = 40;
 const MAX_PATTERN = 30;
 const PID_RETRY_S = 10;
 
-// --- Bus de archivos (como adapters/common/state.py) ------------------------
+// --- File bus (like adapters/common/state.py) ------------------------
 
 export function baseDir(env = process.env) {
   if (env.AGENT_NOTCH_DIR) return env.AGENT_NOTCH_DIR;
@@ -67,7 +67,7 @@ function writeAtomic(file, data) {
   }
 }
 
-// --- Textos (como describe() de hook.py) ------------------------------------
+// --- Texts (like describe() in hook.py) ------------------------------------
 
 export function clip(text, limit) {
   const t = String(text ?? "").split(/\s+/).filter(Boolean).join(" ");
@@ -76,7 +76,7 @@ export function clip(text, limit) {
 
 export function describe(tool, input) {
   const inp = input && typeof input === "object" ? input : {};
-  // Al empezar la herramienta aún no hay entrada: texto genérico.
+  // When the tool starts there is no input yet: generic text.
   const known = (v) => typeof v === "string" && v.trim() !== "";
   const name = (p) => path.basename(String(p ?? "").replace(/\/+$/, "")) || "file";
   const file = inp.path ?? inp.filePath ?? inp.file_path;
@@ -94,12 +94,12 @@ export function describe(tool, input) {
   }
 }
 
-// --- PID de la interfaz (la terminal) ----------------------------------------
+// --- Interface PID (the terminal) ----------------------------------------
 
 /**
- * PID del proceso de la interfaz de OpenCode que trabaja en `dir`, o null si
- * no hay ninguno o hay varios (no se sabría cuál es). Lee /proc: solo los
- * procesos del mismo usuario dejan leer su carpeta de trabajo.
+ * PID of the OpenCode interface process working in `dir`, or null if
+ * there is none or there are several (it would not be known which one). Reads /proc: only
+ * processes of the same user let you read their working directory.
  */
 export function findClientPid(dir, procRoot = "/proc") {
   if (!dir) return null;
@@ -118,25 +118,25 @@ export function findClientPid(dir, procRoot = "/proc") {
       if (fs.readlinkSync(path.join(procRoot, name, "cwd")) !== dir) continue;
       found.push(Number(name));
     } catch {
-      // Proceso de otro usuario o que acaba de terminar.
+      // A process of another user or one that just ended.
     }
   }
   return found.length === 1 ? found[0] : null;
 }
 
-// --- Estado de las sesiones --------------------------------------------------
+// --- Session state --------------------------------------------------
 
 /**
- * Traduce eventos de OpenCode a archivos de sesión. Sin dependencias de
- * OpenCode: se prueba con eventos falsos (adapters/opencode/test-plugin.mjs).
+ * Translates OpenCode events into session files. No dependencies on
+ * OpenCode: it is tested with fake events (adapters/opencode/test-plugin.mjs).
  */
 export class Tracker {
   constructor({ dir = baseDir(), now = () => Date.now() / 1000, findPid = findClientPid } = {}) {
     this.dir = path.join(dir, "sessions");
     this.now = now;
-    this.findPid = findPid;         // carpeta → PID de la interfaz, o null
-    this.sessions = new Map();      // sesión principal → estado
-    this.rootOf = new Map();        // sesión de subagente → principal
+    this.findPid = findPid;         // folder → interface PID, or null
+    this.sessions = new Map();      // main session → state
+    this.rootOf = new Map();        // subagent session → main one
   }
 
   file(sid) {
@@ -174,8 +174,8 @@ export class Tracker {
   write(sid) {
     const s = this.sessions.get(sid);
     if (!s) return;
-    // Buscar la interfaz al crear la sesión y, mientras no se encuentre, como
-    // mucho cada 10 s (leer /proc cuesta unos milisegundos).
+    // Look up the interface when the session is created and, until it is found, at
+    // most every 10 s (reading /proc costs a few milliseconds).
     if (s.pid === null && this.now() - s.pidCheckedAt >= PID_RETRY_S) {
       s.pidCheckedAt = this.now();
       s.pid = this.findPid(s.cwd);
@@ -188,7 +188,7 @@ export class Tracker {
       inicio: s.inicio, actualizado: this.now(),
       pid: Number.isInteger(pid) && pid > 0 ? pid : null,
     };
-    // Sin cambios (salvo la hora): no reescribir.
+    // No changes (except the time): do not rewrite.
     const key = JSON.stringify({ ...data, actualizado: 0 });
     if (key === s.written) return;
     ensureDir(this.dir);
@@ -205,14 +205,14 @@ export class Tracker {
     for (const sid of [...this.sessions.keys()]) this.remove(sid);
   }
 
-  /** Un evento de OpenCode ({type, data}). */
+  /** An OpenCode event ({type, data}). */
   handle(type, d = {}) {
     const raw = d.sessionID;
     if (!raw) return;
 
     if (type === "session.created") {
       if (d.parentID) {
-        // Subagente: no sale aparte; su principal ya muestra «Delegando tarea».
+        // Subagent: not shown separately; its main session already shows "Delegating a task".
         this.rootOf.set(raw, this.root(d.parentID));
         return;
       }
@@ -292,8 +292,8 @@ async function setup(ctx) {
       for await (const input of ctx.event.subscribe({ signal: controller.signal })) {
         if (controller.signal.aborted) break;
         const data = input?.data ?? {};
-        // Sesión que ya existía al cargar el plugin: pedir su carpeta y si es
-        // de un subagente, una vez.
+        // A session that already existed when the plugin loaded: ask for its folder and whether it is
+        // a subagent's, once.
         if (data.sessionID && input.type !== "session.created" &&
             !tracker.sessions.has(data.sessionID) && !tracker.rootOf.has(data.sessionID)) {
           try {
@@ -306,7 +306,7 @@ async function setup(ctx) {
         try {
           tracker.handle(input.type, data);
         } catch {
-          // Un evento raro o un fallo de escritura no debe romper nada.
+          // An odd event or a write failure must not break anything.
         }
       }
     };
@@ -317,7 +317,7 @@ async function setup(ctx) {
         controller.abort();
         await consuming;
       } finally {
-        // El servicio se cierra: las sesiones dejan de existir para la isla.
+        // The service is closing: the sessions stop existing for the island.
         tracker.removeAll();
       }
     };

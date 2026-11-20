@@ -1,4 +1,4 @@
-"""Pruebas de hook.py, lanzándolo como lo hace Claude Code (stdin → proceso).
+"""Tests for hook.py, running it the way Claude Code does (stdin → process).
 
     python3 -m unittest discover -s adapters/claude-code -v
 """
@@ -35,7 +35,7 @@ class HookTest(unittest.TestCase):
         p = subprocess.run([sys.executable, HOOK], input=data, env=env,
                            capture_output=True, timeout=10)
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertEqual(p.stdout, b"")  # nunca imprime en stdout
+        self.assertEqual(p.stdout, b"")  # never prints on stdout
         return p
 
     def event(self, name, sid="s1", **kw):
@@ -50,7 +50,7 @@ class HookTest(unittest.TestCase):
     def files(self):
         return sorted(os.listdir(self.sessions)) if os.path.isdir(self.sessions) else []
 
-    # --- recorrido de una sesión -----------------------------------------
+    # --- a session's path -----------------------------------------
 
     def test_sesion_completa(self):
         self.event("SessionStart", source="startup")
@@ -62,7 +62,7 @@ class HookTest(unittest.TestCase):
         self.assertEqual(d["cwd"], "/tmp/demo/mi-app")
         self.assertEqual(d["estado"], "inactivo")
         self.assertIsNone(d["accion"])
-        self.assertEqual(d["pid"], os.getpid())  # el padre del hook
+        self.assertEqual(d["pid"], os.getpid())  # the hook's parent
         inicio = d["inicio"]
         self.assertAlmostEqual(inicio, time.time(), delta=5)
 
@@ -85,13 +85,13 @@ class HookTest(unittest.TestCase):
         self.event("Stop")
         d = self.read()
         self.assertEqual((d["estado"], d["accion"]), ("terminado", "Done"))
-        self.assertEqual(d["inicio"], inicio)  # se conserva
+        self.assertEqual(d["inicio"], inicio)  # kept
         self.assertGreaterEqual(d["actualizado"], inicio)
 
         self.event("SessionEnd", reason="exit")
         self.assertEqual(self.files(), [])
 
-    # --- textos de acción -------------------------------------------------
+    # --- action texts -------------------------------------------------
 
     def test_acciones(self):
         cases = [
@@ -114,7 +114,7 @@ class HookTest(unittest.TestCase):
             self.assertEqual(self.read()["accion"], expected, tool)
         self.assertLessEqual(len(self.read()["accion"]), 60)
 
-    # --- atención y errores -----------------------------------------------
+    # --- attention and errors -----------------------------------------------
 
     def test_notificacion_que_pide_atencion(self):
         self.event("Stop")
@@ -147,7 +147,7 @@ class HookTest(unittest.TestCase):
         self.event("SubagentStop")
         self.assertEqual(self.files(), [])
 
-    # --- entradas malas: siempre salida 0 y sin efecto -------------------
+    # --- bad input: always exit 0 and no effect -------------------
 
     def test_entradas_malas(self):
         for bad in ("", "{roto", "[1,2]", "null", '"texto"', b"\xff\xfe", "{}"):
@@ -165,7 +165,7 @@ class HookTest(unittest.TestCase):
             p = self.event("SessionStart")
         finally:
             os.chmod(self.runtime, 0o700)
-        self.assertEqual(p.stderr, b"")  # sin AGENT_NOTCH_DEBUG no dice nada
+        self.assertEqual(p.stderr, b"")  # without AGENT_NOTCH_DEBUG it says nothing
 
     def test_dos_sesiones_dos_archivos(self):
         self.event("SessionStart", sid="a")

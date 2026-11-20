@@ -1,4 +1,4 @@
-// Pruebas de modules/dockerstate.js (lógica pura del módulo Docker).
+// Tests for modules/dockerstate.js (pure logic of the Docker module).
 //     gjs -m scripts/test-dockerstate.js
 
 import System from 'system';
@@ -18,25 +18,25 @@ function eq(actual, expected, what) {
         passed++;
     } else {
         failed++;
-        printerr(`FALLA ${what}\n   obtenido: ${a}\n   esperado: ${e}`);
+        printerr(`FAIL ${what}\n   got:      ${a}\n   expected: ${e}`);
     }
 }
 
-// --- socket y URLs -----------------------------------------------------------
-eq(socketPath(null), '/var/run/docker.sock', 'socket por defecto');
+// --- socket and URLs -----------------------------------------------------------
+eq(socketPath(null), '/var/run/docker.sock', 'default socket');
 eq(socketPath('unix:///run/user/1000/docker.sock'), '/run/user/1000/docker.sock', 'DOCKER_HOST unix');
-eq(socketPath('tcp://1.2.3.4:2375'), '/var/run/docker.sock', 'DOCKER_HOST tcp: se ignora');
-eq(socketPath('unix://'), '/var/run/docker.sock', 'DOCKER_HOST vacío');
+eq(socketPath('tcp://1.2.3.4:2375'), '/var/run/docker.sock', 'DOCKER_HOST tcp: ignored');
+eq(socketPath('unix://'), '/var/run/docker.sock', 'empty DOCKER_HOST');
 eq(apiUrl('/containers/json'), 'http://docker/v1.40/containers/json', 'url');
-eq(decodeURIComponent(eventsUrl().split('filters=')[1]).startsWith('{"type":["container"]'), true, 'filtro de eventos');
+eq(decodeURIComponent(eventsUrl().split('filters=')[1]).startsWith('{"type":["container"]'), true, 'event filter');
 
 // --- depends_on ------------------------------------------------------------------
-eq(parseDependsOn('jellyfin:service_started:false'), ['jellyfin'], 'una dependencia');
-eq(parseDependsOn('db:service_healthy:true,cache:service_started:false'), ['db', 'cache'], 'varias');
-eq(parseDependsOn(''), [], 'vacía');
-eq(parseDependsOn(undefined), [], 'sin etiqueta');
+eq(parseDependsOn('jellyfin:service_started:false'), ['jellyfin'], 'one dependency');
+eq(parseDependsOn('db:service_healthy:true,cache:service_started:false'), ['db', 'cache'], 'several');
+eq(parseDependsOn(''), [], 'empty');
+eq(parseDependsOn(undefined), [], 'no label');
 
-// --- lista de la API ---------------------------------------------------------------
+// --- API list ---------------------------------------------------------------
 const api = [
     {
         Id: 'a1', Names: ['/anime'], Image: 'anime-local', State: 'exited',
@@ -59,57 +59,57 @@ const api = [
     null,
 ];
 const list = parseContainers(JSON.stringify(api));
-eq(list.length, 4, 'descarta los que no tienen Id');
+eq(list.length, 4, 'drops the ones without Id');
 eq(list[0], {
     id: 'a1', name: 'anime', image: 'anime-local', state: 'exited', ports: [8010],
     project: 'medios', service: 'anime', dependsOn: ['jellyfin'], workingDir: '/home/u/jellyfin',
-}, 'contenedor completo (puertos sin repetir)');
-eq(list[1].ports, [8096], 'solo puertos publicados');
-eq(list[2].project, '', 'sin proyecto');
-eq(list[2].service, 'suelto', 'sin servicio: el nombre');
-eq(list[3].ports, [], 'sin Ports');
-eq(parseContainers('no es json'), null, 'JSON roto');
-eq(parseContainers('{"message":"x"}'), null, 'no es una lista');
-eq(parseContainers('[{"Id":"abcdef0123456789"}]')[0].name, 'abcdef012345', 'sin nombre: Id corto');
+}, 'full container (ports without repeats)');
+eq(list[1].ports, [8096], 'only published ports');
+eq(list[2].project, '', 'no project');
+eq(list[2].service, 'suelto', 'no service: the name');
+eq(list[3].ports, [], 'no Ports');
+eq(parseContainers('no es json'), null, 'broken JSON');
+eq(parseContainers('{"message":"x"}'), null, 'not a list');
+eq(parseContainers('[{"Id":"abcdef0123456789"}]')[0].name, 'abcdef012345', 'no name: short Id');
 
-// --- grupos ---------------------------------------------------------------------------
+// --- groups ---------------------------------------------------------------------------
 const groups = groupByProject(list);
-eq(groups.map(g => g.project), ['api', 'medios', ''], 'por nombre, sin proyecto al final');
-eq(groups[1].containers.map(c => c.name), ['anime', 'jellyfin'], 'dentro, por nombre');
-eq(groupByProject([]), [], 'sin contenedores');
+eq(groups.map(g => g.project), ['api', 'medios', ''], 'by name, no project at the end');
+eq(groups[1].containers.map(c => c.name), ['anime', 'jellyfin'], 'inside, by name');
+eq(groupByProject([]), [], 'no containers');
 
-// --- orden de dependencias ------------------------------------------------------------
+// --- dependency order ------------------------------------------------------------
 const C = (service, dependsOn = [], state = 'exited') => ({name: service, service, dependsOn, state});
-eq(startOrder([C('anime', ['jellyfin']), C('jellyfin')]).map(c => c.name), ['jellyfin', 'anime'], 'jellyfin antes que anime');
-eq(startOrder([C('web', ['api']), C('api', ['db']), C('db')]).map(c => c.name), ['db', 'api', 'web'], 'cadena');
-eq(startOrder([C('a', ['b']), C('b', ['a'])]).map(c => c.name), ['a', 'b'], 'ciclo: por nombre, sin colgarse');
-eq(startOrder([C('a', ['fuera'])]).map(c => c.name), ['a'], 'dependencia fuera del grupo');
-eq(startOrder([C('a', ['a'])]).map(c => c.name), ['a'], 'depende de sí mismo');
+eq(startOrder([C('anime', ['jellyfin']), C('jellyfin')]).map(c => c.name), ['jellyfin', 'anime'], 'jellyfin before anime');
+eq(startOrder([C('web', ['api']), C('api', ['db']), C('db')]).map(c => c.name), ['db', 'api', 'web'], 'chain');
+eq(startOrder([C('a', ['b']), C('b', ['a'])]).map(c => c.name), ['a', 'b'], 'cycle: by name, without hanging');
+eq(startOrder([C('a', ['fuera'])]).map(c => c.name), ['a'], 'dependency outside the group');
+eq(startOrder([C('a', ['a'])]).map(c => c.name), ['a'], 'depends on itself');
 
-// --- botón del grupo --------------------------------------------------------------------
+// --- group button --------------------------------------------------------------------
 const medios = [C('anime', ['jellyfin']), C('jellyfin')];
-eq(groupAction(medios), 'start', 'todo parado: iniciar');
-eq(groupPlan(medios, 'start').map(c => c.name), ['jellyfin', 'anime'], 'iniciar en orden');
+eq(groupAction(medios), 'start', 'all stopped: start');
+eq(groupPlan(medios, 'start').map(c => c.name), ['jellyfin', 'anime'], 'start in order');
 const mitad = [C('anime', ['jellyfin']), C('jellyfin', [], 'running')];
-eq(groupAction(mitad), 'start', 'a medias: iniciar');
-eq(groupPlan(mitad, 'start').map(c => c.name), ['anime'], 'solo los que faltan');
+eq(groupAction(mitad), 'start', 'half-way: start');
+eq(groupPlan(mitad, 'start').map(c => c.name), ['anime'], 'only the missing ones');
 const todos = [C('anime', ['jellyfin'], 'running'), C('jellyfin', [], 'running')];
-eq(groupAction(todos), 'stop', 'todo en marcha: detener');
-eq(groupPlan(todos, 'stop').map(c => c.name), ['anime', 'jellyfin'], 'detener en orden inverso');
+eq(groupAction(todos), 'stop', 'all running: stop');
+eq(groupPlan(todos, 'stop').map(c => c.name), ['anime', 'jellyfin'], 'stop in reverse order');
 
-// --- textos ------------------------------------------------------------------------------
+// --- texts ------------------------------------------------------------------------------
 eq(isRunning('running'), true, 'running');
-eq(isRunning('paused'), true, 'paused cuenta como en marcha');
+eq(isRunning('paused'), true, 'paused counts as running');
 eq(isRunning('exited'), false, 'exited');
-eq(stateText('exited'), 'stopped', 'texto parado');
-eq(stateText('raro'), 'raro', 'estado desconocido');
-eq(formatPorts([8010, 8096]), ':8010 :8096', 'puertos');
-eq(errorMessage(404, '{"message":"No such container: x"}'), 'No such container: x', 'mensaje de Docker');
-eq(errorMessage(500, 'basura'), 'Error 500', 'sin mensaje');
+eq(stateText('exited'), 'stopped', 'stopped text');
+eq(stateText('raro'), 'raro', 'unknown state');
+eq(formatPorts([8010, 8096]), ':8010 :8096', 'ports');
+eq(errorMessage(404, '{"message":"No such container: x"}'), 'No such container: x', 'Docker message');
+eq(errorMessage(500, 'basura'), 'Error 500', 'no message');
 eq(actionOk(204), true, '204');
 eq(actionOk(304), true, '304');
 eq(actionOk(500), false, '500');
 
-print(`${passed} pruebas OK, ${failed} fallos`);
+print(`${passed} tests OK, ${failed} failures`);
 if (failed)
     System.exit(1);

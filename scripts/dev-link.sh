@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Enlaza la extensión del proyecto en la carpeta de extensiones de GNOME,
-# para que los cambios se vean sin copiar archivos.
+# Links the project's extension into GNOME's extensions folder,
+# so changes show up without copying files.
 set -euo pipefail
 
 UUID="agent-notch@daniel.local"
@@ -19,14 +19,14 @@ else
     echo "Linked: $DEST -> $SRC"
 fi
 
-# Esquema de ajustes (docs/20): compilado en el repo (no se sube, .gitignore).
+# Settings schema (docs/20): compiled in the repo (not uploaded, .gitignore).
 glib-compile-schemas "$SRC/schemas"
 echo "Settings schema compiled in $SRC/schemas"
 
-# Servicios D-Bus aparte: el D-Bus de sesión los arranca al llamarlos y se
-# cierran solos; no queda nada en marcha.
-#   - Test de velocidad (docs/16-velocidad-internet.md)
-#   - Brillo de monitores externos por DDC/CI (docs/17-brillo-monitor.md)
+# Separate D-Bus services: the session D-Bus starts them when they are called and they
+# quit on their own; nothing is left running.
+#   - Speed test (docs/16-velocidad-internet.md)
+#   - External monitor brightness over DDC/CI (docs/17-brillo-monitor.md)
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SERVICE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services"
 mkdir -p "$SERVICE_DIR"

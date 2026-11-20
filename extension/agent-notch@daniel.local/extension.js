@@ -18,22 +18,22 @@ import {SettingsModule} from './modules/settings.js';
 import {UpdateModule} from './modules/update.js';
 import {setEyeAnimations} from './modules/widgets.js';
 
-// Cuánto sobresale la isla por debajo de la barra superior (px lógicos),
-// para que se distinga aunque la barra también sea negra, como un notch.
+// How far the island hangs below the top bar (logical px), so it stands
+// out even when the bar is black too, like a notch.
 const OVERHANG_PX = 4;
 
-// Ajustes que se leen en el momento de usarlos (docs/20); el resto cambia qué
-// actores existen y obliga a rehacer la isla.
+// Settings read at the moment they are used (docs/20); the rest change which
+// actors exist and require rebuilding the island.
 const LIVE_KEYS = new Set(['sonido-atencion', 'banner-atencion', 'banner-segundos']);
-const REBUILD_DELAY_MS = 300;   // agrupa varios cambios seguidos
+const REBUILD_DELAY_MS = 300;   // groups several changes in a row
 
 export default class AgentNotchExtension extends Extension {
     enable() {
-        // El reloj ocupa el centro de la barra: lo pasamos a la derecha
-        // (como en un MacBook con notch). disable() lo devuelve a su sitio.
+        // The clock sits in the middle of the bar: we move it to the right
+        // (like on a MacBook with a notch). disable() puts it back.
         this._moveClock(Main.panel._rightBox);
 
-        // Ajustes de la ventana de preferencias (docs/20), por eventos.
+        // Preferences window settings (docs/20), event-driven.
         this._settings = this.getSettings();
         this._rebuildId = 0;
         this._settings.connectObject('changed', (_s, key) => {
@@ -43,8 +43,8 @@ export default class AgentNotchExtension extends Extension {
 
         this._buildIsland();
 
-        // La isla se centra sola al cambiar de ancho (Island.setAnchor): aquí
-        // solo hace falta recolocarla si cambian el monitor, la barra o la escala.
+        // The island centers itself when its width changes (Island.setAnchor): here
+        // it only needs repositioning when the monitor, the bar or the scale change.
         const reposition = () => this._reposition();
         Main.panel.connectObject('notify::height', reposition, this);
         Main.layoutManager.connectObject('monitors-changed', reposition, this);
@@ -52,7 +52,7 @@ export default class AgentNotchExtension extends Extension {
             .connectObject('notify::scale-factor', reposition, this);
         this._reposition();
 
-        // Brillo de monitores externos en Ajustes rápidos (docs/17).
+        // External monitor brightness in Quick Settings (docs/17).
         this._brightness = new MonitorBrightness();
     }
 
@@ -60,7 +60,7 @@ export default class AgentNotchExtension extends Extension {
         this._brightness?.destroy();
         this._brightness = null;
 
-        // Regla de oro: deshacer TODO lo que hizo enable().
+        // Golden rule: undo EVERYTHING enable() did.
         Main.layoutManager.disconnectObject(this);
         Main.panel.disconnectObject(this);
         St.ThemeContext.get_for_stage(global.stage).disconnectObject(this);
@@ -77,15 +77,15 @@ export default class AgentNotchExtension extends Extension {
         this._moveClock(Main.panel._centerBox);
     }
 
-    // La isla con los módulos encendidos en los ajustes. Un módulo apagado no
-    // se crea: ni pestaña, ni tarjeta, ni memoria (docs/20).
+    // The island with the modules turned on in the settings. A module that is
+    // off is not created: no tab, no card, no memory (docs/20).
     _buildIsland() {
         const s = this._settings;
         const on = key => s.get_boolean(key);
         setEyeAnimations(on('animar-ojos'));
 
-        // La isla flota sobre la barra (no va dentro de ella) para poder
-        // crecer hacia abajo al expandirse.
+        // The island floats over the bar (it is not inside it) so it can
+        // grow downwards when it expands.
         this._island = new Island();
         if (on('modulo-musica'))
             this._island.addModule(new MusicModule());
@@ -103,12 +103,12 @@ export default class AgentNotchExtension extends Extension {
         }
         if (on('modulo-docker'))
             this._island.addModule(new DockerModule());
-        // La versión del código cargado (version-name, la escribe install.sh);
-        // sin aviso de actualizaciones, el módulo no vigila nada.
+        // The version of the loaded code (version-name, written by install.sh);
+        // with the update notice off, the module watches nothing.
         const running = on('aviso-actualizaciones') ? this.metadata['version-name'] ?? null : null;
         const update = new UpdateModule(running);
         this._island.addModule(update);
-        // Ojos según los agentes y puntito si hay versión nueva.
+        // Eyes driven by the agents, and a dot when a new version is out.
         this._island.addModule(new MascotModule(agents, update));
         // Gear at the end of the tab bar: opens the preferences (docs/20).
         this._island.addModule(new SettingsModule(() => this.openPreferences()));
@@ -129,11 +129,11 @@ export default class AgentNotchExtension extends Extension {
 
     _destroyIsland() {
         if (this._island) {
-            // Parar las animaciones y hacer ya la colocación pendiente,
-            // mientras sigue en pantalla. Si no, al desactivar a mitad de un
-            // cambio de tamaño (p. ej. al bloquear justo cuando termina un
-            // agente), Clutter colocaría luego una isla ya quitada
-            // («Spurious clutter_actor_allocate», visto el 19-11-2026).
+            // Stop the animations and do the pending layout now, while it is
+            // still on screen. Otherwise, when disabling in the middle of a
+            // size change (e.g. locking right when an agent finishes), Clutter
+            // would later lay out an island that was already removed
+            // ("Spurious clutter_actor_allocate", seen on 19-11-2026).
             this._island.remove_all_transitions();
             this._island.get_allocation_box();
             Main.layoutManager.removeChrome(this._island);

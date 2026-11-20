@@ -1,13 +1,13 @@
-// Lógica pura del módulo Docker (docs/19-modulo-docker.md): interpretar la
-// respuesta de la API, agrupar por proyecto de Compose y ordenar por
-// dependencias. Sin GNOME Shell, para poder probarla con
+// Pure logic of the Docker module (docs/19-modulo-docker.md): interpret the
+// API answer, group by Compose project and sort by
+// dependencies. Without GNOME Shell, so it can be tested with
 //     gjs -m scripts/test-dockerstate.js
 
-// Versión fija de la API: la mínima que acepta Docker 29 (✅ 19-11-2026).
+// Fixed API version: the minimum Docker 29 accepts (✅ 19-11-2026).
 export const API_VERSION = 'v1.40';
 export const DEFAULT_SOCKET = '/var/run/docker.sock';
 
-// Eventos de contenedor que cambian lo que se ve en la pestaña.
+// Container events that change what is shown in the tab.
 export const EVENTS = ['create', 'destroy', 'start', 'die', 'pause', 'unpause', 'rename'];
 
 const PROJECT = 'com.docker.compose.project';
@@ -15,19 +15,19 @@ const SERVICE = 'com.docker.compose.service';
 const DEPENDS_ON = 'com.docker.compose.depends_on';
 const WORKING_DIR = 'com.docker.compose.project.working_dir';
 
-/** Ruta del socket: DOCKER_HOST=unix://… si lo hay, si no el de siempre. */
+/** Socket path: DOCKER_HOST=unix://… if set, otherwise the usual one. */
 export function socketPath(dockerHost) {
     if (dockerHost?.startsWith('unix://') && dockerHost.length > 'unix://'.length)
         return dockerHost.slice('unix://'.length);
     return DEFAULT_SOCKET;
 }
 
-/** URL de la API para una ruta («/containers/json»). */
+/** API URL for a path ("/containers/json"). */
 export function apiUrl(path) {
     return `http://docker/${API_VERSION}${path}`;
 }
 
-/** URL del flujo de eventos de contenedores. */
+/** URL of the container event stream. */
 export function eventsUrl() {
     const filters = JSON.stringify({type: ['container'], event: EVENTS});
     return apiUrl(`/events?filters=${encodeURIComponent(filters)}`);
@@ -40,7 +40,7 @@ export function parseDependsOn(label) {
     return label.split(',').map(part => part.split(':')[0].trim()).filter(Boolean);
 }
 
-/** «En marcha» para la pestaña: lo que hay que detener, no iniciar. */
+/** "Running" for the tab: what needs stopping, not starting. */
 export function isRunning(state) {
     return state === 'running' || state === 'restarting' || state === 'paused';
 }
@@ -57,8 +57,8 @@ function publicPorts(ports) {
 }
 
 /**
- * Respuesta de GET /containers/json?all=true (texto) → lista de
- * contenedores normalizada. Lo que no tenga Id ni nombre se descarta.
+ * Answer of GET /containers/json?all=true (text) → normalized list of
+ * containers. Anything without an Id or a name is dropped.
  */
 export function parseContainers(text) {
     let raw;
@@ -95,8 +95,8 @@ export function parseContainers(text) {
 const byName = (a, b) => a.name.localeCompare(b.name);
 
 /**
- * Agrupa por proyecto de Compose: grupos por nombre, y los que no son de
- * Compose (project '') al final. Dentro, por nombre.
+ * Groups by Compose project: groups by name, and the non-Compose ones
+ * (project '') at the end. Inside, by name.
  */
 export function groupByProject(containers) {
     const map = new Map();
@@ -115,10 +115,10 @@ export function groupByProject(containers) {
 }
 
 /**
- * Orden para iniciar un grupo: antes los servicios de los que dependen
- * otros (depends_on de Compose). Las dependencias fuera de la lista se
- * ignoran. Si hay un ciclo, el resto va por nombre (nunca se cuelga).
- * Para detener, el inverso.
+ * Order to start a group: first the services others depend on
+ * (Compose's depends_on). Dependencies outside the list are
+ * ignored. If there is a cycle, the rest goes by name (it never hangs).
+ * To stop, the reverse.
  */
 export function startOrder(containers) {
     const pending = [...containers].sort(byName);
@@ -136,14 +136,14 @@ export function startOrder(containers) {
 }
 
 /**
- * Qué hace el botón de un grupo: 'start' si hay alguno parado (inicia los
- * que faltan), 'stop' si están todos en marcha.
+ * What a group's button does: 'start' if any is stopped (starts the
+ * missing ones), 'stop' if they are all running.
  */
 export function groupAction(containers) {
     return containers.some(c => !isRunning(c.state)) ? 'start' : 'stop';
 }
 
-/** Contenedores del grupo a los que afecta la acción, en el orden en que se hace. */
+/** Containers of the group the action affects, in the order it is done. */
 export function groupPlan(containers, action) {
     const order = startOrder(containers);
     if (action === 'start')
@@ -151,7 +151,7 @@ export function groupPlan(containers, action) {
     return order.reverse().filter(c => isRunning(c.state));
 }
 
-/** Texto del estado, en español. */
+/** Text of the state. */
 export function stateText(state) {
     switch (state) {
     case 'running': return 'running';
@@ -165,24 +165,24 @@ export function stateText(state) {
     }
 }
 
-/** Puertos publicados como «:8096 :8010». */
+/** Published ports as ":8096 :8010". */
 export function formatPorts(ports) {
     return ports.map(p => `:${p}`).join(' ');
 }
 
-/** Mensaje de error de Docker ({"message": "…"}) o uno genérico con el código. */
+/** Docker error message ({"message": "…"}) or a generic one with the code. */
 export function errorMessage(status, text) {
     try {
         const msg = JSON.parse(text)?.message;
         if (typeof msg === 'string' && msg)
             return msg;
     } catch {
-        // No era JSON.
+        // It was not JSON.
     }
     return `Error ${status}`;
 }
 
-/** true si la respuesta a start/stop es un éxito (204 hecho, 304 ya estaba). */
+/** true if the answer to start/stop is a success (204 done, 304 already like that). */
 export function actionOk(status) {
     return status === 204 || status === 304;
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Envía notificaciones de prueba al GNOME de prueba (scripts/dev-shell.sh),
-# nunca a tu escritorio real.
+# Sends test notifications to the test GNOME (scripts/dev-shell.sh),
+# never to your real desktop.
 #
 # Uso:
-#   scripts/notify-test.sh            # una tanda: 3 notificaciones de apps distintas
-#   scripts/notify-test.sh critica    # una notificación crítica (se queda hasta el clic)
+#   scripts/notify-test.sh            # a batch: 3 notifications from different apps
+#   scripts/notify-test.sh critica    # a critical notification (stays until clicked)
 set -euo pipefail
 
 BUS_FILE="${AGENT_NOTCH_BUS_FILE:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev-bus}"
@@ -14,7 +14,7 @@ if [ ! -f "$BUS_FILE" ]; then
 fi
 export DBUS_SESSION_BUS_ADDRESS="$(cat "$BUS_FILE")"
 
-send() {  # app icono título cuerpo [urgencia]
+send() {  # app icon title body [urgency]
     notify-send --app-name="$1" --icon="$2" --urgency="${5:-normal}" "$3" "$4"
 }
 

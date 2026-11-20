@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Test de velocidad de agent-notch: servicio D-Bus aparte (docs/16-velocidad-internet.md).
+"""agent-notch speed test: a separate D-Bus service (docs/16-velocidad-internet.md).
 
-Lo arranca el D-Bus de sesión al llamar a Start (activación D-Bus) y se
-cierra solo al terminar. Mide contra speed.cloudflare.com: latencia (RTT de
-TCP que devuelve Cloudflare), bajada y subida con 4 conexiones en paralelo.
+The session D-Bus starts it when Start is called (D-Bus activation) and it
+quits on its own when done. It measures against speed.cloudflare.com: latency (TCP
+RTT returned by Cloudflare), download and upload with 4 parallel connections.
 
-Las conexiones van en hilos; las señales D-Bus se emiten siempre desde el
-bucle principal (GLib.idle_add).
+The connections run in threads; D-Bus signals are always emitted from the
+main loop (GLib.idle_add).
 """
 
 import http.client
@@ -59,11 +59,11 @@ DOWNLOAD_MAX_BYTES = 200_000_000
 UPLOAD_REQUEST_BYTES = 4 * 1024 * 1024
 UPLOAD_MAX_S = 8
 UPLOAD_MAX_BYTES = 50_000_000
-WARMUP_S = 1.0          # el arranque lento de TCP no cuenta
+WARMUP_S = 1.0          # TCP slow start does not count
 PROGRESS_EVERY_S = 0.5
 
-IDLE_EXIT_S = 15        # arrancado y nadie llama a Start
-HARD_LIMIT_S = 60       # red de seguridad
+IDLE_EXIT_S = 15        # started and nobody calls Start
+HARD_LIMIT_S = 60       # safety net
 
 RTT_RE = re.compile(r'cfL4;[^,]*?\brtt=(\d+)')
 
@@ -77,7 +77,7 @@ class Cancelled(Exception):
 
 
 class RateLimited(Exception):
-    """Cloudflare responde 429 si se repiten muchos tests seguidos."""
+    """Cloudflare answers 429 if many tests are run in a row."""
 
 
 def check_status(response):
@@ -88,7 +88,7 @@ def check_status(response):
 
 
 class SpeedTest:
-    """La medición completa; corre en un hilo propio."""
+    """The whole measurement; it runs in a thread of its own."""
 
     def __init__(self, on_progress, on_finished, on_failed):
         self._on_progress = on_progress
@@ -115,7 +115,7 @@ class SpeedTest:
         except RateLimited:
             log('Cloudflare asks to wait (HTTP 429)')
             self._on_failed('rate-limited')
-        except Exception as e:  # noqa: BLE001 - cualquier fallo se avisa
+        except Exception as e:  # noqa: BLE001 - any failure is reported
             log(f'failed: {e!r}')
             self._on_failed(str(e) or e.__class__.__name__)
 
@@ -123,7 +123,7 @@ class SpeedTest:
         if self._stop.is_set():
             raise Cancelled()
 
-    # --- Latencia -----------------------------------------------------------
+    # --- Latency -----------------------------------------------------------
 
     def _latency(self):
         conn = http.client.HTTPSConnection(HOST, timeout=CONNECT_TIMEOUT_S)
@@ -137,8 +137,8 @@ class SpeedTest:
                 response.read()
                 elapsed_ms = (time.monotonic() - t) * 1000
                 check_status(response)
-                # RTT de TCP medido por Cloudflare (µs); si no está, el
-                # tiempo de la petición.
+                # TCP RTT measured by Cloudflare (µs); if missing, the
+                # request time.
                 m = RTT_RE.search(response.getheader('server-timing') or '')
                 samples.append(int(m.group(1)) / 1000 if m else elapsed_ms)
                 self._on_progress('latency', statistics.median(samples))
@@ -146,7 +146,7 @@ class SpeedTest:
             conn.close()
         return statistics.median(samples)
 
-    # --- Bajada y subida ----------------------------------------------------
+    # --- Download and upload ----------------------------------------------------
 
     def _phase(self, name, worker, max_s, max_bytes):
         self._check()
@@ -173,7 +173,7 @@ class SpeedTest:
         for t in threads:
             t.start()
 
-        mark = None   # (bytes, tiempo) al acabar el calentamiento
+        mark = None   # (bytes, time) when the warm-up ends
         rate = 0.0
         try:
             while True:
@@ -335,7 +335,7 @@ class Service:
             self._watch_id = 0
         if self._conn:
             try:
-                self._conn.flush_sync(None)   # que las señales salgan antes de cerrar
+                self._conn.flush_sync(None)   # let the signals go out before closing
             except GLib.Error:
                 pass
         self._loop.quit()

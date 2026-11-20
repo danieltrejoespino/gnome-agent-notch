@@ -1,36 +1,36 @@
-// Interfaz común de los módulos de la isla (música, sistema, notificaciones, agentes…).
+// Common interface of the island's modules (music, system, notifications, agents…).
 //
-// Cada módulo:
-//   - emite 'changed' cuando cambia lo que quiere mostrar,
-//   - puede aportar una vista compacta (`active` + `compactActor`): la isla
-//     muestra solo la del módulo activo de mayor prioridad,
-//   - puede aportar una sección expandida (`hasExpanded` + `expandedActor`):
-//     la isla apila las de todos los módulos, por prioridad,
-//   - puede pedir un banner temporal (`bannerActor`): la isla se expande
-//     sola para mostrarlo, con un brillo del color `bannerAccent`,
-//   - puede aportar una tarjeta para la pestaña Home del panel (`homeCard`)
-//     y una página propia con su pestaña (`pageActor`, `pageTitle`, `pageIcon`),
-//   - la isla le avisa de si su vista compacta se está viendo
-//     (setCompactVisible → _onCompactVisibleChanged), p. ej. para animar
-//     algo SOLO mientras se ve,
-//   - la isla y el panel le avisan de qué vistas se están viendo
-//     ('expanded', 'home', 'page'); el módulo reacciona en
-//     _onViewsChanged(views) para trabajar SOLO mientras algo se ve
-//     (p. ej. leer la RAM solo si se ve alguna de sus vistas),
-//   - puede pedir que el panel se abra en su página (señal 'show-page'),
-//   - libera todo en destroy().
+// Each module:
+//   - emits 'changed' when what it wants to show changes,
+//   - can provide a compact view (`active` + `compactActor`): the island
+//     only shows the one of the active module with the highest priority,
+//   - can provide an expanded section (`hasExpanded` + `expandedActor`):
+//     the island stacks those of all modules, by priority,
+//   - can ask for a temporary banner (`bannerActor`): the island expands
+//     on its own to show it, with a glow in the `bannerAccent` color,
+//   - can provide a card for the panel's Home tab (`homeCard`)
+//     and a page of its own with its tab (`pageActor`, `pageTitle`, `pageIcon`),
+//   - the island tells it whether its compact view is visible
+//     (setCompactVisible → _onCompactVisibleChanged), e.g. to animate
+//     something ONLY while visible,
+//   - the island and the panel tell it which views are visible
+//     ('expanded', 'home', 'page'); the module reacts in
+//     _onViewsChanged(views) to work ONLY while something is visible
+//     (e.g. read the RAM only if one of its views is visible),
+//   - can ask the panel to open on its page ('show-page' signal),
+//   - releases everything in destroy().
 //
-// Los actores son del módulo: se crean UNA vez y se actualizan después
-// (nunca se recrean en cada cambio).
+// The actors belong to the module: they are created ONCE and updated afterwards
+// (never recreated on every change).
 
 import GObject from 'gi://GObject';
 
 export const NotchModule = GObject.registerClass({
-    // 'changed': cambió lo que quiere mostrar.
-    // 'dismiss': pide a la isla que se minimice (cierra el panel y no se
-    //            vuelve a expandir hasta que el ratón salga y vuelva a entrar).
-    // 'show-page': pide abrir el panel en su página, o cerrarlo si ya está
-    //            abierto en ella (p. ej. un atajo de teclado).
+    // 'changed': what it wants to show changed.
+    // 'dismiss': asks the island to minimize (closes the panel and does not
+    //            expand again until the pointer leaves and comes back).
+    // 'show-page': asks to open the panel on its page, or close it if it is
+    //            already open on it (e.g. a keyboard shortcut).
     Signals: {'changed': {}, 'dismiss': {}, 'show-page': {}},
 }, class NotchModule extends GObject.Object {
     _init(params) {
@@ -39,76 +39,76 @@ export const NotchModule = GObject.registerClass({
         this._notchCompactVisible = false;
     }
 
-    /** Mayor número = antes (compacta: gana; expandida: va más arriba). */
+    /** Higher number = first (compact: wins; expanded: goes higher up). */
     get priority() {
         return 0;
     }
 
-    /** true si tiene algo que mostrar en la fila compacta. */
+    /** true if it has something to show in the compact row. */
     get active() {
         return false;
     }
 
-    /** Actor de la vista compacta. */
+    /** Actor of the compact view. */
     get compactActor() {
         return null;
     }
 
-    /** true si su vista compacta es la "de reposo" (la isla queda mínima). */
+    /** true if its compact view is the "resting" one (the island stays minimal). */
     get minimal() {
         return false;
     }
 
     /**
-     * Actor que el módulo añade al final de la barra de pestañas del panel
-     * (p. ej. el botón «Actualizar», docs/18), o null. Lo crea y lo muestra
-     * u oculta el módulo; el panel solo lo coloca y lo suelta al destruirse.
+     * Actor the module adds at the end of the panel's tab bar
+     * (e.g. the "Update" button, docs/18), or null. The module creates it and
+     * shows or hides it; the panel only places it and releases it when destroyed.
      */
     get tabBarActor() {
         return null;
     }
 
-    /** true si su vista compacta necesita la fila alta (dos líneas, docs/09). */
+    /** true if its compact view needs the tall row (two lines, docs/09). */
     get tallCompact() {
         return false;
     }
 
-    /** true si tiene una sección que mostrar en la vista expandida. */
+    /** true if it has a section to show in the expanded view. */
     get hasExpanded() {
         return false;
     }
 
     /**
-     * Actor de la sección expandida. Conviene crearlo la primera vez que se
-     * pide, no antes: si nunca se pasa el ratón, no ocupa memoria.
+     * Actor of the expanded section. Better to create it the first time it is
+     * asked for, not before: if the pointer never goes over it, it uses no memory.
      */
     get expandedActor() {
         return null;
     }
 
-    /** Tarjeta para la pestaña Home del panel, o null. Crearla al primer uso. */
+    /** Card for the panel's Home tab, or null. Create it on first use. */
     get homeCard() {
         return null;
     }
 
-    /** Página propia en el panel (con su pestaña), o null. Crearla al primer uso. */
+    /** Page of its own in the panel (with its tab), or null. Create it on first use. */
     get pageActor() {
         return null;
     }
 
-    /** Nombre de la pestaña. */
+    /** Tab name. */
     get pageTitle() {
         return '';
     }
 
-    /** Icono simbólico de la pestaña. */
+    /** Symbolic icon of the tab. */
     get pageIcon() {
         return 'application-x-addon-symbolic';
     }
 
-    // --- Qué vistas se están viendo -----------------------------------------
+    // --- Which views are visible -----------------------------------------
 
-    /** La isla avisa: su vista compacta se ve (o deja de verse). */
+    /** The island tells it: its compact view is visible (or stops being visible). */
     setCompactVisible(visible) {
         if (visible === this._notchCompactVisible)
             return;
@@ -120,7 +120,7 @@ export const NotchModule = GObject.registerClass({
         return this._notchCompactVisible;
     }
 
-    /** Para los módulos: su vista compacta empieza o deja de verse. */
+    /** For the modules: their compact view starts or stops being visible. */
     _onCompactVisibleChanged(_visible) {}
 
     setExpandedVisible(visible) {
@@ -135,7 +135,7 @@ export const NotchModule = GObject.registerClass({
         this._setViewVisible('page', visible);
     }
 
-    /** Vistas visibles ahora mismo ('expanded', 'home', 'page'). */
+    /** Views visible right now ('expanded', 'home', 'page'). */
     get visibleViews() {
         return this._notchVisibleViews;
     }
@@ -150,19 +150,19 @@ export const NotchModule = GObject.registerClass({
         this._onViewsChanged(this._notchVisibleViews);
     }
 
-    /** Para los módulos: cambió el conjunto de vistas visibles. */
+    /** For the modules: the set of visible views changed. */
     _onViewsChanged(_views) {}
 
     /**
-     * Banner temporal (p. ej. una notificación), o null. Mientras no sea
-     * null, la isla se expande sola y lo muestra en lugar de las secciones.
-     * Al cambiar, emitir 'changed'.
+     * Temporary banner (e.g. a notification), or null. While it is not
+     * null, the island expands on its own and shows it instead of the sections.
+     * When it changes, emit 'changed'.
      */
     get bannerActor() {
         return null;
     }
 
-    /** Color del brillo inferior mientras se ve el banner ({red, green, blue} 0–255), o null. */
+    /** Color of the bottom glow while the banner is visible ({red, green, blue} 0–255), or null. */
     get bannerAccent() {
         return null;
     }

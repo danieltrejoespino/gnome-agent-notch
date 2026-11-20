@@ -1,17 +1,17 @@
-// Módulo Concentración: temporizador (15 / 25 / 50 min) para trabajar sin
-// distracciones. Ver docs/13-rediseno.md (etapa D4).
+// Focus module: timer (15 / 25 / 50 min) to work without
+// distractions. See docs/13-rediseno.md (stage D4).
 //
-// Vistas: compacta mientras cuenta («◔ 18 min»), sección en el hover,
-// tarjeta de Home («25:00 · Concentración, listo ▶») y página propia.
+// Views: compact while counting ("◔ 18 min"), a section in the hover,
+// Home card ("25:00 · Focus, ready ▶") and a page of its own.
 //
-// Consumo (lo mínimo posible para un temporizador):
-//   - Parado: nada.
-//   - Contando y sin ninguna vista detallada: un despertar por MINUTO
-//     (la compacta solo muestra minutos) + uno al terminar.
-//   - Con el hover, Home o la página a la vista: un despertar por segundo,
-//     solo mientras se ve.
-//   - Al bloquear la pantalla GNOME desactiva la extensión: se guarda la
-//     hora de fin en $XDG_RUNTIME_DIR (RAM) y se recupera al desbloquear.
+// Cost (as little as possible for a timer):
+//   - Stopped: nothing.
+//   - Counting and no detailed view: one wakeup per MINUTE
+//     (the compact view only shows minutes) + one at the end.
+//   - With the hover, Home or the page visible: one wakeup per second,
+//     only while visible.
+//   - When the screen locks GNOME disables the extension: the end
+//     time is saved in $XDG_RUNTIME_DIR (RAM) and restored on unlock.
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -23,7 +23,7 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import {NotchModule} from './module.js';
 import {Bar, formatTime, makeLabel} from './widgets.js';
 
-const PRIORITY = 20;            // contando: gana a la música en la compacta
+const PRIORITY = 20;            // counting: beats the music in the compact view
 const PRESETS_MIN = [15, 25, 50];
 const DEFAULT_MIN = 25;
 const ICON = 'alarm-symbolic';
@@ -44,10 +44,10 @@ class FocusModule extends NotchModule {
 
         this._mode = 'idle';                 // 'idle' | 'running' | 'paused'
         this._duration = DEFAULT_MIN * 60;   // s
-        this._endsAt = 0;                    // s (hora real) si running
-        this._remaining = this._duration;    // s si paused
+        this._endsAt = 0;                    // s (wall clock) if running
+        this._remaining = this._duration;    // s if paused
         this._tickId = 0;
-        this._viewList = [];                    // vistas creadas (se crean al primer uso)
+        this._viewList = [];                    // views created (created on first use)
         this._exp = this._card = this._page = null;
 
         this._buildCompact();
@@ -94,7 +94,7 @@ class FocusModule extends NotchModule {
         return ICON;
     }
 
-    // --- Estado ---------------------------------------------------------------
+    // --- State ---------------------------------------------------------------
 
     get _remainingSeconds() {
         if (this._mode === 'running')
@@ -110,7 +110,7 @@ class FocusModule extends NotchModule {
         const remaining = this._mode === 'paused' ? this._remaining : this._duration;
         this._endsAt = nowSeconds() + remaining;
         this._setMode('running');
-        // Minimizar la isla: el tiempo se sigue viendo en la compacta.
+        // Minimize the island: the time still shows in the compact view.
         this.emit('dismiss');
     }
 
@@ -142,12 +142,12 @@ class FocusModule extends NotchModule {
         this._mode = mode;
         this._schedule();
         this._refreshAll();
-        // Aparece/desaparece de la compacta y el tamaño de las vistas cambia.
+        // It appears/disappears from the compact view and the size of the views changes.
         this.emit('changed');
     }
 
-    // Un solo temporizador: cada segundo si alguna vista detallada se ve,
-    // si no, al siguiente cambio de minuto (o al final, lo que llegue antes).
+    // A single timer: every second if a detailed view is visible,
+    // otherwise, at the next minute change (or at the end, whichever comes first).
     _schedule() {
         if (this._tickId) {
             GLib.source_remove(this._tickId);
@@ -194,7 +194,7 @@ class FocusModule extends NotchModule {
         }
     }
 
-    // --- Persistencia al bloquear la pantalla ----------------------------------
+    // --- Persistence when locking the screen ----------------------------------
 
     _saveState() {
         try {
@@ -223,7 +223,7 @@ class FocusModule extends NotchModule {
                 return;
             state = JSON.parse(new TextDecoder().decode(bytes));
         } catch {
-            return;   // no había temporizador guardado
+            return;   // there was no saved timer
         }
         if (!['running', 'paused'].includes(state?.mode))
             return;
@@ -236,14 +236,14 @@ class FocusModule extends NotchModule {
             this._mode = 'running';
             this._endsAt = Number(state.endsAt);
         } else {
-            // Terminó mientras la pantalla estaba bloqueada.
+            // It finished while the screen was locked.
             this._notifyFinished();
             return;
         }
         this._schedule();
     }
 
-    // --- Vistas ----------------------------------------------------------------
+    // --- Views ----------------------------------------------------------------
 
     _buildCompact() {
         this._compact = new St.BoxLayout({
@@ -376,7 +376,7 @@ class FocusModule extends NotchModule {
     }
 
     destroy() {
-        // Guardar antes de nada: se llama al bloquear la pantalla.
+        // Save before anything: called when the screen locks.
         this._saveState();
 
         if (this._tickId) {

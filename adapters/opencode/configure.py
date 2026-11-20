@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""Añade o quita el plugin de agent-notch en OpenCode.
+"""Adds or removes the agent-notch plugin in OpenCode.
 
-    configure.py install     instala el plugin (si ya estaba, lo deja al día)
-    configure.py uninstall   lo quita
-    configure.py status      dice si está (código 0 = sí, 1 = no)
+    configure.py install     installs the plugin (if it was already there, updates it)
+    configure.py uninstall   removes it
+    configure.py status      tells whether it is there (exit code 0 = yes, 1 = no)
 
-OpenCode carga los plugins de ~/.config/opencode/plugins/*.js
-($XDG_CONFIG_HOME/opencode/plugins). Ahí se deja un archivo pequeño,
-agent-notch.js, que carga el adaptador de esta carpeta (agent-notch.js junto a
-este script): así una actualización de agent-notch llega sola, sin volver a
-configurar. Si el adaptador desaparece (al desinstalar agent-notch sin quitar
-el plugin), el archivo no hace nada en lugar de dar error.
+OpenCode loads the plugins in ~/.config/opencode/plugins/*.js
+($XDG_CONFIG_HOME/opencode/plugins). A small file is left there,
+agent-notch.js, which loads the adapter in this folder (agent-notch.js next to
+this script): that way an agent-notch update arrives on its own, without
+configuring again. If the adapter goes missing (when uninstalling agent-notch without
+removing the plugin), the file does nothing instead of failing.
 
---plugin RUTA elige qué adaptador usar; por defecto, el de esta carpeta. Sirve
-tanto para la copia instalada (~/.local/share/agent-notch/adapters/) como para
-un repo clonado.
+--plugin PATH picks which adapter to use; by default, the one in this folder. It works
+both for the installed copy (~/.local/share/agent-notch/adapters/) and for
+a cloned repo.
 
-Solo toca su propio archivo: los demás plugins quedan igual. OpenCode 2 carga
-los plugins en su servicio de fondo (`opencode serve --service`), que sigue
-vivo al cerrar OpenCode: para que cargue el plugin hay que pararlo
-(pkill -f 'opencode serve'); OpenCode lo vuelve a lanzar al abrirlo.
+It only touches its own file: other plugins stay the same. OpenCode 2 loads
+plugins in its background service (`opencode serve --service`), which stays
+alive after closing OpenCode: to load the plugin it has to be stopped
+(pkill -f 'opencode serve'); OpenCode starts it again when it opens.
 """
 
 import argparse
@@ -97,8 +97,8 @@ def main(argv=None):
         return 0
 
     if ours and text != loader(plugin):
-        # Apunta a otra copia (p. ej. un repo clonado): se deja, como el hook
-        # de Claude Code.
+        # It points to another copy (e.g. a cloned repo): leave it, like the
+        # Claude Code hook.
         print("agent-notch: the OpenCode plugin points to another copy; leaving it (%s)" % path)
     elif ours:
         os.unlink(path)

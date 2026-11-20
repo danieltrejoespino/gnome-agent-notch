@@ -1,21 +1,21 @@
-// Lógica pura del botón «Actualizar» (docs/18): sin GNOME Shell, para
-// probarla con gjs (scripts/test-updatestate.js).
+// Pure logic of the "Update" button (docs/18): without GNOME Shell, so it
+// can be tested with gjs (scripts/test-updatestate.js).
 //
-// update.json lo escribe services/updater/update_check.py:
+// update.json is written by services/updater/update_check.py:
 //   {"disponible": "v5", "instalada": "v4", "estado": "disponible",
-//    "registro": "/ruta/update.log", ...lo de «Más tarde»}
+//    "registro": "/path/update.log", ...the "Later" fields}
 
 const TAG = /^v(\d+(?:\.\d+)*)$/;
 
 export const UPDATE_STATES = ['disponible', 'instalando', 'instalada', 'error'];
 
-/** 'v1.10' → [1, 10]; lo que no sea una release (main, local (…)) → null. */
+/** 'v1.10' → [1, 10]; anything that is not a release (main, local (…)) → null. */
 export function versionKey(tag) {
     const m = TAG.exec(String(tag ?? '').trim());
     return m ? m[1].split('.').map(Number) : null;
 }
 
-/** ¿`latest` es una release más nueva que `installed`? (v1.10 > v1.9) */
+/** Is `latest` a release newer than `installed`? (v1.10 > v1.9) */
 export function isNewer(latest, installed) {
     const a = versionKey(latest);
     const b = versionKey(installed);
@@ -29,19 +29,19 @@ export function isNewer(latest, installed) {
     return false;
 }
 
-/** Contenido de VERSION → la versión ('v4', 'local (…)'…), sin espacios. */
+/** Contents of VERSION → the version ('v4', 'local (…)'…), trimmed. */
 export function parseInstalled(text) {
     return String(text ?? '').trim();
 }
 
 /**
- * Texto de update.json + versión EN MARCHA → qué mostrar, o null si no hay
- * nada (sin actualización, JSON roto, código que no es una release…):
+ * update.json text + RUNNING version → what to show, or null if there is
+ * nothing (no update, broken JSON, code that is not a release…):
  *   {version: 'v5', state: 'disponible'|'instalando'|'instalada'|'error', log}
- * `running` es la versión del código que GNOME tiene cargado (version-name
- * del metadata.json, que escribe install.sh), no el archivo VERSION: así,
- * tras instalar, «Cerrar sesión para terminar» sigue hasta volver a entrar
- * y desaparece después (arreglado el 19-11-2026: antes se quedaba).
+ * `running` is the version of the code GNOME has loaded (version-name
+ * from metadata.json, written by install.sh), not the VERSION file: that way,
+ * after installing, "Log out to finish" stays until logging back in
+ * and goes away afterwards (fixed on 19-11-2026: it used to stay).
  */
 export function updateView(raw, running) {
     if (!versionKey(running))
@@ -64,13 +64,13 @@ export function updateView(raw, running) {
     return {version, state, log};
 }
 
-/** ¿Cambió lo que se muestra? */
+/** Did what is shown change? */
 export function sameView(a, b) {
     return a === b || (a !== null && b !== null &&
         a.version === b.version && a.state === b.state && a.log === b.log);
 }
 
-/** Texto del botón para cada estado. */
+/** Button text for each state. */
 export function buttonText(view) {
     switch (view?.state) {
     case 'instalando':

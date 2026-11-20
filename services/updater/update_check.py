@@ -1,39 +1,39 @@
 #!/usr/bin/env python3
-"""Aviso de versión nueva de agent-notch.
+"""agent-notch new-version notice.
 
-Lo lanza un temporizador de systemd del usuario una vez al día
-(agent-notch-update.timer, lo instala scripts/install.sh). Fuera de GNOME
-Shell: la extensión no lanza procesos (Regla 2 de CLAUDE.md).
+Run by a user systemd timer once a day (agent-notch-update.timer, installed
+by scripts/install.sh). Outside GNOME Shell: the extension does not launch
+processes (Rule 2 of CLAUDE.md).
 
-1. Lee la versión instalada (~/.local/share/agent-notch/VERSION). Si no es una
-   release (vN), por ejemplo «main» o «local (...)», no hace nada.
-2. Pregunta a GitHub cuál es la última release: UNA petición, sin la API
-   (que limita peticiones): /releases/latest redirige a /releases/tag/vN.
-3. Si hay una más nueva y no se pospuso, muestra una notificación:
-       agent-notch v2 disponible · Tienes la v1      [Más tarde] [Actualizar]
-   Clic en la notificación (o en el banner de la isla) = Actualizar.
-4. Actualizar: descarga scripts/install.sh de esa versión y lo ejecuta; al
-   terminar avisa de que hay que volver a entrar en la sesión.
+1. Reads the installed version (~/.local/share/agent-notch/VERSION). If it is
+   not a release (vN), for example "main" or "local (...)", it does nothing.
+2. Asks GitHub which one is the latest release: ONE request, without the API
+   (which rate-limits): /releases/latest redirects to /releases/tag/vN.
+3. If there is a newer one and it was not postponed, it shows a notification:
+       agent-notch v2 available · You have v1      [Later] [Update]
+   Click on the notification (or on the island's banner) = Update.
+4. Update: downloads that version's scripts/install.sh and runs it; when
+   done it says you need to log back in.
 
-Espera la respuesta como mucho WAIT_S; después cierra la notificación y sale
-(la de mañana volverá a avisar). «Más tarde» o descartarla: no vuelve a
-avisar de esa versión en SNOOZE_DAYS días.
+It waits for an answer at most WAIT_S; then it closes the notification and
+exits (tomorrow's run will notify again). "Later" or dismissing it: it does
+not notify about that version again for SNOOZE_DAYS days.
 
-Además (docs/18, botón «Actualizar» en la isla): apunta la versión disponible
-en update.json ({"disponible", "instalada", "estado", "registro"}), que la
-extensión vigila para mostrar su botón, y atiende el método Instalar() del
-nombre D-Bus dev.agentnotch.Updater:
-  - mientras espera respuesta a su notificación, lo tiene este proceso;
-  - si no, D-Bus arranca «update_check.py --servicio», que instala y sale
-    (o sale a los SERVICE_IDLE_S segundos si nadie llama).
-Así nunca hay dos instalaciones a la vez.
+Also (docs/18, the island's "Update" button): it writes the available
+version to update.json ({"disponible", "instalada", "estado", "registro"}),
+which the extension watches to show its button, and it serves the Instalar()
+method of the D-Bus name dev.agentnotch.Updater:
+  - while it waits for an answer to its notification, this process owns it;
+  - otherwise, D-Bus starts "update_check.py --servicio", which installs and
+    exits (or exits after SERVICE_IDLE_S seconds if nobody calls).
+That way there are never two installs at once.
 
-Desactivar: systemctl --user disable --now agent-notch-update.timer
+Disable: systemctl --user disable --now agent-notch-update.timer
 
-Para pruebas (no las usa el temporizador):
-    AGENT_NOTCH_UPDATE_LATEST=v9         fingir la última release
-    AGENT_NOTCH_UPDATE_INSTALLER=/ruta   instalador local en vez de descargarlo
-    AGENT_NOTCH_UPDATE_WAIT=30           segundos de espera
+For tests (the timer does not use them):
+    AGENT_NOTCH_UPDATE_LATEST=v9         fake the latest release
+    AGENT_NOTCH_UPDATE_INSTALLER=/path   local installer instead of downloading it
+    AGENT_NOTCH_UPDATE_WAIT=30           seconds to wait
 """
 
 import json
@@ -76,8 +76,8 @@ STATE_HOME = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/st
 VERSION_FILE = os.path.join(DATA, APP, "VERSION")
 STATE_FILE = os.path.join(STATE_HOME, APP, "update.json")
 LOG_FILE = os.path.join(STATE_HOME, APP, "update.log")
-# Ajuste aviso-actualizaciones de la ventana de preferencias (docs/20): el
-# esquema va compilado dentro de la carpeta de la extensión.
+# aviso-actualizaciones setting of the preferences window (docs/20): the
+# schema is compiled inside the extension's folder.
 EXT_SCHEMAS = os.path.join(DATA, "gnome-shell", "extensions", "agent-notch@daniel.local", "schemas")
 SCHEMA_ID = "org.gnome.shell.extensions.agent-notch"
 
@@ -100,8 +100,8 @@ def is_newer(latest, installed):
 
 
 def updates_enabled():
-    """¿Está encendido el aviso de actualizaciones? Sin esquema (versiones
-    viejas, copias de desarrollo sin compilar), sí."""
+    """Is the update notice on? Without a schema (old versions,
+    development copies not compiled), yes."""
     try:
         source = Gio.SettingsSchemaSource.new_from_directory(
             EXT_SCHEMAS, Gio.SettingsSchemaSource.get_default(), False)
@@ -123,12 +123,12 @@ def installed_version():
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
-        return None   # no seguirla: basta con la cabecera Location
+        return None   # do not follow it: the Location header is enough
 
 
 def latest_release():
-    """Etiqueta de la última release, sin descargar ninguna página: GitHub
-    responde a /releases/latest con una redirección a /releases/tag/<etiqueta>."""
+    """Tag of the latest release, without downloading any page: GitHub
+    answers /releases/latest with a redirect to /releases/tag/<tag>."""
     fake = os.environ.get("AGENT_NOTCH_UPDATE_LATEST")
     if fake:
         return fake
@@ -137,7 +137,7 @@ def latest_release():
                                  method="HEAD", headers={"User-Agent": USER_AGENT})
     try:
         with opener.open(req, timeout=HTTP_TIMEOUT_S):
-            return None   # sin redirección: el repo no tiene releases
+            return None   # no redirect: the repo has no releases
     except urllib.error.HTTPError as e:
         location = e.headers.get("Location", "") if e.code in (301, 302, 303, 307, 308) else ""
     m = re.search(r"/releases/tag/([^/?#]+)$", location)
@@ -173,7 +173,7 @@ def snooze(version):
 
 
 def set_offer(**fields):
-    """Lo que lee el botón de la isla (docs/18); conserva lo de «Más tarde»."""
+    """What the island's button reads (docs/18); keeps the "Later" fields."""
     st = load_state()
     st.update(fields)
     save_state(st)
@@ -188,8 +188,8 @@ def clear_offer():
 # --- D-Bus: dev.agentnotch.Updater.Instalar() --------------------------------
 
 def own_updater(conn, on_install):
-    """Pide el nombre y atiende Instalar() llamando a on_install() desde el
-    bucle principal, después de responder. Devuelve False si otro lo tiene."""
+    """Requests the name and serves Instalar() by calling on_install() from the
+    main loop, after replying. Returns False if someone else owns it."""
     def on_call(_conn, _sender, _path, _iface, method, _params, invocation):
         if method != "Instalar":
             invocation.return_dbus_error("org.freedesktop.DBus.Error.UnknownMethod", method)
@@ -203,10 +203,10 @@ def own_updater(conn, on_install):
         "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RequestName",
         GLib.Variant("(su)", (BUS_NAME, 4)),   # 4 = DO_NOT_QUEUE
         GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, -1, None)
-    return reply.unpack()[0] in (1, 4)   # 1 = dueño, 4 = ya lo era
+    return reply.unpack()[0] in (1, 4)   # 1 = owner, 4 = already was
 
 
-# --- Notificaciones (org.freedesktop.Notifications) -------------------------
+# --- Notifications (org.freedesktop.Notifications) -------------------------
 
 class Notifier:
     def __init__(self):
@@ -242,17 +242,17 @@ class Notifier:
             pass
 
     def wait(self, seconds):
-        """Espera a que se pulse una acción o se cierre; None si se agota el tiempo."""
+        """Waits until an action is pressed or it is closed; None if time runs out."""
         self.answer = None
         self._timed_out = False
         source = GLib.timeout_add_seconds(seconds, self._timeout)
         self.loop.run()
         if not self._timed_out:
-            GLib.source_remove(source)   # que no corte la próxima espera
+            GLib.source_remove(source)   # so it does not cut the next wait short
         return self.answer
 
     def answer_with(self, answer):
-        """Respuesta que no viene de la notificación (p. ej. el botón de la isla)."""
+        """An answer that does not come from the notification (e.g. the island's button)."""
         if self.answer is None:
             self.answer = answer
         self.loop.quit()
@@ -266,22 +266,22 @@ class Notifier:
         args = params.unpack()
         if args[0] != self.nid:
             return
-        # Al pulsar, GNOME manda antes ActivationToken: hay que ignorarla.
+        # On click, GNOME sends ActivationToken first: it must be ignored.
         if signal == "ActionInvoked":
             self.answer = args[1]
         elif signal == "NotificationClosed":
             if self.answer is None:
-                # 2 = descartada por el usuario; 1 (caducó) o 3 (la cerramos) no cuentan.
+                # 2 = dismissed by the user; 1 (expired) or 3 (we closed it) do not count.
                 self.answer = "later" if args[1] == 2 else "closed"
         else:
             return
         self.loop.quit()
 
 
-# --- Actualizar --------------------------------------------------------------
+# --- Updating ----------------------------------------------------------------
 
 def run_installer(version):
-    """Ejecuta el install.sh de esa versión. Devuelve (ok, mensaje)."""
+    """Runs that version's install.sh. Returns (ok, message)."""
     local = os.environ.get("AGENT_NOTCH_UPDATE_INSTALLER")
     env = dict(os.environ, AGENT_NOTCH_REF=version)
     os.makedirs(os.path.dirname(LOG_FILE), mode=0o700, exist_ok=True)
@@ -294,14 +294,14 @@ def run_installer(version):
             with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp, open(script, "wb") as f:
                 f.write(resp.read())
         with open(LOG_FILE, "w", encoding="utf-8") as logf:
-            # cwd neutro: un install.sh descargado no debe ver el repo local.
+            # neutral cwd: a downloaded install.sh must not see the local repo.
             p = subprocess.run(["bash", script], env=env, cwd=tmp,
                                stdout=logf, stderr=subprocess.STDOUT, timeout=600)
     return p.returncode == 0, LOG_FILE
 
 
 def logout_dialog():
-    """Muestra el diálogo de cerrar sesión de GNOME (no cierra sin confirmar)."""
+    """Shows GNOME's log out dialog (it does not log out without confirming)."""
     try:
         Gio.bus_get_sync(Gio.BusType.SESSION, None).call_sync(
             "org.gnome.SessionManager", "/org/gnome/SessionManager",
@@ -312,8 +312,8 @@ def logout_dialog():
 
 
 def install(version, n=None):
-    """Instala esa versión dejando el progreso en update.json (y en la
-    notificación, si la hay). Devuelve True si fue bien."""
+    """Installs that version, leaving the progress in update.json (and in the
+    notification, if there is one). Returns True if it went well."""
     set_offer(disponible=version, instalada=installed_version(), estado="instalando", registro=None)
     if n:
         n.notify("Updating agent-notch…", "Downloading %s" % version, replaces=n.nid)
@@ -327,8 +327,8 @@ def install(version, n=None):
 
 
 def serve():
-    """Modo --servicio: lo arranca D-Bus cuando la isla llama a Instalar() y
-    el comprobador diario no está esperando. Instala y sale."""
+    """--servicio mode: D-Bus starts it when the island calls Instalar() and
+    the daily checker is not waiting. It installs and exits."""
     loop = GLib.MainLoop()
     state = {"busy": False}
 
@@ -379,14 +379,14 @@ def main():
         log("up to date (%s; latest %s)" % (installed, latest))
         clear_offer()
         return 0
-    # El botón de la isla sale aunque la notificación esté pospuesta.
+    # The island's button shows even if the notification is postponed.
     set_offer(disponible=latest, instalada=installed, estado="disponible", registro=None)
     if snoozed(latest, time.time()):
         log("%s postponed" % latest)
         return 0
 
     n = Notifier()
-    # Mientras espera, el botón de la isla llega aquí (no a otro proceso).
+    # While it waits, the island's button reaches this process (not another one).
     own_updater(n.bus, lambda: n.answer_with("update"))
     n.notify("agent-notch %s available" % latest,
              "You have %s. Click to update." % installed,
@@ -404,7 +404,7 @@ def main():
             if n.wait(min(WAIT_S, 3600)) == "logout":
                 logout_dialog()
             else:
-                # Sin respuesta: el mismo aviso, sin un botón que ya nadie escucha.
+                # No answer: the same notice, without a button nobody listens to anymore.
                 n.notify("agent-notch %s installed" % latest,
                          "Log out and back in to apply it.", replaces=n.nid)
         else:
@@ -415,7 +415,7 @@ def main():
     if answer == "later":
         snooze(latest)
     else:
-        n.close()   # sin respuesta: que no quede un botón que ya no escucha nadie
+        n.close()   # no answer: do not leave a button nobody listens to anymore
     return 0
 
 

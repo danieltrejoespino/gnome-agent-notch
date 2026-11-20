@@ -1,18 +1,18 @@
-// Brillo de monitores externos por DDC/CI en Ajustes rápidos: una barra
-// como la de brillo de GNOME, justo debajo de ella, por cada monitor externo
-// que acepte DDC/CI. Ver docs/17-brillo-monitor.md.
+// External monitor brightness over DDC/CI in Quick Settings: a slider
+// like GNOME's brightness one, right below it, for each external monitor
+// that supports DDC/CI. See docs/17-brillo-monitor.md.
 //
-// GNOME 50 solo mueve el brillo de pantallas con backlight en Mutter (la
-// del portátil); los monitores externos se controlan por DDC/CI, que es
-// lento (~0,8 s para buscarlos, ~0,13 s por escritura). Eso lo hace un
-// servicio D-Bus aparte (services/brightness/brightness.py) que el D-Bus
-// arranca al llamarlo y que se cierra solo a los 30 s sin uso.
+// GNOME 50 only changes the brightness of screens with a backlight in Mutter (the
+// laptop's); external monitors are controlled over DDC/CI, which is
+// slow (~0.8 s to find them, ~0.13 s per write). That is done by a
+// separate D-Bus service (services/brightness/brightness.py) that D-Bus
+// starts when called and that quits on its own after 30 s unused.
 //
-// Consumo: sin monitor externo no se hace nada. Se buscan monitores solo
-// al activar la extensión y cuando cambia el conjunto de monitores
-// externos (señal monitors-changed); el valor se relee al abrir Ajustes
-// rápidos. Mientras se arrastra la barra se manda como mucho un valor cada
-// 200 ms (y siempre el último).
+// Cost: without an external monitor nothing is done. Monitors are only looked up
+// when the extension is enabled and when the set of external monitors
+// changes (monitors-changed signal); the value is read again when Quick
+// Settings opens. While dragging the slider at most one value is sent every
+// 200 ms (and always the last one).
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -26,17 +26,17 @@ const OBJECT_PATH = '/dev/agentnotch/Brightness';
 const INTERFACE = 'dev.agentnotch.Brightness';
 const CALL_TIMEOUT_MS = 15000;
 
-const HOTPLUG_DELAY_S = 3;     // el monitor recién conectado tarda en responder por DDC
-const SEND_EVERY_MS = 200;     // mientras se arrastra
-const N_COLUMNS = 2;           // las barras ocupan las dos columnas
+const HOTPLUG_DELAY_S = 3;     // a freshly connected monitor takes a while to answer over DDC
+const SEND_EVERY_MS = 200;     // while dragging
+const N_COLUMNS = 2;           // the sliders take both columns
 
-// En el GNOME de prueba el monitor es virtual y no coincide con el real:
-// scripts/dev-shell.sh pone esta variable para mostrar todos los monitores
-// DDC que encuentre ddcutil.
+// In the test GNOME the monitor is virtual and does not match the real one:
+// scripts/dev-shell.sh sets this variable to show all the DDC
+// monitors ddcutil finds.
 const DEV_ANY_MONITOR = GLib.getenv('AGENT_NOTCH_DDC_ANY') === '1';
 
-// 'SAM:S24R35x:ABC123' → monitores externos activos según Mutter, con
-// el mismo formato que el campo "Monitor" de `ddcutil detect`.
+// 'SAM:S24R35x:ABC123' → active external monitors according to Mutter, with
+// the same format as the "Monitor" field of `ddcutil detect`.
 function externalMonitors() {
     const found = new Map();
     const manager = global.backend.get_monitor_manager();
@@ -64,7 +64,7 @@ class MonitorSlider extends QuickSlider {
 
         this._sendValue = sendValue;
         this._blocked = false;
-        this._pending = null;   // valor que falta por mandar
+        this._pending = null;   // value still to send
         this._sent = null;
         this._throttleId = 0;
 
@@ -74,10 +74,10 @@ class MonitorSlider extends QuickSlider {
         }, this);
     }
 
-    // Valor leído del monitor (al detectar o al abrir Ajustes rápidos).
+    // Value read from the monitor (when detecting or when opening Quick Settings).
     showValue(current, maximum) {
         if (this._throttleId)
-            return;   // se está arrastrando: manda lo que pide el usuario
+            return;   // being dragged: send what the user asks for
         this.maximum = maximum;
         this._sent = current;
         this._blocked = true;
@@ -115,7 +115,7 @@ class MonitorSlider extends QuickSlider {
             this._throttleId = 0;
         }
         this.slider.disconnectObject(this);
-        this.menu?.destroy();   // GNOME no lo destruye con el item
+        this.menu?.destroy();   // GNOME does not destroy it with the item
         super.destroy();
     }
 });
@@ -130,7 +130,7 @@ export class MonitorBrightness {
         this._detecting = false;
         this._detectAgain = false;
 
-        // Sin icono en la barra: solo aporta las barras de Ajustes rápidos.
+        // No icon in the bar: it only provides the Quick Settings sliders.
         const quickSettings = Main.panel.statusArea.quickSettings;
         quickSettings.addExternalIndicator(this._indicator, N_COLUMNS);
 
@@ -147,7 +147,7 @@ export class MonitorBrightness {
         const monitors = externalMonitors();
         const key = [...monitors.keys()].sort().join('|');
         if (key === this._knownMonitors && !now)
-            return;   // cambio de resolución, escala…: los mismos monitores
+            return;   // resolution change, scale…: the same monitors
         this._knownMonitors = key;
 
         if (this._hotplugId) {
@@ -169,7 +169,7 @@ export class MonitorBrightness {
         });
     }
 
-    // Llamada asíncrona al servicio; el D-Bus lo arranca si no está.
+    // Asynchronous call to the service; D-Bus starts it if it is not running.
     _call(method, params, replyType, onReply) {
         Gio.DBus.session.call(BUS_NAME, OBJECT_PATH, INTERFACE, method, params,
             replyType ? new GLib.VariantType(replyType) : null,
@@ -216,7 +216,7 @@ export class MonitorBrightness {
             .map(([bus, id, model, current, maximum]) =>
                 ({bus, name: monitors.get(id) ?? model, current, maximum}));
 
-        // Mismos monitores que ya hay: solo se actualizan los valores.
+        // Same monitors as before: only the values are updated.
         const same = wanted.length === this._sliders.length &&
             wanted.every((d, i) => d.bus === this._sliders[i].bus);
         if (!same) {
@@ -233,9 +233,9 @@ export class MonitorBrightness {
         wanted.forEach((d, i) => this._sliders[i].showValue(d.current, d.maximum));
     }
 
-    // Justo debajo de la barra de brillo de GNOME (o de la última de las
-    // nuestras). `_brightness` es interno de GNOME: si no está, la barra va
-    // donde la pone addExternalIndicator (al final).
+    // Right below GNOME's brightness slider (or the last of
+    // ours). `_brightness` is a GNOME internal: if it is missing, the slider goes
+    // where addExternalIndicator puts it (at the end).
     _insert(quickSettings, slider) {
         const menu = quickSettings.menu;
         const anchor = this._sliders.at(-2) ??

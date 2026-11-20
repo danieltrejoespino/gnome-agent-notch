@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
-"""Sesiones de agentes falsas para probar la isla sin Claude Code.
+"""Fake agent sessions to try the island without Claude Code.
 
-Escriben el formato común (docs/03-formato-estado.md) con agente
-"simulador". Por defecto van al bus del GNOME de prueba
-($XDG_RUNTIME_DIR/agent-notch-dev, el que usa scripts/dev-shell.sh), no al
-del escritorio real.
+They write the common format (docs/03-formato-estado.md) with agent
+"simulador". By default they go to the test GNOME's bus
+($XDG_RUNTIME_DIR/agent-notch-dev, the one scripts/dev-shell.sh uses), not to
+the real desktop's.
 
 Uso:
-    scripts/simulate.py demo         # ciclo de una sesión: inactivo → pensando → trabajando
+    scripts/simulate.py demo         # one session's cycle: inactivo → pensando → trabajando
                                      #   → atencion → trabajando → terminado → inactivo
-    scripts/simulate.py multi 4      # 4 sesiones con estados variados, en segundo plano
-    scripts/simulate.py atencion     # una sesión pidiendo atención, en segundo plano
-    scripts/simulate.py list         # muestra las sesiones simuladas y su PID
-    scripts/simulate.py clear        # borra todas las sesiones simuladas
+    scripts/simulate.py multi 4      # 4 sessions in different states, in the background
+    scripts/simulate.py atencion     # one session asking for attention, in the background
+    scripts/simulate.py list         # shows the simulated sessions and their PID
+    scripts/simulate.py clear        # removes all the simulated sessions
 
 Opciones:
-    --real        usar el bus del escritorio real ($XDG_RUNTIME_DIR/agent-notch)
-    --paso S      segundos entre estados en demo (por defecto 2)
+    --real        use the real desktop's bus ($XDG_RUNTIME_DIR/agent-notch)
+    --paso S      seconds between states in demo (2 by default)
 
-Cada sesión de multi/atencion tiene su propio proceso dormido, cuyo PID va en
-el archivo: matarlo (kill PID) simula un agente que se cierra mal, y la isla
-debe quitar la sesión. Esos procesos se cierran solos a la hora.
+Each multi/atencion session has its own sleeping process, whose PID goes in
+the file: killing it (kill PID) simulates an agent that dies, and the island
+must remove the session. Those processes quit on their own after an hour.
 """
 
 import argparse
@@ -53,7 +53,7 @@ ACTIONS = {
 
 
 def default_dir(real):
-    """Bus de pruebas, salvo --real. Un AGENT_NOTCH_DIR ya puesto manda."""
+    """Test bus, unless --real. An AGENT_NOTCH_DIR already set wins."""
     if not real and os.environ.get("AGENT_NOTCH_DIR"):
         return os.environ["AGENT_NOTCH_DIR"]
     runtime = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
@@ -89,7 +89,7 @@ def sim_files():
 
 
 def is_our_child(pid):
-    """Solo matamos procesos que sean este mismo script."""
+    """We only kill processes that are this same script."""
     try:
         with open("/proc/%d/cmdline" % pid, "rb") as f:
             return b"simulate.py" in f.read()
@@ -97,12 +97,12 @@ def is_our_child(pid):
         return False
 
 
-# --- procesos dormidos ----------------------------------------------------
+# --- sleeping processes ----------------------------------------------------
 
 def spawn_sleeper(path):
-    """Proceso en segundo plano que vive hasta que lo maten o pase CHILD_TTL.
-    Al salir por las buenas (TTL o SIGTERM de clear) borra su archivo; con
-    SIGKILL no puede, como un agente que se cuelga."""
+    """Background process that lives until it is killed or CHILD_TTL passes.
+    When it exits cleanly (TTL or clear's SIGTERM) it removes its file; with
+    SIGKILL it cannot, like an agent that hangs."""
     pid = os.fork()
     if pid:
         return pid
@@ -124,13 +124,13 @@ def spawn_sleeper(path):
 def start_background(sid, project, estado):
     path = state.session_path(AGENT, sid)
     accion, tool = pick(estado)
-    # Primero el proceso y después el archivo: así el PID que lleva ya existe.
+    # First the process and then the file: that way the PID it carries already exists.
     pid = spawn_sleeper(path)
     state.write_json(path, session(sid, project, estado, accion, tool, pid=pid))
     return pid
 
 
-# --- comandos -------------------------------------------------------------
+# --- commands -------------------------------------------------------------
 
 def cmd_demo(args):
     sid = "demo"
@@ -166,7 +166,7 @@ def cmd_multi(args):
     while len(projects) < args.n:
         projects.append("project-%d" % (len(projects) + 1))
     for i, project in enumerate(projects):
-        # Que salgan todos los estados antes de repetir.
+        # Show all the states before repeating.
         estado = estados[i % len(estados)] if i < len(estados) else random.choice(estados)
         sid = "multi-%d" % (i + 1)
         pid = start_background(sid, project, estado)
@@ -204,8 +204,8 @@ def cmd_clear(args):
             except OSError:
                 pass
         state.remove(path)
-    # Esperar a que terminen: al salir borran su archivo, y si después se
-    # lanza otro multi, borrarían los nuevos que se llamen igual.
+    # Wait for them to finish: when they exit they remove their file, and if another
+    # multi is started afterwards, they would remove the new ones with the same name.
     deadline = time.time() + 2
     while time.time() < deadline and any(os.path.exists("/proc/%d" % p) for p in killed):
         time.sleep(0.02)

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Brillo de monitores externos por DDC/CI: servicio D-Bus aparte.
+"""External monitor brightness over DDC/CI: a separate D-Bus service.
 
-Ver docs/17-brillo-monitor.md. Lo arranca el D-Bus de sesión al llamar a
-cualquier método (activación D-Bus) y se cierra solo tras IDLE_EXIT_S sin
-llamadas. Habla con los monitores con `ddcutil` (DDC/CI es lento: ~0,8 s
-para buscar monitores, ~0,13 s por lectura o escritura), por eso no va
-dentro de GNOME Shell.
+See docs/17-brillo-monitor.md. The session D-Bus starts it when
+any method is called (D-Bus activation) and it quits on its own after IDLE_EXIT_S without
+calls. It talks to the monitors with `ddcutil` (DDC/CI is slow: ~0.8 s
+to look for monitors, ~0.13 s per read or write), which is why it does not run
+inside GNOME Shell.
 
-Las llamadas a ddcutil van en hilos; las respuestas D-Bus se devuelven
-siempre desde el bucle principal (GLib.idle_add).
+Calls to ddcutil run in threads; D-Bus answers are always returned
+from the main loop (GLib.idle_add).
 """
 
 import re
@@ -47,7 +47,7 @@ INTERFACE_XML = f'''
 
 VCP_BRIGHTNESS = '10'
 DDCUTIL_TIMEOUT_S = 10
-IDLE_EXIT_S = 30        # sin llamadas → se cierra
+IDLE_EXIT_S = 30        # no calls → it quits
 
 DISPLAY_RE = re.compile(r'^Display \d+\s*$')
 BUS_RE = re.compile(r'^\s*I2C bus:\s*/dev/i2c-(\d+)')
@@ -88,11 +88,11 @@ def read_brightness(bus):
 
 
 def detect():
-    """[(bus, id 'VENDOR:MODELO:SERIE', modelo, brillo, máximo)]
+    """[(bus, id 'VENDOR:MODEL:SERIAL', model, brightness, maximum)]
 
-    Solo los monitores que responden por DDC/CI ("Display N"); los
-    "Invalid display" (pantalla del portátil, adaptadores que no dejan
-    pasar DDC) se saltan.
+    Only the monitors that answer over DDC/CI ("Display N"); the
+    "Invalid display" ones (the laptop's screen, adapters that do not let
+    DDC through) are skipped.
     """
     displays = []
     current = None
@@ -125,10 +125,10 @@ def detect():
 
 
 class Writer:
-    """Escrituras de un bus: solo cuenta el último valor pedido.
+    """Writes on a bus: only the last value requested counts.
 
-    Mientras se arrastra la barra llegan valores más rápido de lo que el
-    monitor los acepta; los intermedios se descartan.
+    While the slider is dragged, values arrive faster than the
+    monitor accepts them; the ones in between are dropped.
     """
 
     def __init__(self, bus, on_idle):
@@ -171,7 +171,7 @@ class Service:
         self._loop = GLib.MainLoop()
         self._node = Gio.DBusNodeInfo.new_for_xml(INTERFACE_XML)
         self._writers = {}
-        self._jobs = 0          # Detect/Get en marcha
+        self._jobs = 0          # Detect/Get running
         self._idle_id = 0
         self._owned = False
 
@@ -189,7 +189,7 @@ class Service:
         self._owned = True
 
     def _on_name_lost(self, _conn, _name):
-        # Si ya era nuestro, es que el bus se ha cerrado (fin de la sesión).
+        # If it was already ours, the bus has closed (end of the session).
         if not self._owned:
             log('could not take the bus name (is another one running?)')
         self._loop.quit()
@@ -219,7 +219,7 @@ class Service:
                 result, error = work(), None
             except DdcError as e:
                 result, error = None, str(e)
-            except Exception as e:  # noqa: BLE001 - cualquier fallo se devuelve
+            except Exception as e:  # noqa: BLE001 - any failure is returned
                 log(f'failed: {e!r}')
                 result, error = None, repr(e)
             GLib.idle_add(reply, result, error)
@@ -236,7 +236,7 @@ class Service:
         threading.Thread(target=run, daemon=True).start()
 
     def _touch(self):
-        """Reinicia la cuenta atrás para cerrarse."""
+        """Restarts the countdown to quit."""
         if self._idle_id:
             GLib.source_remove(self._idle_id)
         self._idle_id = GLib.timeout_add_seconds(IDLE_EXIT_S, self._on_idle_timeout)

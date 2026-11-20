@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# Instala o actualiza agent-notch para el usuario actual (sin sudo).
+# Installs or updates agent-notch for the current user (no sudo).
 #
 #   curl -fsSL https://raw.githubusercontent.com/danieltrejoespino/gnome-agent-notch/main/scripts/install.sh | bash
 #
-# Desde un repo clonado, scripts/install.sh instala esa copia en vez de
-# descargarla. Volver a ejecutarlo actualiza.
+# From a cloned repo, scripts/install.sh installs that copy instead of
+# downloading it. Running it again updates.
 #
-# Variables opcionales:
-#   AGENT_NOTCH_REF=v1      versión a instalar (etiqueta o rama). Por defecto,
-#                           la última release; si no hay ninguna, main.
-#   AGENT_NOTCH_NO_ENABLE=1 no activar la extensión.
-#   AGENT_NOTCH_NO_UPDATE_CHECK=1  no instalar el aviso diario de versión nueva.
+# Optional variables:
+#   AGENT_NOTCH_REF=v1      version to install (tag or branch). By default,
+#                           the latest release; if there is none, main.
+#   AGENT_NOTCH_NO_ENABLE=1 do not enable the extension.
+#   AGENT_NOTCH_NO_UPDATE_CHECK=1  do not install the daily new-version notice.
 #
-# Qué instala:
-#   ~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/   la extensión
-#   ~/.local/share/agent-notch/services/                              servicios D-Bus
-#   ~/.local/share/agent-notch/adapters/                              hooks de los agentes
-#   ~/.local/share/dbus-1/services/dev.agentnotch.*.service            su activación
-#   ~/.config/systemd/user/agent-notch-update.{service,timer}          aviso de versión nueva
+# What it installs:
+#   ~/.local/share/gnome-shell/extensions/agent-notch@daniel.local/   the extension
+#   ~/.local/share/agent-notch/services/                              D-Bus services
+#   ~/.local/share/agent-notch/adapters/                              the agents' hooks
+#   ~/.local/share/dbus-1/services/dev.agentnotch.*.service            their activation
+#   ~/.config/systemd/user/agent-notch-update.{service,timer}          new-version notice
 #
-# Todo va dentro de main(): si la descarga por curl se corta a medias, bash
-# no ejecuta nada.
+# Everything goes inside main(): if the curl download is cut half-way, bash
+# runs nothing.
 
 main() {
     set -euo pipefail
@@ -37,7 +37,7 @@ main() {
     warn() { printf '\033[1;33m[agent-notch]\033[0m %s\n' "$*" >&2; }
     die()  { printf '\033[1;31m[agent-notch] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
-    # --- 1. Comprobar el equipo ------------------------------------------
+    # --- 1. Check the machine ------------------------------------------
     command -v gnome-shell >/dev/null || die "GNOME Shell not found. agent-notch is a GNOME extension."
     local version major
     version="$(gnome-shell --version | grep -oE '[0-9]+(\.[0-9]+)*' | head -1)"
@@ -55,10 +55,10 @@ main() {
         die "$EXT_DIR is a development link (scripts/dev-link.sh). Remove it with: rm '$EXT_DIR'"
     fi
 
-    # --- 2. Conseguir el código ------------------------------------------
+    # --- 2. Get the code ------------------------------------------
     local tmp src ref
     tmp="$(mktemp -d)"
-    # shellcheck disable=SC2064  # $tmp se expande ahora: es local de main()
+    # shellcheck disable=SC2064  # $tmp expands now: it is local to main()
     trap "rm -rf '$tmp'" EXIT
 
     local here=""
@@ -75,8 +75,8 @@ main() {
         command -v tar  >/dev/null || die "tar is missing."
         ref="${AGENT_NOTCH_REF:-}"
         if [ -z "$ref" ]; then
-            # La última release, sin usar la API (que tiene límite de peticiones):
-            # /releases/latest redirige a /releases/tag/<etiqueta>.
+            # The latest release, without using the API (which is rate-limited):
+            # /releases/latest redirects to /releases/tag/<tag>.
             local latest
             latest="$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
                 "https://github.com/$REPO/releases/latest" 2>/dev/null || true)"
@@ -92,14 +92,14 @@ main() {
         [ -d "$src/extension/$UUID" ] || die "The download does not contain the extension."
     fi
 
-    # --- 3. Copiar la extensión ------------------------------------------
-    # Se copia a una carpeta nueva y se cambia de golpe, para no dejar nunca
-    # una extensión a medias.
+    # --- 3. Copy the extension ------------------------------------------
+    # It is copied to a new folder and swapped in one go, so there is never
+    # a half-copied extension.
     mkdir -p "$(dirname "$EXT_DIR")"
     local new_ext="$EXT_DIR.new.$$"
     cp -r "$src/extension/$UUID" "$new_ext"
-    # La versión del código que GNOME carga (la lee una vez por sesión): el
-    # botón «Actualizar» la compara con la disponible (docs/18).
+    # The version of the code GNOME loads (it reads it once per session): the
+    # "Update" button compares it with the available one (docs/18).
     python3 -I -c 'import json, sys
 p, ref = sys.argv[1], sys.argv[2]
 with open(p, encoding="utf-8") as f:
@@ -108,22 +108,22 @@ d["version-name"] = ref
 with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f, ensure_ascii=False, indent=2)
     f.write("\n")' "$new_ext/metadata.json" "$ref"
-    # Ajustes de la ventana de preferencias (docs/20).
+    # Settings of the preferences window (docs/20).
     glib-compile-schemas "$new_ext/schemas" || die "Could not compile the settings schema."
     rm -rf "$EXT_DIR"
     mv "$new_ext" "$EXT_DIR"
     say "Extension in $EXT_DIR"
 
-    # --- 4. Servicios D-Bus ----------------------------------------------
-    # Solo arrancan cuando la extensión los llama y se cierran solos.
+    # --- 4. D-Bus services ----------------------------------------------
+    # They only start when the extension calls them, and quit on their own.
     mkdir -p "$APP_DIR" "$DBUS_DIR"
     rm -rf "$APP_DIR/services.new"
     cp -r "$src/services" "$APP_DIR/services.new"
     find "$APP_DIR/services.new" -name __pycache__ -type d -prune -exec rm -rf {} +
     rm -rf "$APP_DIR/services"
     mv "$APP_DIR/services.new" "$APP_DIR/services"
-    # Adaptadores de agentes (hook de Claude Code…), sin sus pruebas. El hook
-    # apunta aquí: una ruta fija que no depende de dónde esté el repo.
+    # Agent adapters (Claude Code hook…), without their tests. The hook
+    # points here: a fixed path that does not depend on where the repo is.
     if [ -d "$src/adapters" ]; then
         rm -rf "$APP_DIR/adapters.new"
         cp -r "$src/adapters" "$APP_DIR/adapters.new"
@@ -144,15 +144,15 @@ with open(p, "w", encoding="utf-8") as f:
     }
     install_service dev.agentnotch.SpeedTest speedtest/speedtest.py
     install_service dev.agentnotch.Brightness brightness/brightness.py
-    # Botón «Actualizar» de la isla (docs/18): instala sin que la extensión
-    # lance procesos. Sin release instalada, el servicio no hace nada.
+    # The island's "Update" button (docs/18): it installs without the extension
+    # launching processes. Without an installed release, the service does nothing.
     install_service dev.agentnotch.Updater "updater/update_check.py --servicio"
     say "D-Bus services in $APP_DIR/services"
 
-    # --- 4b. Aviso de versión nueva ------------------------------------------
-    # Una vez al día, fuera de GNOME Shell: una consulta a GitHub y, si hay
-    # una release nueva, una notificación con «Actualizar». Solo tiene
-    # sentido instalando releases (no desde un repo clonado ni desde main).
+    # --- 4b. New-version notice ------------------------------------------
+    # Once a day, outside GNOME Shell: one request to GitHub and, if there is
+    # a new release, a notification with "Update". It only makes
+    # sense when installing releases (not from a cloned repo or from main).
     local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
     if [ "${AGENT_NOTCH_NO_UPDATE_CHECK:-}" = "1" ] || ! command -v systemctl >/dev/null; then
         :
@@ -186,12 +186,12 @@ with open(p, "w", encoding="utf-8") as f:
         fi
     fi
 
-    # --- 5. Activar ------------------------------------------------------
+    # --- 5. Enable --------------------------------------------------------
     local restart_hint="Log out and back in to load it."
     if [ "${AGENT_NOTCH_NO_ENABLE:-}" != "1" ]; then
-        # gnome-extensions enable solo funciona si GNOME ya conoce la
-        # extensión; si es nueva (Wayland no la ve hasta reiniciar la sesión),
-        # se añade directamente a la lista de extensiones activas.
+        # gnome-extensions enable only works if GNOME already knows the
+        # extension; if it is new (Wayland does not see it until the session restarts),
+        # it is added directly to the list of enabled extensions.
         if gnome-extensions enable "$UUID" 2>/dev/null; then
             say "Extension enabled."
         elif command -v gsettings >/dev/null; then
@@ -213,7 +213,7 @@ with open(p, "w", encoding="utf-8") as f:
         fi
     fi
 
-    # --- 6. Resumen ------------------------------------------------------
+    # --- 6. Summary -------------------------------------------------------
     echo
     say "Installed version $ref."
     say "$restart_hint"
