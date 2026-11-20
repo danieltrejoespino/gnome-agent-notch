@@ -52,7 +52,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {NotchModule} from './module.js';
 import {readText, isCancelled} from './sysinfo.js';
-import {Eyes, makeLabel} from './widgets.js';
+import {Eyes, eyesAnimate, makeLabel} from './widgets.js';
 import {
     AGENT_TINTS, STATES, agentLabel, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession,
     eyesFor, overview, pickWindow, sameSummary, shortPath, shownState, sortSessions, stateText, summarize,
@@ -109,8 +109,12 @@ function setTintClass(actor, tint) {
 
 export const AgentsModule = GObject.registerClass(
 class AgentsModule extends NotchModule {
-    _init() {
+    // settings: ajustes de agent-notch (sonido, banner y su duración se leen
+    // en el momento del aviso); twoLines: ojos arriba y texto debajo (docs/20).
+    _init({settings = null, twoLines = true} = {}) {
         super._init();
+        this._prefs = settings;
+        this._twoLines = twoLines;
 
         this._sessions = new Map();   // nombre de archivo → sesión
         this._readGen = new Map();    // nombre → nº de la última lectura pedida
@@ -169,7 +173,7 @@ class AgentsModule extends NotchModule {
 
     // Ojos arriba y texto debajo: la isla crece mientras se ve (docs/09).
     get tallCompact() {
-        return true;
+        return this._twoLines;
     }
 
     get hasExpanded() {
@@ -329,10 +333,11 @@ class AgentsModule extends NotchModule {
     // --- Vista compacta ----------------------------------------------------------
 
     _buildCompact() {
-        // Dos líneas (docs/09): ojos arriba al centro, texto debajo.
+        // Dos líneas (docs/09): ojos arriba al centro, texto debajo. Con el
+        // ajuste agentes-dos-lineas apagado, todo en una línea (docs/20).
         this._compact = new St.BoxLayout({
-            style_class: 'agent-notch-agents',
-            orientation: Clutter.Orientation.VERTICAL,
+            style_class: this._twoLines ? 'agent-notch-agents' : 'agent-notch-agents una-linea',
+            orientation: this._twoLines ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL,
             y_align: Clutter.ActorAlign.CENTER,
         });
         // Ojos en lugar del punto (docs/09): color y forma según el estado.
@@ -447,7 +452,7 @@ class AgentsModule extends NotchModule {
         if (!this._eyes)
             return;
         const ms = PULSE_MS[this._summary?.state] ?? 0;
-        const want = ms && this.compactVisible && this._settings.enable_animations ? ms : 0;
+        const want = ms && this.compactVisible && eyesAnimate() ? ms : 0;
         if (want === this._pulseMs)
             return;
         this._eyes.remove_transition('opacity');
@@ -465,7 +470,7 @@ class AgentsModule extends NotchModule {
     }
 
     _flash() {
-        if (!this.compactVisible || !this._settings.enable_animations)
+        if (!this.compactVisible || !eyesAnimate())
             return;
         this._eyes.remove_transition('scale-x');
         this._eyes.remove_transition('scale-y');
@@ -493,20 +498,25 @@ class AgentsModule extends NotchModule {
     _alert(name, session) {
         if (!this._notifSettings.get_boolean('show-banners'))
             return;   // «No molestar»: solo cambian los ojos
-        try {
-            global.display.get_sound_player().play_from_theme(
-                ATTENTION_SOUND, `${session.proyecto} te necesita`, null);
-        } catch (e) {
-            console.error(`[agent-notch] Agentes: no se pudo reproducir el aviso: ${e.message}`);
+        // Ajustes de agent-notch (docs/20), leídos ahora: sin señales.
+        if (this._prefs?.get_boolean('sonido-atencion') ?? true) {
+            try {
+                global.display.get_sound_player().play_from_theme(
+                    ATTENTION_SOUND, `${session.proyecto} te necesita`, null);
+            } catch (e) {
+                console.error(`[agent-notch] Agentes: no se pudo reproducir el aviso: ${e.message}`);
+            }
         }
-        this._showBanner(name, session);
+        if (this._prefs?.get_boolean('banner-atencion') ?? true)
+            this._showBanner(name, session);
     }
 
     _buildBanner() {
-        // Dos líneas, como la compacta (docs/09): ojos arriba, mensaje debajo.
+        // Dos líneas, como la compacta (docs/09): ojos arriba, mensaje debajo
+        // (o en una línea, con agentes-dos-lineas apagado, docs/20).
         const box = new St.BoxLayout({
             style_class: 'agent-notch-agents-banner-box',
-            orientation: Clutter.Orientation.VERTICAL,
+            orientation: this._twoLines ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL,
             x_expand: true,
         });
         // Ojos muy abiertos en ámbar (docs/09, añadido al aprobar).
@@ -523,7 +533,9 @@ class AgentsModule extends NotchModule {
         box.add_child(this._bannerEyes);
         box.add_child(line);
         this._banner = new St.Button({
-            style_class: 'agent-notch-agents-banner estado-atencion',
+            style_class: this._twoLines
+                ? 'agent-notch-agents-banner estado-atencion'
+                : 'agent-notch-agents-banner estado-atencion una-linea',
             child: box,
             x_expand: true,
             track_hover: true,
@@ -545,7 +557,8 @@ class AgentsModule extends NotchModule {
         this._banner.accessible_name = `${this._bannerTitle.text}: ${this._bannerDetail.text}`;
         this._bannerName = name;
         this._bannerSession = session;
-        this._scheduleBannerEnd(BANNER_MS);
+        const seconds = this._prefs?.get_int('banner-segundos') ?? BANNER_MS / 1000;
+        this._scheduleBannerEnd(seconds * 1000);
         this.emit('changed');
     }
 
@@ -807,7 +820,7 @@ class AgentsModule extends NotchModule {
     destroy() {
         this._cancellable.cancel();
         this._settings?.disconnectObject(this);
-        this._settings = this._notifSettings = null;
+        this._settings = this._notifSettings = this._prefs = null;
         if (this._bannerId)
             GLib.source_remove(this._bannerId);
         this._bannerId = 0;

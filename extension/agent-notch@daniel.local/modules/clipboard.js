@@ -67,8 +67,10 @@ function isTerminal(window) {
 
 export const ClipboardModule = GObject.registerClass(
 class ClipboardModule extends NotchModule {
-    _init() {
+    // shortcut: tomar Super+V (ajuste atajo-portapapeles, docs/20).
+    _init({shortcut = true} = {}) {
         super._init();
+        this._shortcut = shortcut;
 
         this._history = [];      // textos, el más reciente primero
         this._pinned = [];       // textos fijados, en el orden en que se fijaron
@@ -85,7 +87,8 @@ class ClipboardModule extends NotchModule {
         global.display.get_selection().connectObject('owner-changed',
             (_sel, type, source) => this._onOwnerChanged(type, source), this);
 
-        this._takeKeybinding();
+        if (this._shortcut)
+            this._takeKeybinding();
         this._loadPinned();
     }
 
@@ -492,7 +495,8 @@ class ClipboardModule extends NotchModule {
         this._cancellable?.cancel();
         this._cancellable = null;
         global.display.get_selection().disconnectObject(this);
-        this._restoreKeybinding();
+        if (this._shortcut)
+            this._restoreKeybinding();
 
         if (this._pasteId) {
             GLib.source_remove(this._pasteId);

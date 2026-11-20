@@ -48,6 +48,8 @@ main() {
     command -v python3 >/dev/null || die "Falta python3 (sudo apt install python3)."
     python3 -c 'import gi; gi.require_version("Gio", "2.0")' 2>/dev/null ||
         die "Falta PyGObject (sudo apt install python3-gi)."
+    command -v glib-compile-schemas >/dev/null ||
+        die "Falta glib-compile-schemas (sudo apt install libglib2.0-bin)."
 
     if [ -L "$EXT_DIR" ]; then
         die "$EXT_DIR es un enlace de desarrollo (scripts/dev-link.sh). Bórralo con: rm '$EXT_DIR'"
@@ -106,6 +108,8 @@ d["version-name"] = ref
 with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f, ensure_ascii=False, indent=2)
     f.write("\n")' "$new_ext/metadata.json" "$ref"
+    # Ajustes de la ventana de preferencias (docs/20).
+    glib-compile-schemas "$new_ext/schemas" || die "No se pudo compilar el esquema de ajustes."
     rm -rf "$EXT_DIR"
     mv "$new_ext" "$EXT_DIR"
     say "Extensión en $EXT_DIR"

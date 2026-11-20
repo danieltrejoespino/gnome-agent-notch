@@ -1,6 +1,9 @@
 __pycache__/
 *.pyc
 
+# Esquema de ajustes compilado (lo generan install.sh y dev-link.sh)
+gschemas.compiled
+
 # Solo en local
 docs/
 CLAUDE.md

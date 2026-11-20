@@ -2,6 +2,9 @@
   "uuid": "agent-notch@daniel.local",
   "name": "Agent Notch",
   "description": "Isla estilo notch arriba al centro: música y estado de tus agentes de IA.",
-  "shell-version": ["50"],
-  "version": 1
+  "shell-version": [
+    "50"
+  ],
+  "version": 1,
+  "settings-schema": "org.gnome.shell.extensions.agent-notch"
 }

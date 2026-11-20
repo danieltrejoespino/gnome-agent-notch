@@ -1308,3 +1308,19 @@
   color: #8a8a8a;
   padding-left: 15px;   /* alineada con el proyecto, después del punto */
 }
+
+/* ── Preferencias (docs/20) ───────────────────────── */
+
+/* Agentes en una línea (ajuste agentes-dos-lineas apagado). */
+.agent-notch-agents.una-linea {
+  spacing: 7px;
+  padding-top: 0;
+}
+
+.agent-notch-agents-banner.una-linea {
+  padding: 4px 6px;
+}
+
+.agent-notch-agents-banner.una-linea .agent-notch-agents-banner-box {
+  spacing: 8px;
+}

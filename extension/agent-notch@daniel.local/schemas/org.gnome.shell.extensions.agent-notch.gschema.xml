@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ajustes de agent-notch (docs/20-preferencias.md). Los edita prefs.js. -->
+<schemalist gettext-domain="agent-notch">
+  <schema id="org.gnome.shell.extensions.agent-notch" path="/org/gnome/shell/extensions/agent-notch/">
+
+    <!-- Pestañas: un módulo apagado no se crea. -->
+    <key name="modulo-musica" type="b">
+      <default>true</default>
+      <summary>Música</summary>
+    </key>
+    <key name="modulo-sistema" type="b">
+      <default>true</default>
+      <summary>Sistema</summary>
+    </key>
+    <key name="modulo-agentes" type="b">
+      <default>true</default>
+      <summary>Agentes</summary>
+    </key>
+    <key name="modulo-docker" type="b">
+      <default>true</default>
+      <summary>Docker</summary>
+    </key>
+    <key name="modulo-portapapeles" type="b">
+      <default>true</default>
+      <summary>Portapapeles</summary>
+    </key>
+    <key name="modulo-concentracion" type="b">
+      <default>true</default>
+      <summary>Concentración</summary>
+    </key>
+
+    <!-- Avisos de agentes: se leen en el momento del aviso. -->
+    <key name="sonido-atencion" type="b">
+      <default>true</default>
+      <summary>Sonido cuando un agente te necesita</summary>
+    </key>
+    <key name="banner-atencion" type="b">
+      <default>true</default>
+      <summary>Banner cuando un agente te necesita</summary>
+    </key>
+    <key name="banner-segundos" type="i">
+      <range min="2" max="30"/>
+      <default>5</default>
+      <summary>Segundos que dura el banner</summary>
+    </key>
+
+    <!-- Aspecto. -->
+    <key name="agentes-dos-lineas" type="b">
+      <default>true</default>
+      <summary>Agentes en dos líneas (ojos arriba, texto debajo)</summary>
+    </key>
+    <key name="animar-ojos" type="b">
+      <default>true</default>
+      <summary>Parpadeo, pulso y destello de los ojos</summary>
+    </key>
+
+    <!-- Atajos y actualizaciones. -->
+    <key name="atajo-portapapeles" type="b">
+      <default>true</default>
+      <summary>Super+V abre el Portapapeles</summary>
+    </key>
+    <key name="aviso-actualizaciones" type="b">
+      <default>true</default>
+      <summary>Aviso diario y botón de versión nueva</summary>
+    </key>
+  </schema>
+</schemalist>

@@ -76,6 +76,10 @@ STATE_HOME = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/st
 VERSION_FILE = os.path.join(DATA, APP, "VERSION")
 STATE_FILE = os.path.join(STATE_HOME, APP, "update.json")
 LOG_FILE = os.path.join(STATE_HOME, APP, "update.log")
+# Ajuste aviso-actualizaciones de la ventana de preferencias (docs/20): el
+# esquema va compilado dentro de la carpeta de la extensión.
+EXT_SCHEMAS = os.path.join(DATA, "gnome-shell", "extensions", "agent-notch@daniel.local", "schemas")
+SCHEMA_ID = "org.gnome.shell.extensions.agent-notch"
 
 _TAG = re.compile(r"^v(\d+(?:\.\d+)*)$")
 
@@ -93,6 +97,20 @@ def version_key(tag):
 def is_newer(latest, installed):
     a, b = version_key(latest), version_key(installed)
     return a is not None and b is not None and a > b
+
+
+def updates_enabled():
+    """¿Está encendido el aviso de actualizaciones? Sin esquema (versiones
+    viejas, copias de desarrollo sin compilar), sí."""
+    try:
+        source = Gio.SettingsSchemaSource.new_from_directory(
+            EXT_SCHEMAS, Gio.SettingsSchemaSource.get_default(), False)
+        schema = source.lookup(SCHEMA_ID, False)
+        if schema is None:
+            return True
+        return Gio.Settings.new_full(schema, None, None).get_boolean("aviso-actualizaciones")
+    except GLib.Error:
+        return True
 
 
 def installed_version():
@@ -343,6 +361,10 @@ def serve():
 def main():
     if "--servicio" in sys.argv[1:]:
         return serve()
+    if not updates_enabled():
+        log("aviso de actualizaciones apagado en las preferencias")
+        clear_offer()
+        return 0
 
     installed = installed_version()
     if version_key(installed) is None:

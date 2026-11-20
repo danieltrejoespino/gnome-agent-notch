@@ -19,6 +19,10 @@ else
     echo "Enlazada: $DEST -> $SRC"
 fi
 
+# Esquema de ajustes (docs/20): compilado en el repo (no se sube, .gitignore).
+glib-compile-schemas "$SRC/schemas"
+echo "Esquema de ajustes compilado en $SRC/schemas"
+
 # Servicios D-Bus aparte: el D-Bus de sesión los arranca al llamarlos y se
 # cierran solos; no queda nada en marcha.
 #   - Test de velocidad (docs/16-velocidad-internet.md)

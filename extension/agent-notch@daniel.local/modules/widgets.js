@@ -343,6 +343,19 @@ class EqualizerBars extends St.BoxLayout {
     }
 });
 
+// Ajuste animar-ojos (docs/20): lo pone extension.js al crear la isla.
+let eyeAnimations = true;
+
+/** Encender o apagar el parpadeo, pulso y destello de los ojos. */
+export function setEyeAnimations(on) {
+    eyeAnimations = Boolean(on);
+}
+
+/** ¿Animar los ojos? (ajuste de agent-notch y «reducir animaciones» de GNOME). */
+export function eyesAnimate() {
+    return eyeAnimations && St.Settings.get().enable_animations;
+}
+
 // Ojos: medidas en "unidades" (1/12 del alto), así valen a cualquier escala.
 const EYE_GAP = 9;          // del centro a cada ojo
 const EYE_R = 4;            // radio normal
@@ -382,7 +395,7 @@ class Eyes extends St.DrawingArea {
         this._expression = expression;
         const gen = ++this._blinkGen;
         this.remove_transition('scale-y');
-        if (!animate || !this.mapped || !St.Settings.get().enable_animations) {
+        if (!animate || !this.mapped || !eyesAnimate()) {
             this.scale_y = 1;
             this.queue_repaint();
             return;

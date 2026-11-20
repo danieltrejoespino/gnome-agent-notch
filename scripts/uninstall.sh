@@ -61,6 +61,8 @@ main() {
         say "Quitado el aviso de versión nueva."
     fi
     rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/agent-notch"
+    # Ajustes de la ventana de preferencias (docs/20).
+    dconf reset -f /org/gnome/shell/extensions/agent-notch/ 2>/dev/null || true
 
     rm -f "$DBUS_DIR/dev.agentnotch.SpeedTest.service" \
           "$DBUS_DIR/dev.agentnotch.Brightness.service" \
