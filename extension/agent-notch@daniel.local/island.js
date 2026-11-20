@@ -76,6 +76,8 @@ class Island extends St.Widget {
         this._compactBaseHeight = 0;   // alto de la barra + lo que sobresale
         this._compactTall = false;     // el módulo mostrado pide dos líneas
         this._separators = [];         // líneas entre secciones del hover (se reutilizan)
+        this._anchorX = null;          // centro horizontal (coordenadas del escenario)
+        this._anchorY = 0;             // borde superior
         this._tallExtra = 0;           // px de más en ese caso (CSS)
 
         // Capa de abajo: el fondo dibujado, ocupa toda la isla.
@@ -235,6 +237,27 @@ class Island extends St.Widget {
             'show-page', () => this._togglePage(module),
             this);
         this._update();
+    }
+
+    /**
+     * Dónde va la isla: centrada en x, con el borde de arriba en y. La isla
+     * se centra sola al colocarse (vfunc_allocate), sea cual sea su ancho.
+     * Antes se recolocaba desde fuera con `notify::width` → set_position(),
+     * es decir, en mitad de la colocación de Clutter, que avisaba con «needs
+     * an allocation» en cada cambio de la compacta (arreglado el 19-11-2026).
+     */
+    setAnchor(x, y) {
+        if (x === this._anchorX && y === this._anchorY)
+            return;
+        this._anchorX = x;
+        this._anchorY = y;
+        this.queue_relayout();
+    }
+
+    vfunc_allocate(box) {
+        if (this._anchorX !== null)
+            box.set_origin(Math.round(this._anchorX - box.get_width() / 2), this._anchorY);
+        super.vfunc_allocate(box);
     }
 
     /** Altura de la fila compacta (la de la barra superior). */

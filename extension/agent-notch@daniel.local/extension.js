@@ -42,8 +42,9 @@ export default class AgentNotchExtension extends Extension {
         this._island.addModule(new MascotModule(agents, update));
         Main.layoutManager.addTopChrome(this._island, {trackFullscreen: true});
 
+        // La isla se centra sola al cambiar de ancho (Island.setAnchor): aquí
+        // solo hace falta recolocarla si cambian el monitor, la barra o la escala.
         const reposition = () => this._reposition();
-        this._island.connectObject('notify::width', reposition, this);
         Main.panel.connectObject('notify::height', reposition, this);
         Main.layoutManager.connectObject('monitors-changed', reposition, this);
         St.ThemeContext.get_for_stage(global.stage)
@@ -97,7 +98,6 @@ export default class AgentNotchExtension extends Extension {
             this._island.setCompactHeight(Main.panel.height + OVERHANG_PX * scaleFactor);
         }
 
-        const x = monitor.x + Math.round((monitor.width - this._island.width) / 2);
-        this._island.set_position(x, monitor.y);
+        this._island.setAnchor(monitor.x + monitor.width / 2, monitor.y);
     }
 }
