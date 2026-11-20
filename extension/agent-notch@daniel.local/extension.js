@@ -60,6 +60,13 @@ export default class AgentNotchExtension extends Extension {
         St.ThemeContext.get_for_stage(global.stage).disconnectObject(this);
 
         if (this._island) {
+            // Parar las animaciones y hacer ya la colocación pendiente,
+            // mientras sigue en pantalla. Si no, al desactivar a mitad de un
+            // cambio de tamaño (p. ej. al bloquear justo cuando termina un
+            // agente), Clutter colocaría luego una isla ya quitada
+            // («Spurious clutter_actor_allocate», visto el 19-11-2026).
+            this._island.remove_all_transitions();
+            this._island.get_allocation_box();
             Main.layoutManager.removeChrome(this._island);
             this._island.destroy();
             this._island = null;

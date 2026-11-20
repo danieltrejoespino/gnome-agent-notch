@@ -166,6 +166,11 @@ class AgentsModule extends NotchModule {
         return this._compact;
     }
 
+    // Ojos arriba y texto debajo: la isla crece mientras se ve (docs/09).
+    get tallCompact() {
+        return true;
+    }
+
     get hasExpanded() {
         return this._sessions.size > 0;
     }
@@ -316,12 +321,14 @@ class AgentsModule extends NotchModule {
     // --- Vista compacta ----------------------------------------------------------
 
     _buildCompact() {
+        // Dos líneas (docs/09): ojos arriba al centro, texto debajo.
         this._compact = new St.BoxLayout({
             style_class: 'agent-notch-agents',
+            orientation: Clutter.Orientation.VERTICAL,
             y_align: Clutter.ActorAlign.CENTER,
         });
         // Ojos en lugar del punto (docs/09): color y forma según el estado.
-        this._eyes = new Eyes();
+        this._eyes = new Eyes({x_align: Clutter.ActorAlign.CENTER});
         this._title = makeLabel('agent-notch-agents-title', {y_align: Clutter.ActorAlign.CENTER});
         this._separator = new St.Label({
             style_class: 'agent-notch-agents-separator',
@@ -329,10 +336,15 @@ class AgentsModule extends NotchModule {
             y_align: Clutter.ActorAlign.CENTER,
         });
         this._detail = makeLabel('agent-notch-agents-detail', {y_align: Clutter.ActorAlign.CENTER});
+        const line = new St.BoxLayout({
+            style_class: 'agent-notch-agents-line',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        line.add_child(this._title);
+        line.add_child(this._separator);
+        line.add_child(this._detail);
         this._compact.add_child(this._eyes);
-        this._compact.add_child(this._title);
-        this._compact.add_child(this._separator);
-        this._compact.add_child(this._detail);
+        this._compact.add_child(line);
     }
 
     _render() {
@@ -477,18 +489,25 @@ class AgentsModule extends NotchModule {
     }
 
     _buildBanner() {
-        const box = new St.BoxLayout({style_class: 'agent-notch-agents-banner-box', x_expand: true});
-        // Ojos muy abiertos en ámbar (docs/09, añadido al aprobar).
-        this._bannerEyes = new Eyes();
-        this._bannerEyes.setExpression('muy-abiertos', {animate: false});
-        this._bannerTitle = makeLabel('agent-notch-agents-banner-title', {y_align: Clutter.ActorAlign.CENTER});
-        this._bannerDetail = makeLabel('agent-notch-agents-banner-detail', {
-            y_align: Clutter.ActorAlign.CENTER,
+        // Dos líneas, como la compacta (docs/09): ojos arriba, mensaje debajo.
+        const box = new St.BoxLayout({
+            style_class: 'agent-notch-agents-banner-box',
+            orientation: Clutter.Orientation.VERTICAL,
             x_expand: true,
         });
+        // Ojos muy abiertos en ámbar (docs/09, añadido al aprobar).
+        this._bannerEyes = new Eyes({x_align: Clutter.ActorAlign.CENTER});
+        this._bannerEyes.setExpression('muy-abiertos', {animate: false});
+        this._bannerTitle = makeLabel('agent-notch-agents-banner-title', {y_align: Clutter.ActorAlign.CENTER});
+        this._bannerDetail = makeLabel('agent-notch-agents-banner-detail', {y_align: Clutter.ActorAlign.CENTER});
+        const line = new St.BoxLayout({
+            style_class: 'agent-notch-agents-banner-line',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        line.add_child(this._bannerTitle);
+        line.add_child(this._bannerDetail);
         box.add_child(this._bannerEyes);
-        box.add_child(this._bannerTitle);
-        box.add_child(this._bannerDetail);
+        box.add_child(line);
         this._banner = new St.Button({
             style_class: 'agent-notch-agents-banner estado-atencion',
             child: box,

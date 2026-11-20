@@ -59,6 +59,11 @@ export const NotchModule = GObject.registerClass({
         return false;
     }
 
+    /** true si su vista compacta necesita la fila alta (dos líneas, docs/09). */
+    get tallCompact() {
+        return false;
+    }
+
     /** true si tiene una sección que mostrar en la vista expandida. */
     get hasExpanded() {
         return false;

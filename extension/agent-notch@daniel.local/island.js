@@ -73,6 +73,9 @@ class Island extends St.Widget {
         this._grab = null;     // captura modal mientras el panel está abierto
         this._capturedId = 0;
         this._panelOpen = false;
+        this._compactBaseHeight = 0;   // alto de la barra + lo que sobresale
+        this._compactTall = false;     // el módulo mostrado pide dos líneas
+        this._tallExtra = 0;           // px de más en ese caso (CSS)
 
         // Capa de abajo: el fondo dibujado, ocupa toda la isla.
         this._background = new St.DrawingArea({
@@ -147,7 +150,13 @@ class Island extends St.Widget {
         this._radius = node.get_length('-agent-notch-radius');
         this._glowHeight = node.get_length('-agent-notch-glow-height');
         this._glowAlpha = node.get_double('-agent-notch-glow-opacity');
+        const tallExtra = node.get_length('-agent-notch-tall-extra');
         super.vfunc_style_changed();
+        // Fuera del escenario (al desactivar) el tema no es el real: ignorarlo.
+        if (tallExtra !== this._tallExtra && this.get_stage()) {
+            this._tallExtra = tallExtra;
+            this._syncCompactHeight(false);
+        }
         this._background?.queue_repaint();
     }
 
@@ -229,8 +238,39 @@ class Island extends St.Widget {
 
     /** Altura de la fila compacta (la de la barra superior). */
     setCompactHeight(height) {
-        if (this._compactBin.height !== height)
-            this._compactBin.set_height(height);
+        this._compactBaseHeight = height;
+        this._syncCompactHeight(false);
+    }
+
+    // Fila compacta alta (dos líneas, docs/09) si el módulo mostrado la pide.
+    // Con la isla contraída y en pantalla, el cambio de alto se anima.
+    _syncCompactHeight(animate) {
+        if (!this._compactBaseHeight)
+            return;
+        const height = this._compactBaseHeight + (this._compactTall ? this._tallExtra : 0);
+        if (this._compactBin.height === height)
+            return;
+        // Medir solo si se va a animar (fuera de pantalla, medir obliga a
+        // Clutter a colocar una isla que no está en el escenario).
+        const animated = animate && !this._expanded && this.mapped;
+        const [startW, startH] = animated ? this._currentSize() : [0, 0];
+        this._compactBin.set_height(height);
+        if (!animated)
+            return;
+        const [targetW, targetH] = this._naturalSize();
+        this.set_size(startW, startH);
+        this.ease({
+            width: targetW,
+            height: targetH,
+            duration: ANIMATION_MS,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onStopped: () => {
+                // Volver a seguir al contenido (salvo si ya se expandió:
+                // entonces manda la animación de expandir/contraer).
+                if (!this._expanded && this.get_stage())
+                    this.set_size(-1, -1);
+            },
+        });
     }
 
     _update() {
@@ -252,6 +292,12 @@ class Island extends St.Widget {
             this.remove_style_class_name('minimal');
         else
             this.add_style_class_name('minimal');
+
+        const tall = Boolean(compact && best.tallCompact);
+        if (tall !== this._compactTall) {
+            this._compactTall = tall;
+            this._syncCompactHeight(true);
+        }
 
         this._refresh();
         this._syncCompactVisible();

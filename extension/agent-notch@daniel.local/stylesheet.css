@@ -12,6 +12,7 @@
   -agent-notch-radius: 14px;
   -agent-notch-glow-height: 36px;   /* brillo de color del banner */
   -agent-notch-glow-opacity: 0.45;
+  -agent-notch-tall-extra: 20px;    /* fila compacta en dos líneas (Agentes, docs/09) */
   min-width: 200px;
   color: #f5f5f5;
   font-size: 10pt;
@@ -828,7 +829,14 @@
 
 /* Compacta: «● mi-app · Editando main.py». Colores por estado: docs/09.
    Sin animaciones todavía (pulso del punto: paso 7 de la hoja de ruta). */
+/* Compacta en dos líneas (docs/09): ojos arriba al centro, texto debajo.
+   El padding superior separa los ojos del borde de la pantalla. */
 .agent-notch-agents {
+  spacing: 4px;
+  padding-top: 6px;
+}
+
+.agent-notch-agents-line {
   spacing: 7px;
 }
 
@@ -980,7 +988,7 @@
 .agent-notch-agents-banner {
   min-width: 320px;
   border-radius: 14px;
-  padding: 4px 6px;
+  padding: 10px 6px 6px;
 }
 
 .agent-notch-agents-banner:hover,
@@ -988,7 +996,12 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+/* Dos líneas, como la compacta: ojos arriba al centro, mensaje debajo. */
 .agent-notch-agents-banner-box {
+  spacing: 6px;
+}
+
+.agent-notch-agents-banner-line {
   spacing: 8px;
 }
 
