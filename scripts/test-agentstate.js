@@ -4,7 +4,7 @@
 import System from 'system';
 
 import {
-    AGENT_TINTS, agentLabel, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
+    AGENT_TINTS, EYE_EXPRESSIONS, STATES, agentLabel, eyesFor, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
     sameSummary, shownState, sortSessions, summarize,
 } from '../extension/agent-notch@daniel.local/modules/agentstate.js';
 
@@ -145,6 +145,17 @@ eq(agentLabel('un-agente-muy-largo'), {name: 'un-agente-m…', tint: 'otro'}, 'n
 eq(agentLabel('  '), {name: '?', tint: 'otro'}, 'vacío');
 eq(agentLabel('toString'), {name: 'toString', tint: 'otro'}, 'no confunde propiedades heredadas');
 eq(AGENT_TINTS.includes(agentLabel('cualquiera').tint), true, 'el tinte siempre es uno conocido');
+
+// --- ojos con expresión (docs/09) --------------------------------------------
+eq(eyesFor('pensando'), 'arriba', 'pensando: miran arriba');
+eq(eyesFor('trabajando'), 'derecha', 'trabajando: miran al texto');
+eq(eyesFor('atencion'), 'muy-abiertos', 'atención: muy abiertos');
+eq(eyesFor('terminado'), 'contentos', 'terminado: contentos');
+eq(eyesFor('error'), 'error', 'error: × ×');
+eq(eyesFor('inactivo'), 'abiertos', 'inactivo: abiertos');
+eq(eyesFor('raro'), 'abiertos', 'desconocido: abiertos');
+eq(eyesFor('toString'), 'abiertos', 'no confunde propiedades heredadas');
+eq(STATES.every(s => EYE_EXPRESSIONS.includes(eyesFor(s))), true, 'cada estado tiene una expresión dibujable');
 
 print(`${passed} pruebas OK, ${failed} fallos`);
 if (failed)

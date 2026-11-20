@@ -81,7 +81,7 @@
 .agent-notch-bar {
   width: 3px;
   height: 12px;
-  border-radius: 2px;
+  border-radius: 3px;
   background-color: #e5484d;
 }
 
@@ -91,7 +91,7 @@
 
 /* En pausa: atenuado. */
 .agent-notch-music.paused {
-  color: #9a9a9a;
+  color: #8a8a8a;
 }
 
 /* Vista expandida (hover, M4): tarjeta con la carátula de fondo.
@@ -99,7 +99,7 @@
    (ver CoverBackdrop en modules/widgets.js). */
 
 .agent-notch-music-hero {
-  border-radius: 18px;
+  border-radius: 14px;
 }
 
 .agent-notch-music-hero-backdrop {
@@ -159,13 +159,13 @@
 
 .agent-notch-music-hero-output-icon {
   icon-size: 14px;
-  color: #e8e8e8;
+  color: #f5f5f5;
 }
 
 .agent-notch-music-hero-output {
   max-width: 260px;
-  font-size: 9.5pt;
-  color: #e8e8e8;
+  font-size: 9pt;
+  color: #f5f5f5;
 }
 
 .agent-notch-music-hero-line {
@@ -220,7 +220,7 @@
   border-radius: 99px;
   padding: 10px;
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.14);
   transition-duration: 100ms;
 }
 
@@ -313,15 +313,15 @@
 
 .agent-notch-music-button:hover,
 .agent-notch-music-button:focus {
-  background-color: #2a2a2a;
+  background-color: rgba(255, 255, 255, 0.14);
 }
 
 .agent-notch-music-button:active {
-  background-color: #3a3a3a;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .agent-notch-music-button:insensitive {
-  color: #555;
+  color: #6a6a6a;
 }
 
 .agent-notch-music-button StIcon {
@@ -353,7 +353,7 @@
 .agent-notch-usage-trough {
   height: 6px;
   border-radius: 3px;
-  background-color: #2a2a2a;
+  background-color: rgba(255, 255, 255, 0.14);
 }
 
 .agent-notch-usage-fill {
@@ -373,7 +373,7 @@
 
 .agent-notch-banner {
   min-width: 380px;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 2px 0;
 }
 
@@ -388,7 +388,7 @@
 .agent-notch-banner-title {
   max-width: 260px;
   font-weight: bold;
-  font-size: 10.5pt;
+  font-size: 10pt;
 }
 
 .agent-notch-banner-app {
@@ -396,12 +396,12 @@
   padding-left: 12px;
   font-family: monospace;
   font-size: 8.5pt;
-  color: #b8b8b8;
+  color: #c8c8c8;
 }
 
 .agent-notch-banner-body {
   max-width: 380px;
-  color: #d0d0d0;
+  color: #c8c8c8;
 }
 
 /* ── Panel con pestañas (D3) ──────────────────────── */
@@ -414,7 +414,7 @@
 .agent-notch-panel-date {
   font-family: monospace;
   font-size: 8.5pt;
-  color: #9a9a9a;
+  color: #8a8a8a;
 }
 
 .agent-notch-panel-page {
@@ -429,7 +429,7 @@
 .agent-notch-tab {
   border-radius: 99px;
   padding: 5px 10px;
-  color: #b8b8b8;
+  color: #c8c8c8;
   transition-duration: 100ms;
 }
 
@@ -475,7 +475,7 @@
 }
 
 .agent-notch-card {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   padding: 10px 12px;
   spacing: 10px;
@@ -489,7 +489,7 @@
 .agent-notch-card-subtitle {
   max-width: 150px;
   font-size: 9pt;
-  color: #b8b8b8;
+  color: #c8c8c8;
 }
 
 .agent-notch-music-card {
@@ -498,11 +498,11 @@
 
 .agent-notch-music-card-cover {
   icon-size: 40px;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .agent-notch-music-card-cover.no-cover {
-  background-color: #222;
+  background-color: rgba(255, 255, 255, 0.08);
   color: #8a8a8a;
 }
 
@@ -527,7 +527,7 @@
 }
 
 .agent-notch-music-page-cover.no-cover {
-  background-color: #222;
+  background-color: rgba(255, 255, 255, 0.08);
   color: #8a8a8a;
 }
 
@@ -552,7 +552,7 @@
 
 .agent-notch-music-page-title {
   max-width: 260px;
-  font-size: 15pt;
+  font-size: 16pt;
   font-weight: 800;
 }
 
@@ -563,8 +563,8 @@
 
 .agent-notch-music-time {
   font-family: monospace;
-  font-size: 8pt;
-  color: #9a9a9a;
+  font-size: 8.5pt;
+  color: #8a8a8a;
 }
 
 .agent-notch-music-page-controls {
@@ -628,7 +628,7 @@
   padding: 2px 10px;
   font-size: 8.5pt;
   color: #f5f5f5;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.14);
   transition-duration: 100ms;
 }
 
@@ -667,7 +667,7 @@
 
 .agent-notch-focus-status {
   font-size: 9pt;
-  color: #b8b8b8;
+  color: #c8c8c8;
 }
 
 .agent-notch-focus-card {
@@ -692,19 +692,18 @@
   spacing: 6px;
 }
 
-/* ── Mascota (D4): ojos fijos propios ─────────────── */
+/* ── Ojos con expresión (docs/09) ─────────────────── */
 
-/* Círculos (distintos de los óvalos verticales de Mochi/Coucou). */
-.agent-notch-eyes {
-  spacing: 10px;
+/* Los dibuja `Eyes` (widgets.js) con Cairo: medidas en unidades de 1/12 del
+   alto. Círculos, distintos de los óvalos verticales de Mochi/Coucou. El
+   color es `color`. */
+.agent-notch-face {
+  width: 30px;
+  height: 12px;
+  color: #8a8a8a;
 }
 
-.agent-notch-eye {
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  background-color: #dbeafe;
-}
+.agent-notch-face.mascota { color: #dbeafe; }
 
 /* ── Módulo Portapapeles (C1) ─────────────────────── */
 
@@ -716,7 +715,7 @@
 .agent-notch-clipboard-search {
   border-radius: 99px;
   padding: 5px 12px;
-  font-size: 9.5pt;
+  font-size: 9pt;
   color: #f5f5f5;
   background-color: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -726,7 +725,7 @@
 }
 
 .agent-notch-clipboard-search:focus {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .agent-notch-clipboard-search StLabel.hint-text {
@@ -736,7 +735,7 @@
 .agent-notch-clipboard-search-icon {
   icon-size: 14px;
   padding-right: 6px;
-  color: #9a9a9a;
+  color: #8a8a8a;
 }
 
 .agent-notch-clipboard-toolbar {
@@ -747,12 +746,12 @@
 .agent-notch-clipboard-clear {
   border-radius: 99px;
   padding: 6px;
-  color: #cfcfcf;
+  color: #c8c8c8;
 }
 
 .agent-notch-clipboard-clear:hover,
 .agent-notch-clipboard-clear:focus {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
@@ -779,13 +778,13 @@
 .agent-notch-clipboard-item {
   border-radius: 10px;
   padding: 6px 10px;
-  color: #e8e8e8;
+  color: #f5f5f5;
   transition-duration: 100ms;
 }
 
 .agent-notch-clipboard-item:hover,
 .agent-notch-clipboard-item:focus {
-  background-color: rgba(255, 255, 255, 0.07);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .agent-notch-clipboard-item:selected {
@@ -794,20 +793,20 @@
 }
 
 .agent-notch-clipboard-text {
-  font-size: 9.5pt;
+  font-size: 9pt;
   max-width: 360px;
 }
 
 .agent-notch-clipboard-pin {
   border-radius: 99px;
   padding: 5px;
-  color: #7a7a7a;
+  color: #8a8a8a;
   transition-duration: 100ms;
 }
 
 .agent-notch-clipboard-pin:hover,
 .agent-notch-clipboard-pin:focus {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.14);
   color: #f5f5f5;
 }
 
@@ -821,7 +820,7 @@
 
 .agent-notch-clipboard-empty {
   padding: 24px 0;
-  font-size: 9.5pt;
+  font-size: 9pt;
   color: #8a8a8a;
 }
 
@@ -840,11 +839,11 @@
   background-color: #8a8a8a;
 }
 
-.agent-notch-agents.estado-pensando   .agent-notch-dot { background-color: #a78bfa; }
-.agent-notch-agents.estado-trabajando .agent-notch-dot { background-color: #60a5fa; }
-.agent-notch-agents.estado-atencion   .agent-notch-dot { background-color: #fbbf24; }
-.agent-notch-agents.estado-terminado  .agent-notch-dot { background-color: #34d399; }
-.agent-notch-agents.estado-error      .agent-notch-dot { background-color: #f87171; }
+.agent-notch-agents.estado-pensando   .agent-notch-face { color: #a78bfa; }
+.agent-notch-agents.estado-trabajando .agent-notch-face { color: #60a5fa; }
+.agent-notch-agents.estado-atencion   .agent-notch-face { color: #fbbf24; }
+.agent-notch-agents.estado-terminado  .agent-notch-face { color: #34d399; }
+.agent-notch-agents.estado-error      .agent-notch-face { color: #f87171; }
 
 .agent-notch-agents-title {
   max-width: 140px;
@@ -858,7 +857,7 @@
 .agent-notch-agents-detail {
   max-width: 220px;
   font-family: monospace;
-  color: #cfcfcf;
+  color: #c8c8c8;
 }
 
 .agent-notch-agents.estado-atencion .agent-notch-agents-detail {
@@ -903,11 +902,11 @@
 /* Etiqueta del agente (paso 15): tinte propio, distinto de los colores de
    estado del punto. Desconocidos: gris neutro. */
 .agent-notch-agents-row-tag {
-  font-size: 8pt;
+  font-size: 8.5pt;
   font-weight: bold;
   border-radius: 6px;
   padding: 1px 6px;
-  color: #b8b8b8;
+  color: #c8c8c8;
   background-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -924,7 +923,7 @@
 .agent-notch-agents-row-action {
   font-family: monospace;
   font-size: 9pt;
-  color: #cfcfcf;
+  color: #c8c8c8;
 }
 
 .agent-notch-agents-row.estado-atencion .agent-notch-agents-row-action {
@@ -980,21 +979,21 @@
    El brillo ámbar de abajo lo pinta la isla (bannerAccent). */
 .agent-notch-agents-banner {
   min-width: 320px;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 4px 6px;
 }
 
 .agent-notch-agents-banner:hover,
 .agent-notch-agents-banner:focus {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .agent-notch-agents-banner-box {
   spacing: 8px;
 }
 
-.agent-notch-agents-banner .agent-notch-dot {
-  background-color: #fbbf24;
+.agent-notch-agents-banner .agent-notch-face {
+  color: #fbbf24;
 }
 
 .agent-notch-agents-banner-title {
@@ -1051,7 +1050,7 @@
 
 .agent-notch-docker-group-button:hover,
 .agent-notch-docker-group-button:focus {
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: rgba(255, 255, 255, 0.14);
 }
 
 .agent-notch-docker-group-button:insensitive {
@@ -1073,7 +1072,7 @@
 }
 
 .agent-notch-docker-row:hover {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .agent-notch-docker-row.en-marcha .agent-notch-dot { background-color: #34d399; }
@@ -1095,7 +1094,7 @@
 .agent-notch-docker-row-ports {
   font-family: monospace;
   font-size: 9pt;
-  color: #cfcfcf;
+  color: #c8c8c8;
 }
 
 .agent-notch-docker-row-button {
@@ -1105,7 +1104,7 @@
 
 .agent-notch-docker-row-button:hover,
 .agent-notch-docker-row-button:focus {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.14);
 }
 
 .agent-notch-docker-row-button:active {
@@ -1137,10 +1136,10 @@
 .agent-notch-docker-retry {
   border-radius: 99px;
   padding: 4px 14px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.14);
 }
 
 .agent-notch-docker-retry:hover,
 .agent-notch-docker-retry:focus {
-  background-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.2);
 }

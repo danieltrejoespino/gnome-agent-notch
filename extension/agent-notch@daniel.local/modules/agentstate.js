@@ -184,6 +184,24 @@ export function agentLabel(agente) {
     };
 }
 
+// Ojos con expresión (docs/09, aprobado el 19-11-2026): la forma de los ojos
+// que sustituyen al punto en la compacta. Las expresiones las dibuja `Eyes`
+// (widgets.js).
+export const EYE_EXPRESSIONS = ['abiertos', 'entornados', 'arriba', 'derecha', 'muy-abiertos', 'contentos', 'error'];
+const STATE_EYES = {
+    pensando: 'arriba',
+    trabajando: 'derecha',
+    atencion: 'muy-abiertos',
+    terminado: 'contentos',
+    error: 'error',
+    inactivo: 'abiertos',
+};
+
+/** Estado → expresión de los ojos; desconocido → 'abiertos'. */
+export function eyesFor(state) {
+    return Object.hasOwn(STATE_EYES, state) ? STATE_EYES[state] : 'abiertos';
+}
+
 /** Texto corto de cada estado, para las filas sin `accion`. */
 export function stateText(state) {
     return STATE_TEXT[state] ?? state;

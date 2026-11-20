@@ -29,10 +29,12 @@
 //   - Cada lista se crea la primera vez que se ve y reutiliza sus filas.
 //
 // Animaciones y avisos (paso 7, docs/09-diseno-visual.md):
-//   - Pulso del punto (opacidad, con ease() en la GPU) mientras piensa o
+//   - En la compacta, ojos en lugar del punto (docs/09, 19-11-2026): cambian
+//     de forma y color con el estado y parpadean una vez al cambiar.
+//   - Pulso de los ojos (opacidad, con ease() en la GPU) mientras piensa o
 //     trabaja (900 ms) o pide atención (500 ms), SOLO con la compacta a la
 //     vista y con las animaciones de GNOME activadas. Si no, ningún bucle.
-//   - `terminado`: un destello único del punto.
+//   - `terminado`: ojos contentos y un destello único.
 //   - Al pasar una sesión a `atencion` (una vez por cambio, no en cada
 //     evento): la isla se despliega 5 s con un banner ámbar y suena
 //     `dialog-question` del tema. Clic en el banner → su terminal. Con
@@ -43,7 +45,6 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
-import Graphene from 'gi://Graphene';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
 
@@ -51,10 +52,10 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {NotchModule} from './module.js';
 import {readText, isCancelled} from './sysinfo.js';
-import {makeLabel} from './widgets.js';
+import {Eyes, makeLabel} from './widgets.js';
 import {
     AGENT_TINTS, STATES, agentLabel, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession,
-    pickWindow, sameSummary, shownState, sortSessions, stateText, summarize,
+    eyesFor, pickWindow, sameSummary, shownState, sortSessions, stateText, summarize,
 } from './agentstate.js';
 
 // Compacta: con algo en marcha gana a la música (10) pero no al
@@ -319,11 +320,8 @@ class AgentsModule extends NotchModule {
             style_class: 'agent-notch-agents',
             y_align: Clutter.ActorAlign.CENTER,
         });
-        this._dot = new St.Widget({
-            style_class: 'agent-notch-dot',
-            y_align: Clutter.ActorAlign.CENTER,
-            pivot_point: new Graphene.Point({x: 0.5, y: 0.5}),   // destello desde el centro
-        });
+        // Ojos en lugar del punto (docs/09): color y forma según el estado.
+        this._eyes = new Eyes();
         this._title = makeLabel('agent-notch-agents-title', {y_align: Clutter.ActorAlign.CENTER});
         this._separator = new St.Label({
             style_class: 'agent-notch-agents-separator',
@@ -331,7 +329,7 @@ class AgentsModule extends NotchModule {
             y_align: Clutter.ActorAlign.CENTER,
         });
         this._detail = makeLabel('agent-notch-agents-detail', {y_align: Clutter.ActorAlign.CENTER});
-        this._compact.add_child(this._dot);
+        this._compact.add_child(this._eyes);
         this._compact.add_child(this._title);
         this._compact.add_child(this._separator);
         this._compact.add_child(this._detail);
@@ -372,8 +370,12 @@ class AgentsModule extends NotchModule {
                 this._detail.text = summary.detail;
             }
         }
+        // Al terminar, el destello sustituye al parpadeo del cambio de forma.
+        const finished = summary?.state === 'terminado' && before?.state !== 'terminado';
+        if (summary)
+            this._eyes.setExpression(eyesFor(summary.state), {animate: !finished && this.compactVisible});
         this._syncPulse();
-        if (summary?.state === 'terminado' && before?.state !== 'terminado')
+        if (finished)
             this._flash();
 
         // El banner sobra si su sesión ya no pide atención (se contestó en
@@ -416,17 +418,17 @@ class AgentsModule extends NotchModule {
 
     // Un único bucle de opacidad, y solo mientras aporta algo.
     _syncPulse() {
-        if (!this._dot)
+        if (!this._eyes)
             return;
         const ms = PULSE_MS[this._summary?.state] ?? 0;
         const want = ms && this.compactVisible && this._settings.enable_animations ? ms : 0;
         if (want === this._pulseMs)
             return;
-        this._dot.remove_transition('opacity');
-        this._dot.opacity = 255;
+        this._eyes.remove_transition('opacity');
+        this._eyes.opacity = 255;
         this._pulseMs = want;
         if (want) {
-            this._dot.ease({
+            this._eyes.ease({
                 opacity: PULSE_OPACITY,
                 duration: want,
                 mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
@@ -439,12 +441,12 @@ class AgentsModule extends NotchModule {
     _flash() {
         if (!this.compactVisible || !this._settings.enable_animations)
             return;
-        this._dot.remove_transition('scale-x');
-        this._dot.remove_transition('scale-y');
-        this._dot.set_scale(1, 1);
-        this._dot.ease({
-            scale_x: 1.8,
-            scale_y: 1.8,
+        this._eyes.remove_transition('scale-x');
+        this._eyes.remove_transition('scale-y');
+        this._eyes.set_scale(1, 1);
+        this._eyes.ease({
+            scale_x: 1.4,
+            scale_y: 1.4,
             duration: FLASH_MS,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             repeatCount: 1,
@@ -464,7 +466,7 @@ class AgentsModule extends NotchModule {
 
     _alert(name, session) {
         if (!this._notifSettings.get_boolean('show-banners'))
-            return;   // «No molestar»: solo cambia el punto
+            return;   // «No molestar»: solo cambian los ojos
         try {
             global.display.get_sound_player().play_from_theme(
                 ATTENTION_SOUND, `${session.proyecto} te necesita`, null);
@@ -476,13 +478,15 @@ class AgentsModule extends NotchModule {
 
     _buildBanner() {
         const box = new St.BoxLayout({style_class: 'agent-notch-agents-banner-box', x_expand: true});
-        this._bannerDot = new St.Widget({style_class: 'agent-notch-dot', y_align: Clutter.ActorAlign.CENTER});
+        // Ojos muy abiertos en ámbar (docs/09, añadido al aprobar).
+        this._bannerEyes = new Eyes();
+        this._bannerEyes.setExpression('muy-abiertos', {animate: false});
         this._bannerTitle = makeLabel('agent-notch-agents-banner-title', {y_align: Clutter.ActorAlign.CENTER});
         this._bannerDetail = makeLabel('agent-notch-agents-banner-detail', {
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,
         });
-        box.add_child(this._bannerDot);
+        box.add_child(this._bannerEyes);
         box.add_child(this._bannerTitle);
         box.add_child(this._bannerDetail);
         this._banner = new St.Button({
@@ -718,7 +722,7 @@ class AgentsModule extends NotchModule {
         this._bannerId = 0;
         this._bannerName = this._bannerSession = null;
         this._banner?.destroy();
-        this._banner = this._bannerDot = this._bannerTitle = this._bannerDetail = null;
+        this._banner = this._bannerEyes = this._bannerTitle = this._bannerDetail = null;
         this._monitor?.disconnectObject(this);
         this._monitor?.cancel();
         this._monitor = null;
@@ -731,7 +735,7 @@ class AgentsModule extends NotchModule {
         this._sessions.clear();
         this._readGen.clear();
         this._compact?.destroy();
-        this._compact = this._dot = this._title = this._separator = this._detail = null;
+        this._compact = this._eyes = this._title = this._separator = this._detail = null;
         this._exp?.actor.destroy();
         this._page?.actor.destroy();
         this._exp = this._page = null;

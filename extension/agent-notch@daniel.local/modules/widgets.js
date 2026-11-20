@@ -342,3 +342,130 @@ class EqualizerBars extends St.BoxLayout {
         }
     }
 });
+
+// Ojos: medidas en "unidades" (1/12 del alto), así valen a cualquier escala.
+const EYE_GAP = 9;          // del centro a cada ojo
+const EYE_R = 4;            // radio normal
+const EYE_R_WIDE = 5.5;     // muy abiertos
+const EYE_LOOK = 2;         // desplazamiento al mirar arriba o a la derecha
+const EYE_STROKE = 1.8;     // grosor de ^ ^ y × ×
+const BLINK_MS = 75;        // cada mitad del parpadeo
+
+/**
+ * Ojos con expresión (docs/09, aprobado el 19-11-2026): los de la mascota y
+ * los que sustituyen al punto en Agentes. Dos ojos dibujados con Cairo según
+ * `expression` (ver EYE_EXPRESSIONS en agentstate.js); el color es el `color`
+ * CSS de su clase. Solo se repinta al cambiar de expresión o de estilo, nunca
+ * por fotogramas. Al cambiar de expresión parpadea una vez (scale_y con
+ * ease(), en la GPU), salvo con «reducir animaciones» o fuera de pantalla.
+ */
+export const Eyes = GObject.registerClass(
+class Eyes extends St.DrawingArea {
+    _init(params = {}) {
+        super._init({
+            style_class: 'agent-notch-face',
+            y_align: Clutter.ActorAlign.CENTER,
+            pivot_point: new Graphene.Point({x: 0.5, y: 0.5}),
+            ...params,
+        });
+        this._expression = 'abiertos';
+        this._blinkGen = 0;
+    }
+
+    get expression() {
+        return this._expression;
+    }
+
+    setExpression(expression, {animate = true} = {}) {
+        if (expression === this._expression)
+            return;
+        this._expression = expression;
+        const gen = ++this._blinkGen;
+        this.remove_transition('scale-y');
+        if (!animate || !this.mapped || !St.Settings.get().enable_animations) {
+            this.scale_y = 1;
+            this.queue_repaint();
+            return;
+        }
+        // Se cierran, se pinta la forma nueva con el ojo cerrado y se abren.
+        this.ease({
+            scale_y: 0.1,
+            duration: BLINK_MS,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: () => {
+                if (gen !== this._blinkGen)
+                    return;   // lo sustituyó otro cambio
+                this.queue_repaint();
+                this.ease({
+                    scale_y: 1,
+                    duration: BLINK_MS,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                });
+            },
+        });
+    }
+
+    vfunc_style_changed() {
+        super.vfunc_style_changed();
+        this._color = this.get_theme_node().get_foreground_color();
+        this.queue_repaint();
+    }
+
+    vfunc_repaint() {
+        const cr = this.get_context();
+        const [w, h] = this.get_surface_size();
+        const c = this._color;
+        if (c) {
+            const u = h / 12;
+            cr.setSourceRGBA(c.red / 255, c.green / 255, c.blue / 255, c.alpha / 255);
+            cr.setLineWidth(EYE_STROKE * u);
+            cr.setLineCap(Cairo.LineCap.ROUND);
+            cr.setLineJoin(Cairo.LineJoin.ROUND);
+            for (const cx of [w / 2 - EYE_GAP * u, w / 2 + EYE_GAP * u])
+                this._paintEye(cr, cx, h / 2, u);
+        }
+        cr.$dispose();
+    }
+
+    _paintEye(cr, cx, cy, u) {
+        cr.newPath();
+        switch (this._expression) {
+        case 'arriba':
+            cr.arc(cx, cy - EYE_LOOK * u, EYE_R * u, 0, 2 * Math.PI);
+            cr.fill();
+            break;
+        case 'derecha':
+            cr.arc(cx + EYE_LOOK * u, cy, EYE_R * u, 0, 2 * Math.PI);
+            cr.fill();
+            break;
+        case 'muy-abiertos':
+            cr.arc(cx, cy, EYE_R_WIDE * u, 0, 2 * Math.PI);
+            cr.fill();
+            break;
+        case 'entornados':   // óvalo aplastado, algo más abajo
+            cr.save();
+            cr.translate(cx, cy + u);
+            cr.scale(1, 0.4);
+            cr.arc(0, 0, EYE_R * u, 0, 2 * Math.PI);
+            cr.restore();
+            cr.fill();
+            break;
+        case 'contentos':    // ^
+            cr.moveTo(cx - 3.5 * u, cy + 1.5 * u);
+            cr.lineTo(cx, cy - 2 * u);
+            cr.lineTo(cx + 3.5 * u, cy + 1.5 * u);
+            cr.stroke();
+            break;
+        case 'error':        // ×
+            cr.moveTo(cx - 3 * u, cy - 3 * u);
+            cr.lineTo(cx + 3 * u, cy + 3 * u);
+            cr.moveTo(cx + 3 * u, cy - 3 * u);
+            cr.lineTo(cx - 3 * u, cy + 3 * u);
+            cr.stroke();
+            break;
+        default:             // abiertos
+            cr.arc(cx, cy, EYE_R * u, 0, 2 * Math.PI);
+            cr.fill();
+        }
+    }
+});

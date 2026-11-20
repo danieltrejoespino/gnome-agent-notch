@@ -32,9 +32,10 @@ export default class AgentNotchExtension extends Extension {
         this._island.addModule(new NotificationsModule());
         this._island.addModule(new FocusModule());
         this._island.addModule(new ClipboardModule());
-        this._island.addModule(new AgentsModule());
+        const agents = new AgentsModule();
+        this._island.addModule(agents);
         this._island.addModule(new DockerModule());
-        this._island.addModule(new MascotModule());
+        this._island.addModule(new MascotModule(agents));   // ojos según los agentes
         Main.layoutManager.addTopChrome(this._island, {trackFullscreen: true});
 
         const reposition = () => this._reposition();
