@@ -59,6 +59,15 @@ export const NotchModule = GObject.registerClass({
         return false;
     }
 
+    /**
+     * Actor que el módulo añade al final de la barra de pestañas del panel
+     * (p. ej. el botón «Actualizar», docs/18), o null. Lo crea y lo muestra
+     * u oculta el módulo; el panel solo lo coloca y lo suelta al destruirse.
+     */
+    get tabBarActor() {
+        return null;
+    }
+
     /** true si su vista compacta necesita la fila alta (dos líneas, docs/09). */
     get tallCompact() {
         return false;

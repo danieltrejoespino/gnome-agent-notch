@@ -1156,3 +1156,104 @@
 .agent-notch-docker-retry:focus {
   background-color: rgba(255, 255, 255, 0.2);
 }
+
+/* ── Actualización (docs/18) ─────────────────────── */
+
+/* Botón al final de la barra de pestañas, solo con versión nueva. */
+.agent-notch-update-pill {
+  border-radius: 99px;
+  padding: 5px 12px;
+  margin-left: 8px;
+  color: #f5f5f5;
+  background-color: rgba(96, 165, 250, 0.25);
+  font-size: 8.5pt;
+  font-weight: bold;
+  transition-duration: 100ms;
+}
+
+.agent-notch-update-pill:hover,
+.agent-notch-update-pill:focus {
+  background-color: rgba(96, 165, 250, 0.4);
+}
+
+.agent-notch-update-pill.estado-instalando {
+  color: #c8c8c8;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-update-pill.estado-instalada {
+  background-color: rgba(52, 211, 153, 0.25);
+}
+
+.agent-notch-update-pill.estado-instalada:hover,
+.agent-notch-update-pill.estado-instalada:focus {
+  background-color: rgba(52, 211, 153, 0.4);
+}
+
+.agent-notch-update-pill.estado-error {
+  background-color: rgba(248, 113, 113, 0.25);
+}
+
+.agent-notch-update-pill-box {
+  spacing: 6px;
+}
+
+.agent-notch-update-icon {
+  icon-size: 14px;
+  color: #60a5fa;
+}
+
+.estado-instalada .agent-notch-update-icon { color: #34d399; }
+.estado-error .agent-notch-update-icon { color: #f87171; }
+.agent-notch-update-pill .agent-notch-update-icon { color: #f5f5f5; }
+
+/* Fila del hover. */
+.agent-notch-update-row {
+  spacing: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.agent-notch-update-title {
+  font-size: 9pt;
+  color: #c8c8c8;
+}
+
+.agent-notch-update-button {
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 8.5pt;
+  font-weight: bold;
+  color: #f5f5f5;
+  background-color: rgba(96, 165, 250, 0.25);
+}
+
+.agent-notch-update-button:hover,
+.agent-notch-update-button:focus {
+  background-color: rgba(96, 165, 250, 0.4);
+}
+
+.agent-notch-update-row.estado-instalando .agent-notch-update-button {
+  color: #c8c8c8;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-update-row.estado-instalada .agent-notch-update-button {
+  background-color: rgba(52, 211, 153, 0.25);
+}
+
+.agent-notch-update-row.estado-error .agent-notch-update-button {
+  background-color: rgba(248, 113, 113, 0.25);
+}
+
+/* Puntito junto a los ojos en reposo. */
+.agent-notch-mascot {
+  spacing: 6px;
+}
+
+.agent-notch-update-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: #60a5fa;
+}

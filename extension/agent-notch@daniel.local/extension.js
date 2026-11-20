@@ -13,6 +13,7 @@ import {MascotModule} from './modules/mascot.js';
 import {MusicModule} from './modules/music.js';
 import {NotificationsModule} from './modules/notifications.js';
 import {SystemModule} from './modules/system.js';
+import {UpdateModule} from './modules/update.js';
 
 // Cuánto sobresale la isla por debajo de la barra superior (px lógicos),
 // para que se distinga aunque la barra también sea negra, como un notch.
@@ -35,7 +36,10 @@ export default class AgentNotchExtension extends Extension {
         const agents = new AgentsModule();
         this._island.addModule(agents);
         this._island.addModule(new DockerModule());
-        this._island.addModule(new MascotModule(agents));   // ojos según los agentes
+        const update = new UpdateModule();
+        this._island.addModule(update);
+        // Ojos según los agentes y puntito si hay versión nueva.
+        this._island.addModule(new MascotModule(agents, update));
         Main.layoutManager.addTopChrome(this._island, {trackFullscreen: true});
 
         const reposition = () => this._reposition();

@@ -46,6 +46,7 @@ export const NotchPanel = GObject.registerClass({
         this._clock = null;
         this._home = null;         // se crea al primer uso
         this._tabs = new Map();    // key -> {button, label}
+        this._extraActors = null;  // actores de los módulos al final de las pestañas
 
         // Cabecera: fecha.
         this._date = new St.Label({style_class: 'agent-notch-panel-date'});
@@ -127,6 +128,11 @@ export const NotchPanel = GObject.registerClass({
         this._addTab(HOME, 'Home', 'go-home-symbolic');
         for (const module of this._pageModules())
             this._addTab(module, module.pageTitle, module.pageIcon);
+
+        // Lo que los módulos añaden al final (p. ej. «Actualizar», docs/18).
+        this._extraActors = this._modules.map(m => m.tabBarActor).filter(Boolean);
+        for (const actor of this._extraActors)
+            this._tabBar.add_child(actor);
     }
 
     _addTab(key, title, iconName) {
@@ -242,6 +248,9 @@ export const NotchPanel = GObject.registerClass({
         this.close();
         // Soltar los actores de los módulos: son de ellos, no del panel.
         this._pageBin.set_child(null);
+        for (const actor of this._extraActors ?? [])
+            this._tabBar.remove_child(actor);
+        this._extraActors = null;
         this._cards?.remove_all_children();
         this._home?.destroy();
         this._home = this._bigClock = this._cards = null;

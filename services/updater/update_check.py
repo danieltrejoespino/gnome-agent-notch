@@ -19,6 +19,15 @@ Espera la respuesta como mucho WAIT_S; después cierra la notificación y sale
 (la de mañana volverá a avisar). «Más tarde» o descartarla: no vuelve a
 avisar de esa versión en SNOOZE_DAYS días.
 
+Además (docs/18, botón «Actualizar» en la isla): apunta la versión disponible
+en update.json ({"disponible", "instalada", "estado", "registro"}), que la
+extensión vigila para mostrar su botón, y atiende el método Instalar() del
+nombre D-Bus dev.agentnotch.Updater:
+  - mientras espera respuesta a su notificación, lo tiene este proceso;
+  - si no, D-Bus arranca «update_check.py --servicio», que instala y sale
+    (o sale a los SERVICE_IDLE_S segundos si nadie llama).
+Así nunca hay dos instalaciones a la vez.
+
 Desactivar: systemctl --user disable --now agent-notch-update.timer
 
 Para pruebas (no las usa el temporizador):
@@ -49,6 +58,18 @@ SNOOZE_DAYS = 3
 HTTP_TIMEOUT_S = 15
 USER_AGENT = "agent-notch-update-check"
 ICON = "software-update-available-symbolic"
+SERVICE_IDLE_S = 30
+
+BUS_NAME = "dev.agentnotch.Updater"
+OBJECT_PATH = "/dev/agentnotch/Updater"
+INTERFACE_XML = """
+<node>
+  <interface name="dev.agentnotch.Updater">
+    <method name="Instalar"/>
+  </interface>
+</node>
+"""
+OFFER_KEYS = ("disponible", "instalada", "estado", "registro")
 
 DATA = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
 STATE_HOME = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
@@ -128,7 +149,43 @@ def snoozed(version, now):
 
 
 def snooze(version):
-    save_state({"version": version, "snooze_until": time.time() + SNOOZE_DAYS * 86400})
+    st = load_state()
+    st.update(version=version, snooze_until=time.time() + SNOOZE_DAYS * 86400)
+    save_state(st)
+
+
+def set_offer(**fields):
+    """Lo que lee el botón de la isla (docs/18); conserva lo de «Más tarde»."""
+    st = load_state()
+    st.update(fields)
+    save_state(st)
+
+
+def clear_offer():
+    st = load_state()
+    if any(k in st for k in OFFER_KEYS):
+        save_state({k: v for k, v in st.items() if k not in OFFER_KEYS})
+
+
+# --- D-Bus: dev.agentnotch.Updater.Instalar() --------------------------------
+
+def own_updater(conn, on_install):
+    """Pide el nombre y atiende Instalar() llamando a on_install() desde el
+    bucle principal, después de responder. Devuelve False si otro lo tiene."""
+    def on_call(_conn, _sender, _path, _iface, method, _params, invocation):
+        if method != "Instalar":
+            invocation.return_dbus_error("org.freedesktop.DBus.Error.UnknownMethod", method)
+            return
+        invocation.return_value(None)
+        GLib.idle_add(lambda: on_install() and False)
+
+    info = Gio.DBusNodeInfo.new_for_xml(INTERFACE_XML).interfaces[0]
+    conn.register_object_with_closures2(OBJECT_PATH, info, on_call, None, None)
+    reply = conn.call_sync(
+        "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "RequestName",
+        GLib.Variant("(su)", (BUS_NAME, 4)),   # 4 = DO_NOT_QUEUE
+        GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, -1, None)
+    return reply.unpack()[0] in (1, 4)   # 1 = dueño, 4 = ya lo era
 
 
 # --- Notificaciones (org.freedesktop.Notifications) -------------------------
@@ -168,11 +225,22 @@ class Notifier:
 
     def wait(self, seconds):
         """Espera a que se pulse una acción o se cierre; None si se agota el tiempo."""
-        GLib.timeout_add_seconds(seconds, self._timeout)
+        self.answer = None
+        self._timed_out = False
+        source = GLib.timeout_add_seconds(seconds, self._timeout)
         self.loop.run()
+        if not self._timed_out:
+            GLib.source_remove(source)   # que no corte la próxima espera
         return self.answer
 
+    def answer_with(self, answer):
+        """Respuesta que no viene de la notificación (p. ej. el botón de la isla)."""
+        if self.answer is None:
+            self.answer = answer
+        self.loop.quit()
+
     def _timeout(self):
+        self._timed_out = True
         self.loop.quit()
         return GLib.SOURCE_REMOVE
 
@@ -225,7 +293,57 @@ def logout_dialog():
         log("no se pudo abrir el diálogo de cerrar sesión: %s" % e.message)
 
 
+def install(version, n=None):
+    """Instala esa versión dejando el progreso en update.json (y en la
+    notificación, si la hay). Devuelve True si fue bien."""
+    set_offer(disponible=version, instalada=installed_version(), estado="instalando", registro=None)
+    if n:
+        n.notify("Actualizando agent-notch…", "Descargando la %s" % version, replaces=n.nid)
+    try:
+        ok, logfile = run_installer(version)
+    except (OSError, subprocess.SubprocessError) as e:
+        ok, logfile = False, str(e)
+    set_offer(estado="instalada" if ok else "error", registro=logfile)
+    log("instalación de %s: %s" % (version, "bien" if ok else "falló"))
+    return ok
+
+
+def serve():
+    """Modo --servicio: lo arranca D-Bus cuando la isla llama a Instalar() y
+    el comprobador diario no está esperando. Instala y sale."""
+    loop = GLib.MainLoop()
+    state = {"busy": False}
+
+    def on_install():
+        if state["busy"]:
+            return
+        state["busy"] = True
+        version = load_state().get("disponible")
+        installed = installed_version()
+        if not is_newer(version, installed):
+            log("nada que instalar (%r; instalada %r)" % (version, installed))
+        else:
+            install(version)
+        loop.quit()
+
+    def idle_exit():
+        if not state["busy"]:
+            loop.quit()
+        return GLib.SOURCE_REMOVE
+
+    conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    if not own_updater(conn, on_install):
+        log("otro proceso atiende %s" % BUS_NAME)
+        return 0
+    GLib.timeout_add_seconds(SERVICE_IDLE_S, idle_exit)
+    loop.run()
+    return 0
+
+
 def main():
+    if "--servicio" in sys.argv[1:]:
+        return serve()
+
     installed = installed_version()
     if version_key(installed) is None:
         log("versión instalada %r no es una release: no se comprueba" % installed)
@@ -237,12 +355,17 @@ def main():
         return 0
     if not is_newer(latest, installed):
         log("al día (%s; última %s)" % (installed, latest))
+        clear_offer()
         return 0
+    # El botón de la isla sale aunque la notificación esté pospuesta.
+    set_offer(disponible=latest, instalada=installed, estado="disponible", registro=None)
     if snoozed(latest, time.time()):
         log("%s pospuesta" % latest)
         return 0
 
     n = Notifier()
+    # Mientras espera, el botón de la isla llega aquí (no a otro proceso).
+    own_updater(n.bus, lambda: n.answer_with("update"))
     n.notify("agent-notch %s disponible" % latest,
              "Tienes la %s. Haz clic para actualizar." % installed,
              actions=[("default", "Actualizar"), ("later", "Más tarde"), ("update", "Actualizar")])
@@ -250,11 +373,8 @@ def main():
     log("respuesta: %s" % answer)
 
     if answer in ("default", "update"):
-        n.notify("Actualizando agent-notch…", "Descargando la %s" % latest, replaces=n.nid)
-        try:
-            ok, logfile = run_installer(latest)
-        except (OSError, subprocess.SubprocessError) as e:
-            ok, logfile = False, str(e)
+        ok = install(latest, n)
+        logfile = load_state().get("registro") or LOG_FILE
         if ok:
             n.notify("agent-notch %s instalada" % latest,
                      "Cierra sesión y vuelve a entrar para aplicarla.",

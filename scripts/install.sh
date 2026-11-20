@@ -130,6 +130,9 @@ main() {
     }
     install_service dev.agentnotch.SpeedTest speedtest/speedtest.py
     install_service dev.agentnotch.Brightness brightness/brightness.py
+    # Botón «Actualizar» de la isla (docs/18): instala sin que la extensión
+    # lance procesos. Sin release instalada, el servicio no hace nada.
+    install_service dev.agentnotch.Updater "updater/update_check.py --servicio"
     say "Servicios D-Bus en $APP_DIR/services"
 
     # --- 4b. Aviso de versión nueva ------------------------------------------

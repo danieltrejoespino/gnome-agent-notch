@@ -63,7 +63,8 @@ main() {
     rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/agent-notch"
 
     rm -f "$DBUS_DIR/dev.agentnotch.SpeedTest.service" \
-          "$DBUS_DIR/dev.agentnotch.Brightness.service"
+          "$DBUS_DIR/dev.agentnotch.Brightness.service" \
+          "$DBUS_DIR/dev.agentnotch.Updater.service"
     say "Quitados los servicios D-Bus."
 
     # $APP_DIR también guarda los fijados del portapapeles; el temporizador
