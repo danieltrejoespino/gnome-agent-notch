@@ -161,6 +161,29 @@ export function sameSummary(a, b) {
 
 export const STALE_S = 30 * 60;
 
+// Etiqueta de cada agente en las filas (paso 15, decidido el 19-11-2026):
+// nombre corto y un tinte propio (clase CSS `agente-<tinte>`). Los que no
+// están aquí salen con su nombre tal cual y el tinte neutro `otro`.
+const AGENT_LABELS = {
+    'claude-code': {name: 'Claude', tint: 'claude'},
+    'opencode': {name: 'OpenCode', tint: 'opencode'},
+    'codex': {name: 'Codex', tint: 'otro'},
+    'gemini-cli': {name: 'Gemini', tint: 'otro'},
+};
+export const AGENT_TINTS = ['claude', 'opencode', 'otro'];
+const AGENT_NAME_MAX = 12;
+
+/** 'claude-code' → {name: 'Claude', tint: 'claude'}; desconocido → su nombre, tinte 'otro'. */
+export function agentLabel(agente) {
+    if (Object.hasOwn(AGENT_LABELS, agente))
+        return AGENT_LABELS[agente];
+    const name = String(agente ?? '').trim() || '?';
+    return {
+        name: name.length > AGENT_NAME_MAX ? `${name.slice(0, AGENT_NAME_MAX - 1)}…` : name,
+        tint: 'otro',
+    };
+}
+
 /** Texto corto de cada estado, para las filas sin `accion`. */
 export function stateText(state) {
     return STATE_TEXT[state] ?? state;

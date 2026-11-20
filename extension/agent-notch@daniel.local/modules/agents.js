@@ -53,7 +53,7 @@ import {NotchModule} from './module.js';
 import {readText, isCancelled} from './sysinfo.js';
 import {makeLabel} from './widgets.js';
 import {
-    STATES, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession,
+    AGENT_TINTS, STATES, agentLabel, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession,
     pickWindow, sameSummary, shownState, sortSessions, stateText, summarize,
 } from './agentstate.js';
 
@@ -94,6 +94,15 @@ function setStateClass(actor, state) {
             actor.add_style_class_name(`estado-${s}`);
         else
             actor.remove_style_class_name(`estado-${s}`);
+    }
+}
+
+function setTintClass(actor, tint) {
+    for (const t of AGENT_TINTS) {
+        if (t === tint)
+            actor.add_style_class_name(`agente-${t}`);
+        else
+            actor.remove_style_class_name(`agente-${t}`);
     }
 }
 
@@ -600,12 +609,14 @@ class AgentsModule extends NotchModule {
         });
         row.dot = new St.Widget({style_class: 'agent-notch-dot', y_align: Clutter.ActorAlign.CENTER});
         row.project = makeLabel('agent-notch-agents-row-project', {y_align: Clutter.ActorAlign.CENTER});
+        row.tag = new St.Label({style_class: 'agent-notch-agents-row-tag', y_align: Clutter.ActorAlign.CENTER});
+        row.agente = null;
         row.action = makeLabel('agent-notch-agents-row-action', {
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,
         });
         row.age = new St.Label({style_class: 'agent-notch-agents-row-age', y_align: Clutter.ActorAlign.CENTER});
-        for (const child of [row.dot, row.project, row.action, row.age])
+        for (const child of [row.dot, row.project, row.tag, row.action, row.age])
             box.add_child(child);
         row.button.connect('clicked', () => {
             if (row.session)
@@ -632,12 +643,18 @@ class AgentsModule extends NotchModule {
             const action = state === 'inactivo' ? stateText(state) : s.accion ?? stateText(state);
             if (row.project.text !== s.proyecto)
                 row.project.text = s.proyecto;
+            const agent = agentLabel(s.agente);
+            if (row.agente !== s.agente) {
+                row.agente = s.agente;
+                row.tag.text = agent.name;
+                setTintClass(row.tag, agent.tint);
+            }
             if (row.action.text !== action)
                 row.action.text = action;
             const age = formatAge(now - s.inicio);
             if (row.age.text !== age)
                 row.age.text = age;
-            row.button.accessible_name = `${s.proyecto}: ${action}`;
+            row.button.accessible_name = `${s.proyecto} (${agent.name}): ${action}`;
         });
 
         const hidden = sorted.length - shown.length;

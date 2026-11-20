@@ -4,7 +4,7 @@
 import System from 'system';
 
 import {
-    formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
+    AGENT_TINTS, agentLabel, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
     sameSummary, shownState, sortSessions, summarize,
 } from '../extension/agent-notch@daniel.local/modules/agentstate.js';
 
@@ -135,6 +135,16 @@ eq(pickWindow([300, 200, 100], [W(100, 'mi-app 1', 'a'), W(100, 'mi-app 2', 'b')
 eq(pickWindow([300, 200, 100], [W(200, 'x', 'cerca'), W(100, 'mi-app', 'lejos')], 'mi-app'), 'cerca', 'gana el ancestro más cercano');
 eq(pickWindow([300, 200, 100], [W(50, 'mi-app', 'otra')], 'mi-app'), null, 'ventana de otro proceso: nada');
 eq(pickWindow([300], [W(1, 'a', 'x'), W(1, 'b', 'y')], '?'), null, 'sin proyecto');
+
+// --- etiqueta del agente (paso 15) -----------------------------------------
+eq(agentLabel('claude-code'), {name: 'Claude', tint: 'claude'}, 'Claude Code');
+eq(agentLabel('opencode'), {name: 'OpenCode', tint: 'opencode'}, 'OpenCode');
+eq(agentLabel('gemini-cli'), {name: 'Gemini', tint: 'otro'}, 'conocido sin tinte propio');
+eq(agentLabel('simulador'), {name: 'simulador', tint: 'otro'}, 'desconocido: su nombre');
+eq(agentLabel('un-agente-muy-largo'), {name: 'un-agente-m…', tint: 'otro'}, 'nombre largo recortado');
+eq(agentLabel('  '), {name: '?', tint: 'otro'}, 'vacío');
+eq(agentLabel('toString'), {name: 'toString', tint: 'otro'}, 'no confunde propiedades heredadas');
+eq(AGENT_TINTS.includes(agentLabel('cualquiera').tint), true, 'el tinte siempre es uno conocido');
 
 print(`${passed} pruebas OK, ${failed} fallos`);
 if (failed)

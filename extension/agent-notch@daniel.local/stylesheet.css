@@ -900,6 +900,27 @@
   font-weight: bold;
 }
 
+/* Etiqueta del agente (paso 15): tinte propio, distinto de los colores de
+   estado del punto. Desconocidos: gris neutro. */
+.agent-notch-agents-row-tag {
+  font-size: 8pt;
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 1px 6px;
+  color: #b8b8b8;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-agents-row-tag.agente-claude {
+  color: #e8a27f;
+  background-color: rgba(217, 119, 87, 0.18);
+}
+
+.agent-notch-agents-row-tag.agente-opencode {
+  color: #7dd3c0;
+  background-color: rgba(45, 212, 191, 0.14);
+}
+
 .agent-notch-agents-row-action {
   font-family: monospace;
   font-size: 9pt;
