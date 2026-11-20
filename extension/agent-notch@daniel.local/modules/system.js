@@ -214,7 +214,7 @@ class SystemPage extends St.BoxLayout {
         });
         this.usage = new UsageView('agent-notch-system-usage');
         this.cpu = new UsageRow('CPU');
-        this.disk = new UsageRow('Disco');
+        this.disk = new UsageRow('Disk');
         this.add_child(this.usage);
         this.add_child(this.cpu);
         this.add_child(this.disk);
@@ -226,28 +226,28 @@ class SystemPage extends St.BoxLayout {
         });
         this.add_child(info);
 
-        this.battery = new InfoRow('Batería');
+        this.battery = new InfoRow('Battery');
         this.battery.visible = false;
-        this.network = new InfoRow('Red');
+        this.network = new InfoRow('Network');
         this.network.visible = false;
         this.publicIpButton = new St.Button({
             style_class: 'agent-notch-system-button',
-            label: 'Consultar',
+            label: 'Check',
             can_focus: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
         this.publicIpButton.connect('clicked', () => onPublicIp());
-        this.publicIp = new InfoRow('IP pública', this.publicIpButton);
+        this.publicIp = new InfoRow('Public IP', this.publicIpButton);
         this.speedButton = new St.Button({
             style_class: 'agent-notch-system-button',
-            label: 'Medir',
+            label: 'Test',
             can_focus: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
         this.speedButton.connect('clicked', () => onSpeedTest());
-        this.speed = new InfoRow('Velocidad', this.speedButton);
-        this.uptime = new InfoRow('Encendido');
-        this.os = new InfoRow('Sistema');
+        this.speed = new InfoRow('Speed', this.speedButton);
+        this.uptime = new InfoRow('Uptime');
+        this.os = new InfoRow('System');
         for (const row of [this.battery, this.network, this.publicIp, this.speed, this.uptime, this.os])
             info.add_child(row);
     }
@@ -326,7 +326,7 @@ class SystemModule extends NotchModule {
     }
 
     get pageTitle() {
-        return 'Sistema';
+        return 'System';
     }
 
     get pageIcon() {
@@ -391,7 +391,7 @@ class SystemModule extends NotchModule {
                 [, contents] = file.load_contents_finish(result);
             } catch (e) {
                 if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                    console.error('[agent-notch] No se pudo leer', MEMINFO, e.message);
+                    console.error('[agent-notch] Could not read', MEMINFO, e.message);
                 return;
             }
             this._show(parseMeminfo(new TextDecoder().decode(contents)));
@@ -420,7 +420,7 @@ class SystemModule extends NotchModule {
         this._pageCancellable = new Gio.Cancellable();
         this._ticks = 0;
         this._cpuPrev = null;
-        this._page.cpu.setText('midiendo…', 0);
+        this._page.cpu.setText('measuring…', 0);
 
         // Velocidad medida en otra red: ya no vale.
         if (!this._speedProxy && this._speedText && this._speedNetwork !== currentNetworkId())
@@ -475,7 +475,7 @@ class SystemModule extends NotchModule {
             const usage = Info.cpuUsage(this._cpuPrev, cur);
             this._cpuPrev = cur;
             // Hasta la segunda lectura no hay uso (docs/09: «…» parecía «_»).
-            const parts = [usage === null ? 'midiendo…' : `${Math.round(usage * 100)} %`];
+            const parts = [usage === null ? 'measuring…' : `${Math.round(usage * 100)} %`];
             if (temp !== null)
                 parts.push(`${Math.round(Number(temp) / 1000)} °C`);
             page.cpu.setText(parts.join('  ·  '), usage ?? 0);
@@ -492,7 +492,7 @@ class SystemModule extends NotchModule {
             }
         } catch (e) {
             if (!Info.isCancelled(e))
-                console.warn(`[agent-notch] Sistema: ${e.message}`);
+                console.warn(`[agent-notch] System: ${e.message}`);
         }
     }
 
@@ -520,7 +520,7 @@ class SystemModule extends NotchModule {
             this._showUptime();
         } catch (e) {
             if (!Info.isCancelled(e))
-                console.warn(`[agent-notch] Sistema: ${e.message}`);
+                console.warn(`[agent-notch] System: ${e.message}`);
         }
     }
 
@@ -539,7 +539,7 @@ class SystemModule extends NotchModule {
             this._upower = new UPowerProxy(Gio.DBus.system, 'org.freedesktop.UPower',
                 '/org/freedesktop/UPower/devices/DisplayDevice', (_proxy, error) => {
                     if (error) {
-                        console.warn(`[agent-notch] Sistema: UPower: ${error.message}`);
+                        console.warn(`[agent-notch] System: UPower: ${error.message}`);
                         return;
                     }
                     this._showBattery();
@@ -596,7 +596,7 @@ class SystemModule extends NotchModule {
         const c = Info.primaryConnection(this._nmClient);
         page.network.setValue(c
             ? [`${c.name}${c.kind ? ` (${c.kind})` : ''}`, c.ip].filter(Boolean).join(' · ')
-            : 'Sin conexión');
+            : 'No connection');
         this._setRowVisible(page.network, true);
     }
 
@@ -608,7 +608,7 @@ class SystemModule extends NotchModule {
         const cancellable = new Gio.Cancellable();
         this._ipCancellable = cancellable;
         page.publicIpButton.visible = false;
-        page.publicIp.setValue('Consultando…');
+        page.publicIp.setValue('Checking…');
 
         const session = new Soup.Session({timeout: PUBLIC_IP_TIMEOUT_S});
         const message = Soup.Message.new('GET', PUBLIC_IP_URL);
@@ -628,7 +628,7 @@ class SystemModule extends NotchModule {
             if (!this._page)
                 return;
             const ok = text !== null && IP_RE.test(text);
-            this._page.publicIp.setValue(ok ? text : 'No se pudo consultar');
+            this._page.publicIp.setValue(ok ? text : 'Could not check');
             this._page.publicIpButton.visible = !ok;
         });
     }
@@ -645,7 +645,7 @@ class SystemModule extends NotchModule {
     _startSpeedTest() {
         this._speedNetwork = currentNetworkId();
         this._speedDown = null;
-        this._setSpeed('Midiendo…');
+        this._setSpeed('Testing…');
 
         // Proxy asíncrono; el servicio lo arranca el D-Bus al llamar a Start.
         const proxy = new SpeedTestProxy(Gio.DBus.session, SPEED_BUS_NAME, SPEED_OBJECT_PATH,
@@ -675,7 +675,7 @@ class SystemModule extends NotchModule {
 
     _onSpeedProgress(phase, value) {
         if (phase === 'latency') {
-            this._setSpeed(`Latencia ${Math.round(value)} ms…`);
+            this._setSpeed(`Latency ${Math.round(value)} ms…`);
         } else if (phase === 'download') {
             this._speedDown = value;
             this._setSpeed(`↓ ${formatMbps(value)}…`);
@@ -689,11 +689,11 @@ class SystemModule extends NotchModule {
         this._releaseSpeedProxy();
         // Cloudflare limita los tests muy seguidos (HTTP 429).
         if (message === 'rate-limited') {
-            this._setSpeed('Demasiados tests seguidos; espera unos minutos');
+            this._setSpeed('Too many tests in a row; wait a few minutes');
             return;
         }
-        console.warn(`[agent-notch] Sistema: test de velocidad: ${message}`);
-        this._setSpeed('No se pudo medir');
+        console.warn(`[agent-notch] System: speed test: ${message}`);
+        this._setSpeed('Could not test');
     }
 
     _cancelSpeedTest() {
@@ -723,7 +723,7 @@ class SystemModule extends NotchModule {
         if (!this._page)
             return;
         this._page.speed.setValue(this._speedText);
-        this._page.speedButton.label = this._speedProxy ? 'Cancelar' : 'Medir';
+        this._page.speedButton.label = this._speedProxy ? 'Cancel' : 'Test';
     }
 
     // Mostrar u ocultar una fila cambia el tamaño: avisar a la isla.

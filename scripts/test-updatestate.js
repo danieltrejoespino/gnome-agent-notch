@@ -73,10 +73,10 @@ eq(sameView(v, updateView(json(disp), 'v4')), true, 'misma vista');
 eq(sameView(v, null), false, 'vista → nada');
 eq(sameView(null, null), true, 'nada → nada');
 eq(sameView(v, {...v, state: 'instalando'}), false, 'cambia el estado');
-eq(buttonText(v), 'Actualizar a v5', 'botón disponible');
-eq(buttonText({...v, state: 'instalando'}), 'Actualizando…', 'botón instalando');
-eq(buttonText({...v, state: 'instalada'}), 'Cerrar sesión para terminar', 'botón instalada');
-eq(buttonText({...v, state: 'error'}), 'No se pudo actualizar · Reintentar', 'botón error');
+eq(buttonText(v), 'Update to v5', 'botón disponible');
+eq(buttonText({...v, state: 'instalando'}), 'Updating…', 'botón instalando');
+eq(buttonText({...v, state: 'instalada'}), 'Log out to finish', 'botón instalada');
+eq(buttonText({...v, state: 'error'}), 'Update failed · Retry', 'botón error');
 
 print(`${passed} pruebas OK, ${failed} fallos`);
 if (failed)

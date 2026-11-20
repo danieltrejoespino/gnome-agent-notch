@@ -113,10 +113,10 @@ class SpeedTest:
         except Cancelled:
             pass
         except RateLimited:
-            log('Cloudflare pide esperar (HTTP 429)')
+            log('Cloudflare asks to wait (HTTP 429)')
             self._on_failed('rate-limited')
         except Exception as e:  # noqa: BLE001 - cualquier fallo se avisa
-            log(f'fallo: {e!r}')
+            log(f'failed: {e!r}')
             self._on_failed(str(e) or e.__class__.__name__)
 
     def _check(self):
@@ -202,7 +202,7 @@ class SpeedTest:
             errors = counter['errors']
             if any(isinstance(e, RateLimited) for e in errors):
                 raise RateLimited('rate-limited')
-            raise RuntimeError(f'{name}: {errors[0]!r}' if errors else f'{name}: sin datos')
+            raise RuntimeError(f'{name}: {errors[0]!r}' if errors else f'{name}: no data')
         return rate
 
     @staticmethod
@@ -272,7 +272,7 @@ class Service:
                                             self._on_method_call, None, None)
 
     def _on_name_lost(self, _conn, _name):
-        log('no se pudo tomar el nombre en el bus (¿ya hay otro?)')
+        log('could not take the bus name (is another one running?)')
         self._quit()
 
     def _on_method_call(self, conn, sender, _path, _iface, method, _params, invocation):
@@ -281,7 +281,7 @@ class Service:
             if self._test is None:
                 self._watch_id = Gio.bus_watch_name_on_connection(
                     conn, sender, Gio.BusNameWatcherFlags.NONE, None,
-                    lambda *_: self._cancel('el cliente ha desaparecido del bus'))
+                    lambda *_: self._cancel('the client left the bus'))
                 self._test = SpeedTest(
                     lambda phase, value: self._emit('Progress', '(sd)', (phase, value)),
                     self._on_finished, self._on_failed)
@@ -321,7 +321,7 @@ class Service:
         return GLib.SOURCE_REMOVE
 
     def _on_hard_limit(self):
-        log(f'límite de {HARD_LIMIT_S} s alcanzado')
+        log(f'{HARD_LIMIT_S} s limit reached')
         if self._test:
             self._test.cancel()
             self._on_failed('tiempo agotado')

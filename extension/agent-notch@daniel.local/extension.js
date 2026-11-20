@@ -14,6 +14,7 @@ import {MascotModule} from './modules/mascot.js';
 import {MusicModule} from './modules/music.js';
 import {NotificationsModule} from './modules/notifications.js';
 import {SystemModule} from './modules/system.js';
+import {SettingsModule} from './modules/settings.js';
 import {UpdateModule} from './modules/update.js';
 import {setEyeAnimations} from './modules/widgets.js';
 
@@ -109,6 +110,8 @@ export default class AgentNotchExtension extends Extension {
         this._island.addModule(update);
         // Ojos según los agentes y puntito si hay versión nueva.
         this._island.addModule(new MascotModule(agents, update));
+        // Gear at the end of the tab bar: opens the preferences (docs/20).
+        this._island.addModule(new SettingsModule(() => this.openPreferences()));
         Main.layoutManager.addTopChrome(this._island, {trackFullscreen: true});
     }
 

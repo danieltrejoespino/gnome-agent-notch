@@ -27,13 +27,13 @@ main() {
             gsettings set org.gnome.shell enabled-extensions "$new"
         fi
     fi
-    say "Extensión desactivada."
+    say "Extension disabled."
 
     if [ -L "$EXT_DIR" ]; then
-        say "$EXT_DIR es un enlace de desarrollo: lo dejo. Bórralo a mano si quieres."
+        say "$EXT_DIR is a development link: leaving it. Remove it by hand if you want."
     elif [ -d "$EXT_DIR" ]; then
         rm -rf "$EXT_DIR"
-        say "Borrada $EXT_DIR"
+        say "Removed $EXT_DIR"
     fi
 
     # Quitar el hook de Claude Code ANTES de borrar hook.py (el de un repo
@@ -42,13 +42,13 @@ main() {
     local configure="$APP_DIR/adapters/claude-code/configure.py"
     if [ -f "$configure" ]; then
         python3 -I "$configure" uninstall ||
-            say "No pude quitar el hook de Claude Code: revisa ~/.claude/settings.json"
+            say "Could not remove the Claude Code hook: check ~/.claude/settings.json"
     fi
     # Plugin de OpenCode (solo el cargador que apunta a esta copia).
     configure="$APP_DIR/adapters/opencode/configure.py"
     if [ -f "$configure" ]; then
         python3 -I "$configure" uninstall ||
-            say "No pude quitar el plugin de OpenCode: revisa ~/.config/opencode/plugins/agent-notch.js"
+            say "Could not remove the OpenCode plugin: check ~/.config/opencode/plugins/agent-notch.js"
     fi
 
     # Aviso de versión nueva (systemd del usuario).
@@ -58,7 +58,7 @@ main() {
         systemctl --user stop agent-notch-update.service >/dev/null 2>&1 || true
         rm -f "$UNIT_DIR/agent-notch-update.timer" "$UNIT_DIR/agent-notch-update.service"
         systemctl --user daemon-reload >/dev/null 2>&1 || true
-        say "Quitado el aviso de versión nueva."
+        say "Removed the new-version notice."
     fi
     rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/agent-notch"
     # Ajustes de la ventana de preferencias (docs/20).
@@ -67,16 +67,16 @@ main() {
     rm -f "$DBUS_DIR/dev.agentnotch.SpeedTest.service" \
           "$DBUS_DIR/dev.agentnotch.Brightness.service" \
           "$DBUS_DIR/dev.agentnotch.Updater.service"
-    say "Quitados los servicios D-Bus."
+    say "Removed the D-Bus services."
 
     # $APP_DIR también guarda los fijados del portapapeles; el temporizador
     # de concentración deja su estado en la carpeta temporal de la sesión.
     local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch"
     rm -rf "$APP_DIR" "$runtime"
-    say "Borrada $APP_DIR"
+    say "Removed $APP_DIR"
 
     echo
-    say "Listo. Cierra sesión y vuelve a entrar para que GNOME la descargue del todo."
+    say "Done. Log out and back in so GNOME unloads it completely."
 }
 
 main "$@"

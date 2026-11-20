@@ -78,19 +78,19 @@ export function describe(tool, input) {
   const inp = input && typeof input === "object" ? input : {};
   // Al empezar la herramienta aún no hay entrada: texto genérico.
   const known = (v) => typeof v === "string" && v.trim() !== "";
-  const name = (p) => path.basename(String(p ?? "").replace(/\/+$/, "")) || "archivo";
+  const name = (p) => path.basename(String(p ?? "").replace(/\/+$/, "")) || "file";
   const file = inp.path ?? inp.filePath ?? inp.file_path;
   switch (String(tool ?? "").toLowerCase()) {
-    case "read": return "Leyendo " + name(file);
+    case "read": return "Reading " + name(file);
     case "edit": case "write": case "patch": case "multiedit": case "apply_patch":
-      return "Editando " + name(file);
+      return "Editing " + name(file);
     case "bash": case "shell":
-      return known(inp.command) ? "Ejecutando " + clip(inp.command, MAX_COMMAND) : "Ejecutando un comando";
+      return known(inp.command) ? "Running " + clip(inp.command, MAX_COMMAND) : "Running a command";
     case "grep": case "glob": case "search":
-      return known(inp.pattern) ? `Buscando "${clip(inp.pattern, MAX_PATTERN)}"` : "Buscando…";
-    case "webfetch": case "websearch": case "fetch": return "Consultando la web";
-    case "task": case "subagent": return "Delegando tarea";
-    default: return "Usando " + clip(tool || "herramienta", 40);
+      return known(inp.pattern) ? `Searching "${clip(inp.pattern, MAX_PATTERN)}"` : "Searching…";
+    case "webfetch": case "websearch": case "fetch": return "Browsing the web";
+    case "task": case "subagent": return "Delegating a task";
+    default: return "Using " + clip(tool || "tool", 40);
   }
 }
 
@@ -230,7 +230,7 @@ export class Tracker {
         else this.remove(sid);
         return;
       case "session.execution.started":
-        if (!isChild) this.set(sid, "pensando", "Pensando…");
+        if (!isChild) this.set(sid, "pensando", "Thinking…");
         return;
       case "session.tool.input.started": {
         if (isChild) return;
@@ -251,11 +251,11 @@ export class Tracker {
         if (isChild) return;
         const s = this.get(sid);
         s.tools.delete(d.id);
-        if (s.tools.size === 0 && s.estado !== "atencion") this.set(sid, "pensando", "Pensando…");
+        if (s.tools.size === 0 && s.estado !== "atencion") this.set(sid, "pensando", "Thinking…");
         return;
       }
       case "session.execution.succeeded":
-        if (!isChild) this.set(sid, "terminado", "Listo");
+        if (!isChild) this.set(sid, "terminado", "Done");
         return;
       case "session.execution.failed":
         if (!isChild) this.set(sid, "error", "Error");
@@ -264,15 +264,15 @@ export class Tracker {
         if (!isChild) this.set(sid, "inactivo");
         return;
       case "permission.asked":
-        this.set(sid, "atencion", "Pide permiso: " + clip(d.action || "herramienta", 40));
+        this.set(sid, "atencion", "Asks permission: " + clip(d.action || "tool", 40));
         return;
       case "form.created":
-        this.set(sid, "atencion", "Tiene una pregunta");
+        this.set(sid, "atencion", "Has a question");
         return;
       case "permission.replied":
       case "form.replied":
       case "form.cancelled":
-        if (this.sessions.get(sid)?.estado === "atencion") this.set(sid, "pensando", "Pensando…");
+        if (this.sessions.get(sid)?.estado === "atencion") this.set(sid, "pensando", "Thinking…");
         return;
       default:
     }

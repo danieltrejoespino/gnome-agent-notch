@@ -101,7 +101,7 @@ eq(groupPlan(todos, 'stop').map(c => c.name), ['anime', 'jellyfin'], 'detener en
 eq(isRunning('running'), true, 'running');
 eq(isRunning('paused'), true, 'paused cuenta como en marcha');
 eq(isRunning('exited'), false, 'exited');
-eq(stateText('exited'), 'parado', 'texto parado');
+eq(stateText('exited'), 'stopped', 'texto parado');
 eq(stateText('raro'), 'raro', 'estado desconocido');
 eq(formatPorts([8010, 8096]), ':8010 :8096', 'puertos');
 eq(errorMessage(404, '{"message":"No such container: x"}'), 'No such container: x', 'mensaje de Docker');

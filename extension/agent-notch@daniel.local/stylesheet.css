@@ -1324,3 +1324,8 @@
 .agent-notch-agents-banner.una-linea .agent-notch-agents-banner-box {
   spacing: 8px;
 }
+
+/* Gear at the end of the tab bar: opens the preferences (docs/20). */
+.agent-notch-settings-button {
+  margin-left: 4px;
+}

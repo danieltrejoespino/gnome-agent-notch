@@ -31,10 +31,10 @@ OBJECT_PATH = "/org/mpris/MediaPlayer2"
 
 # (título, artistas, color de la carátula o None = sin carátula, duración en s o 0 = desconocida)
 TRACKS = [
-    ("Canción de prueba", ["Artista Uno"], ("#7c3aed", "#ec4899"), 180),
-    ("Un título bastante largo para comprobar que la isla lo corta con puntos suspensivos",
-     ["Artista Dos", "Invitado"], ("#f59e0b", "#ef4444"), 245),
-    ("Pista 3 (sin carátula ni duración)", ["Otro Artista"], None, 0),
+    ("Test song", ["Artist One"], ("#7c3aed", "#ec4899"), 180),
+    ("A rather long title to check that the island cuts it with an ellipsis",
+     ["Artist Two", "Guest"], ("#f59e0b", "#ef4444"), 245),
+    ("Track 3 (no cover, no length)", ["Another Artist"], None, 0),
 ]
 
 COVER_DIR = os.path.join(GLib.get_user_runtime_dir(), "agent-notch-fake-covers")
@@ -153,7 +153,7 @@ class FakePlayer:
                 "CanQuit": GLib.Variant("b", True),
                 "CanRaise": GLib.Variant("b", False),
                 "HasTrackList": GLib.Variant("b", False),
-                "Identity": GLib.Variant("s", f"Reproductor falso {self.name}".strip()),
+                "Identity": GLib.Variant("s", f"Fake player {self.name}".strip()),
                 "SupportedUriSchemes": GLib.Variant("as", []),
                 "SupportedMimeTypes": GLib.Variant("as", []),
             }
@@ -211,7 +211,7 @@ class FakePlayer:
             return
         self.position_us = position_us
         self.playing_since = GLib.get_monotonic_time()
-        print(f"  [posición] {position_us // 1_000_000} s", flush=True)
+        print(f"  [position] {position_us // 1_000_000} s", flush=True)
 
     # --- D-Bus ------------------------------------------------------------
     def _on_get(self, _conn, _sender, _path, iface, prop):
@@ -259,21 +259,21 @@ def connect():
         with open(BUS_FILE) as f:
             address = f.read().strip()
     except FileNotFoundError:
-        sys.exit("No encuentro el GNOME de prueba. Ábrelo antes con scripts/dev-shell.sh")
+        sys.exit("Cannot find the test GNOME. Open it first with scripts/dev-shell.sh")
     flags = (Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
              | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION)
     try:
         return Gio.DBusConnection.new_for_address_sync(address, flags, None, None)
     except GLib.Error as e:
-        sys.exit(f"No pude conectar al GNOME de prueba ({e.message}). ¿Sigue abierto?")
+        sys.exit(f"Could not connect to the test GNOME ({e.message}). Is it still open?")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--auto", type=int, metavar="SEG",
-                        help="cambiar de canción cada SEG segundos")
-    parser.add_argument("--name", default="", metavar="NOMBRE",
-                        help="lanzar otro reproductor a la vez con este nombre")
+    parser.add_argument("--auto", type=int, metavar="SEC",
+                        help="change song every SEC seconds")
+    parser.add_argument("--name", default="", metavar="NAME",
+                        help="start another player at the same time with this name")
     args = parser.parse_args()
 
     loop = GLib.MainLoop()
@@ -282,7 +282,7 @@ def main():
 
     bus_name = f"{BUS_NAME}{args.name}" if args.name else BUS_NAME
     Gio.bus_own_name_on_connection(conn, bus_name, Gio.BusNameOwnerFlags.NONE, None, None)
-    print("Reproductor falso activo en el GNOME de prueba. p=play/pausa, n=siguiente, b=anterior, Ctrl+C=salir")
+    print("Fake player running in the test GNOME. p=play/pause, n=next, b=previous, Ctrl+C=quit")
     title, artists, _colors, _len = TRACKS[0]
     print(f"  [Playing] {title} — {', '.join(artists)}", flush=True)
 

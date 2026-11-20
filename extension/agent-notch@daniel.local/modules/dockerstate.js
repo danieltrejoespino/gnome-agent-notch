@@ -154,13 +154,13 @@ export function groupPlan(containers, action) {
 /** Texto del estado, en español. */
 export function stateText(state) {
     switch (state) {
-    case 'running': return 'en marcha';
-    case 'restarting': return 'reiniciando';
-    case 'paused': return 'en pausa';
-    case 'created': return 'creado';
-    case 'exited': return 'parado';
-    case 'dead': return 'muerto';
-    case 'removing': return 'borrando';
+    case 'running': return 'running';
+    case 'restarting': return 'restarting';
+    case 'paused': return 'paused';
+    case 'created': return 'created';
+    case 'exited': return 'stopped';
+    case 'dead': return 'dead';
+    case 'removing': return 'removing';
     default: return state;
     }
 }

@@ -197,7 +197,7 @@ export class MonitorBrightness {
         this._call('Detect', null, '(a(issuu))', (result, error) => {
             this._detecting = false;
             if (error) {
-                console.warn(`[agent-notch] Brillo: no se pudieron buscar monitores: ${error.message}`);
+                console.warn(`[agent-notch] Brightness: could not look for monitors: ${error.message}`);
                 this._setDisplays([]);
             } else {
                 this._setDisplays(result[0]);
@@ -255,7 +255,7 @@ export class MonitorBrightness {
                 if (!this._sliders.includes(slider))
                     return;
                 if (error) {
-                    console.warn(`[agent-notch] Brillo: no se pudo leer el monitor: ${error.message}`);
+                    console.warn(`[agent-notch] Brightness: could not read the monitor: ${error.message}`);
                     return;
                 }
                 slider.showValue(result[0], result[1]);
@@ -266,7 +266,7 @@ export class MonitorBrightness {
     _send(bus, value) {
         this._call('Set', new GLib.Variant('(iu)', [bus, value]), null, (_reply, error) => {
             if (error)
-                console.warn(`[agent-notch] Brillo: no se pudo cambiar: ${error.message}`);
+                console.warn(`[agent-notch] Brightness: could not change it: ${error.message}`);
         });
     }
 

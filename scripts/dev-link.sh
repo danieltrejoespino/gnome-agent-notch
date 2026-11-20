@@ -10,18 +10,18 @@ DEST="$HOME/.local/share/gnome-shell/extensions/$UUID"
 mkdir -p "$(dirname "$DEST")"
 
 if [ -L "$DEST" ]; then
-    echo "Ya enlazada: $DEST -> $(readlink "$DEST")"
+    echo "Already linked: $DEST -> $(readlink "$DEST")"
 elif [ -e "$DEST" ]; then
-    echo "ERROR: $DEST existe y no es un enlace. Revísalo a mano." >&2
+    echo "ERROR: $DEST exists and is not a link. Check it by hand." >&2
     exit 1
 else
     ln -s "$SRC" "$DEST"
-    echo "Enlazada: $DEST -> $SRC"
+    echo "Linked: $DEST -> $SRC"
 fi
 
 # Esquema de ajustes (docs/20): compilado en el repo (no se sube, .gitignore).
 glib-compile-schemas "$SRC/schemas"
-echo "Esquema de ajustes compilado en $SRC/schemas"
+echo "Settings schema compiled in $SRC/schemas"
 
 # Servicios D-Bus aparte: el D-Bus de sesión los arranca al llamarlos y se
 # cierran solos; no queda nada en marcha.
@@ -39,7 +39,7 @@ Name=$name
 Exec=/usr/bin/python3 -I $ROOT/$script"
     if [ "$(cat "$file" 2>/dev/null)" != "$content" ]; then
         printf '%s\n' "$content" > "$file"
-        echo "Servicio D-Bus instalado: $file"
+        echo "D-Bus service installed: $file"
     fi
 }
 

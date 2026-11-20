@@ -80,7 +80,7 @@ class ConfigureTest(unittest.TestCase):
         self.run_cfg("install")
         before = self.read()
         p = self.run_cfg("install")
-        self.assertIn("ya estaba", p.stdout)
+        self.assertIn("was already", p.stdout)
         self.assertEqual(self.read(), before)
 
     def test_install_sustituye_otra_ruta(self):
@@ -97,14 +97,14 @@ class ConfigureTest(unittest.TestCase):
     def test_json_roto_no_se_toca(self):
         self.write("{ esto no es json")
         p = self.run_cfg("install", code=1)
-        self.assertIn("no es JSON", p.stderr)
+        self.assertIn("is not valid JSON", p.stderr)
         with open(self.settings, encoding="utf-8") as f:
             self.assertEqual(f.read(), "{ esto no es json")
         self.assertFalse(os.path.exists(self.settings + ".agent-notch.bak"))
 
     def test_hook_inexistente(self):
         p = self.run_cfg("install", "--hook", "/no/existe/hook.py", code=1)
-        self.assertIn("no existe", p.stderr)
+        self.assertIn("does not exist", p.stderr)
         self.assertFalse(os.path.exists(self.settings))
 
     # --- uninstall / status ---------------------------------------------------
@@ -157,7 +157,7 @@ class ConfigureTest(unittest.TestCase):
 
     def test_uninstall_sin_nada(self):
         p = self.run_cfg("uninstall")
-        self.assertIn("no estaba", p.stdout)
+        self.assertIn("was not in", p.stdout)
         self.assertFalse(os.path.exists(self.settings))
 
     # --- el comando -------------------------------------------------------------

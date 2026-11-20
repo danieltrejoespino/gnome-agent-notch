@@ -68,23 +68,23 @@ class HookTest(unittest.TestCase):
 
         self.event("UserPromptSubmit", prompt="secreto: no debe guardarse")
         d = self.read()
-        self.assertEqual((d["estado"], d["accion"]), ("pensando", "Pensando…"))
+        self.assertEqual((d["estado"], d["accion"]), ("pensando", "Thinking…"))
         self.assertNotIn("secreto", json.dumps(d))
 
         self.event("PreToolUse", tool_name="Edit",
                    tool_input={"file_path": "/tmp/demo/mi-app/src/main.py", "new_string": "CONTENIDO"})
         d = self.read()
         self.assertEqual((d["estado"], d["accion"], d["herramienta"]),
-                         ("trabajando", "Editando main.py", "Edit"))
+                         ("trabajando", "Editing main.py", "Edit"))
         self.assertNotIn("CONTENIDO", json.dumps(d))
 
         self.event("PostToolUse", tool_name="Edit")
         d = self.read()
-        self.assertEqual((d["estado"], d["accion"], d["herramienta"]), ("pensando", "Pensando…", None))
+        self.assertEqual((d["estado"], d["accion"], d["herramienta"]), ("pensando", "Thinking…", None))
 
         self.event("Stop")
         d = self.read()
-        self.assertEqual((d["estado"], d["accion"]), ("terminado", "Listo"))
+        self.assertEqual((d["estado"], d["accion"]), ("terminado", "Done"))
         self.assertEqual(d["inicio"], inicio)  # se conserva
         self.assertGreaterEqual(d["actualizado"], inicio)
 
@@ -95,19 +95,19 @@ class HookTest(unittest.TestCase):
 
     def test_acciones(self):
         cases = [
-            ("Read", {"file_path": "/a/b/notas.md"}, "Leyendo notas.md"),
-            ("Write", {"file_path": "/a/nuevo.txt"}, "Editando nuevo.txt"),
-            ("NotebookEdit", {"notebook_path": "/a/x.ipynb"}, "Editando x.ipynb"),
-            ("Edit", {}, "Editando archivo"),
-            ("Bash", {"command": "npm test"}, "Ejecutando npm test"),
-            ("Bash", {"command": "echo " + "a" * 100}, "Ejecutando echo " + "a" * 34 + "…"),
-            ("Bash", {"command": "ls\n  -la"}, "Ejecutando ls -la"),
-            ("Grep", {"pattern": "TODO"}, 'Buscando "TODO"'),
-            ("Glob", {"pattern": "**/*.js"}, 'Buscando "**/*.js"'),
-            ("WebFetch", {"url": "https://x"}, "Consultando la web"),
-            ("Agent", {"prompt": "x"}, "Delegando tarea"),
-            ("mcp__srv__tool", {}, "Usando mcp__srv__tool"),
-            ("Read", "no es un objeto", "Leyendo archivo"),
+            ("Read", {"file_path": "/a/b/notas.md"}, "Reading notas.md"),
+            ("Write", {"file_path": "/a/nuevo.txt"}, "Editing nuevo.txt"),
+            ("NotebookEdit", {"notebook_path": "/a/x.ipynb"}, "Editing x.ipynb"),
+            ("Edit", {}, "Editing file"),
+            ("Bash", {"command": "npm test"}, "Running npm test"),
+            ("Bash", {"command": "echo " + "a" * 100}, "Running echo " + "a" * 34 + "…"),
+            ("Bash", {"command": "ls\n  -la"}, "Running ls -la"),
+            ("Grep", {"pattern": "TODO"}, 'Searching "TODO"'),
+            ("Glob", {"pattern": "**/*.js"}, 'Searching "**/*.js"'),
+            ("WebFetch", {"url": "https://x"}, "Browsing the web"),
+            ("Agent", {"prompt": "x"}, "Delegating a task"),
+            ("mcp__srv__tool", {}, "Using mcp__srv__tool"),
+            ("Read", "no es un objeto", "Reading file"),
         ]
         for tool, inp, expected in cases:
             self.event("PreToolUse", tool_name=tool, tool_input=inp)
@@ -133,7 +133,7 @@ class HookTest(unittest.TestCase):
     def test_permission_request(self):
         self.event("PermissionRequest", tool_name="Bash", tool_input={"command": "rm x"})
         d = self.read()
-        self.assertEqual((d["estado"], d["accion"]), ("atencion", "Pide permiso: Bash"))
+        self.assertEqual((d["estado"], d["accion"]), ("atencion", "Asks permission: Bash"))
 
     def test_stop_failure(self):
         self.event("StopFailure", last_assistant_message="API Error: 529 " + "x" * 100)

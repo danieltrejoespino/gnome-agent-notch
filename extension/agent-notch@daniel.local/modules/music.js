@@ -83,7 +83,7 @@ class TrackView {
             if (label && label.text !== text)
                 label.text = text;
         };
-        setText(this.title, current?.trackTitle ?? 'Nada sonando');
+        setText(this.title, current?.trackTitle ?? 'Nothing playing');
         setText(this.artist, current?.trackArtists?.join(', ') ?? '');
         setText(this.player, current
             ? current.app?.get_name() ?? current.source?.title ?? ''
@@ -224,7 +224,7 @@ class MusicModule extends NotchModule {
     }
 
     get pageTitle() {
-        return 'Música';
+        return 'Music';
     }
 
     get pageIcon() {
@@ -764,7 +764,7 @@ class MusicModule extends NotchModule {
                 try {
                     onReply?.(reply);
                 } catch (e) {
-                    console.warn(`[agent-notch] música: ${method}: ${e.message}`);
+                    console.warn(`[agent-notch] music: ${method}: ${e.message}`);
                 }
             });
     }

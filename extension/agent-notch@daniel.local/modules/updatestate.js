@@ -74,12 +74,12 @@ export function sameView(a, b) {
 export function buttonText(view) {
     switch (view?.state) {
     case 'instalando':
-        return 'Actualizando…';
+        return 'Updating…';
     case 'instalada':
-        return 'Cerrar sesión para terminar';
+        return 'Log out to finish';
     case 'error':
-        return 'No se pudo actualizar · Reintentar';
+        return 'Update failed · Retry';
     default:
-        return `Actualizar a ${view?.version ?? ''}`.trim();
+        return `Update to ${view?.version ?? ''}`.trim();
     }
 }

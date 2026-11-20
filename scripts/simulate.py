@@ -37,17 +37,17 @@ import state  # noqa: E402
 AGENT = "simulador"
 CHILD_TTL = 3600
 
-PROJECTS = ["mi-app", "agent-notch", "api-pagos", "blog", "dotfiles", "tienda-web", "scraper", "bot-telegram"]
+PROJECTS = ["my-app", "agent-notch", "payments-api", "blog", "dotfiles", "web-shop", "scraper", "telegram-bot"]
 ACTIONS = {
     "inactivo": [None],
     "pensando": ["Pensando…"],
     "trabajando": [
-        ("Editando main.py", "Edit"), ("Leyendo README.md", "Read"),
-        ("Ejecutando npm test", "Bash"), ('Buscando "TODO"', "Grep"),
-        ("Consultando la web", "WebFetch"), ("Delegando tarea", "Agent"),
+        ("Editing main.py", "Edit"), ("Reading README.md", "Read"),
+        ("Running npm test", "Bash"), ('Searching "TODO"', "Grep"),
+        ("Browsing the web", "WebFetch"), ("Delegating a task", "Agent"),
     ],
-    "atencion": ["Pide permiso: Bash", "Claude needs your permission to use Bash", "Tiene una pregunta"],
-    "terminado": ["Listo"],
+    "atencion": ["Asks permission: Bash", "Claude needs your permission to use Bash", "Has a question"],
+    "terminado": ["Done"],
     "error": ["API Error: 529 Overloaded"],
 }
 
@@ -137,17 +137,17 @@ def cmd_demo(args):
     path = state.session_path(AGENT, sid)
     steps = [
         ("inactivo", None, None),
-        ("pensando", "Pensando…", None),
-        ("trabajando", "Leyendo README.md", "Read"),
-        ("trabajando", "Editando main.py", "Edit"),
-        ("atencion", "Pide permiso: Bash", "Bash"),
-        ("trabajando", "Ejecutando npm test", "Bash"),
-        ("pensando", "Pensando…", None),
-        ("terminado", "Listo", None),
+        ("pensando", "Thinking…", None),
+        ("trabajando", "Reading README.md", "Read"),
+        ("trabajando", "Editing main.py", "Edit"),
+        ("atencion", "Asks permission: Bash", "Bash"),
+        ("trabajando", "Running npm test", "Bash"),
+        ("pensando", "Thinking…", None),
+        ("terminado", "Done", None),
         ("inactivo", None, None),
     ]
     inicio = time.time()
-    print("Sesión demo en %s (Ctrl+C para cortar)" % path)
+    print("Demo session in %s (Ctrl+C to stop)" % path)
     try:
         for estado, accion, tool in steps:
             print("  %-10s %s" % (estado, accion or ""), flush=True)
@@ -157,38 +157,38 @@ def cmd_demo(args):
         print()
     finally:
         state.remove(path)
-        print("Sesión demo borrada.")
+        print("Demo session removed.")
 
 
 def cmd_multi(args):
     estados = list(ACTIONS)
     projects = random.sample(PROJECTS, min(args.n, len(PROJECTS)))
     while len(projects) < args.n:
-        projects.append("proyecto-%d" % (len(projects) + 1))
+        projects.append("project-%d" % (len(projects) + 1))
     for i, project in enumerate(projects):
         # Que salgan todos los estados antes de repetir.
         estado = estados[i % len(estados)] if i < len(estados) else random.choice(estados)
         sid = "multi-%d" % (i + 1)
         pid = start_background(sid, project, estado)
         print("  PID %-7d %-13s %s" % (pid, project, estado))
-    print("Matar uno (kill PID) simula un agente que se cierra mal. Borrar todo: %s clear"
+    print("Killing one (kill PID) simulates an agent that dies. Remove all: %s clear"
           % os.path.relpath(__file__))
 
 
 def cmd_atencion(args):
-    pid = start_background("atencion", "mi-app", "atencion")
-    print("  PID %d  mi-app  atencion" % pid)
+    pid = start_background("atencion", "my-app", "atencion")
+    print("  PID %d  my-app  atencion" % pid)
 
 
 def cmd_list(args):
     files = sim_files()
     if not files:
-        print("No hay sesiones simuladas.")
+        print("No simulated sessions.")
     for path in files:
         d = state.read_json(path)
         pid = d.get("pid")
         alive = os.path.exists("/proc/%s" % pid) if pid else False
-        print("  PID %-7s %-5s %-13s %-10s %s" % (pid, "vivo" if alive else "muerto",
+        print("  PID %-7s %-5s %-13s %-10s %s" % (pid, "alive" if alive else "dead",
                                                 d.get("proyecto"), d.get("estado"), d.get("accion") or ""))
 
 
@@ -209,12 +209,12 @@ def cmd_clear(args):
     deadline = time.time() + 2
     while time.time() < deadline and any(os.path.exists("/proc/%d" % p) for p in killed):
         time.sleep(0.02)
-    print("Borradas %d sesiones simuladas." % len(files))
+    print("Removed %d simulated sessions." % len(files))
 
 
 def main():
     parser = argparse.ArgumentParser(description="Sesiones de agentes falsas para la isla.")
-    parser.add_argument("--real", action="store_true", help="bus del escritorio real, no el del GNOME de prueba")
+    parser.add_argument("--real", action="store_true", help="the real desktop's bus, not the test GNOME's")
     parser.add_argument("--paso", type=float, default=2.0, help="segundos entre estados en demo")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("demo")
@@ -228,7 +228,7 @@ def main():
         parser.error("multi: entre 1 y 20 sesiones")
 
     os.environ["AGENT_NOTCH_DIR"] = default_dir(args.real)
-    print("Bus: %s%s" % (os.environ["AGENT_NOTCH_DIR"], " (escritorio real)" if args.real else ""))
+    print("Bus: %s%s" % (os.environ["AGENT_NOTCH_DIR"], " (real desktop)" if args.real else ""))
     {"demo": cmd_demo, "multi": cmd_multi, "atencion": cmd_atencion,
      "list": cmd_list, "clear": cmd_clear}[args.cmd](args)
 

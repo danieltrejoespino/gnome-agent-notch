@@ -73,23 +73,23 @@ eq(summarize([sess({estado: 'inactivo'})], NOW), null, 'solo esperando');
 eq(summarize([sess({})], NOW),
     {state: 'trabajando', title: 'mi-app', detail: 'Editando main.py'}, 'una trabajando');
 eq(summarize([sess({estado: 'pensando', accion: null})], NOW),
-    {state: 'pensando', title: 'mi-app', detail: 'Pensando…'}, 'sin acción → texto del estado');
+    {state: 'pensando', title: 'mi-app', detail: 'Thinking…'}, 'sin acción → texto del estado');
 eq(summarize([sess({}), sess({sesion: 's2', proyecto: 'blog', estado: 'inactivo'})], NOW),
     {state: 'trabajando', title: 'mi-app', detail: 'Editando main.py'}, 'una ocupada y otra esperando');
 eq(summarize([
     sess({}),
     sess({sesion: 's2', proyecto: 'blog', estado: 'atencion', accion: 'Pide permiso: Bash'}),
     sess({sesion: 's3', proyecto: 'api', estado: 'pensando'}),
-], NOW), {state: 'atencion', title: '3 agentes', detail: '1 te necesita'}, 'varias, una pide atención');
+], NOW), {state: 'atencion', title: '3 agents', detail: '1 needs you'}, 'varias, una pide atención');
 eq(summarize([
     sess({estado: 'atencion'}), sess({sesion: 's2', estado: 'atencion'}),
-], NOW).detail, '2 te necesitan', 'plural');
+], NOW).detail, '2 need you', 'plural');
 eq(summarize([
     sess({}), sess({sesion: 's2', estado: 'error'}),
 ], NOW).state, 'error', 'error gana a trabajando');
 eq(summarize([
     sess({estado: 'terminado', actualizado: NOW - 1}), sess({sesion: 's2', estado: 'terminado', actualizado: NOW - 2}),
-], NOW).detail, '2 listos', 'dos terminadas');
+], NOW).detail, '2 done', 'dos terminadas');
 eq(summarize([sess({estado: 'terminado', actualizado: NOW - 30})], NOW), null, 'terminada hace rato');
 
 // --- comparar resúmenes ---------------------------------------------------
@@ -158,13 +158,13 @@ eq(eyesFor('toString'), 'abiertos', 'no confunde propiedades heredadas');
 eq(STATES.every(s => EYE_EXPRESSIONS.includes(eyesFor(s))), true, 'cada estado tiene una expresión dibujable');
 
 // --- resumen y carpeta (revisión de diseño, docs/09) ---------------------------
-eq(overview([], NOW), {state: null, title: 'Agentes', detail: 'Ninguno en marcha', text: 'Ninguno en marcha'}, 'resumen: ninguna');
-eq(overview([base], NOW), {state: 'trabajando', title: '1 agente', detail: 'trabajando', text: '1 agente · trabajando'}, 'resumen: una');
-eq(overview([{...base, estado: 'inactivo'}], NOW).text, '1 agente · esperando', 'resumen: una esperando');
+eq(overview([], NOW), {state: null, title: 'Agents', detail: 'None running', text: 'None running'}, 'resumen: ninguna');
+eq(overview([base], NOW), {state: 'trabajando', title: '1 agent', detail: 'working', text: '1 agent · working'}, 'resumen: una');
+eq(overview([{...base, estado: 'inactivo'}], NOW).text, '1 agent · waiting', 'resumen: una esperando');
 eq(overview([base, {...base, sesion: 's2', estado: 'inactivo'}, {...base, sesion: 's3', estado: 'atencion'}], NOW),
-    {state: 'atencion', title: '3 agentes', detail: '1 te necesita · 1 trabajando · 1 esperando',
-        text: '3 agentes · 1 te necesita · 1 trabajando · 1 esperando'}, 'resumen: varias, por prioridad');
-eq(overview([base, {...base, sesion: 's2'}], NOW).text, '2 agentes · 2 trabajando', 'resumen: mismo estado');
+    {state: 'atencion', title: '3 agents', detail: '1 needs you · 1 working · 1 waiting',
+        text: '3 agents · 1 needs you · 1 working · 1 waiting'}, 'resumen: varias, por prioridad');
+eq(overview([base, {...base, sesion: 's2'}], NOW).text, '2 agents · 2 working', 'resumen: mismo estado');
 eq(overview([{...base, estado: 'terminado', actualizado: NOW - 60}], NOW).state, 'inactivo', 'resumen: terminado hace rato cuenta como esperando');
 eq(parseSession(JSON.stringify(base)).cwd, '/x/mi-app', 'la sesión conserva la carpeta');
 eq(parseSession(JSON.stringify({...base, cwd: 3})).cwd, null, 'carpeta que no es texto');

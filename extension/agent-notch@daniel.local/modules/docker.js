@@ -160,7 +160,7 @@ class DockerModule extends NotchModule {
                 return;
             }
             if (message.get_status() !== Soup.Status.OK) {
-                this._dockerDown(cancellable, `eventos: ${message.get_status()}`);
+                this._dockerDown(cancellable, `events: ${message.get_status()}`);
                 return;
             }
             const lines = new Gio.DataInputStream({base_stream: stream, close_base_stream: true});
@@ -183,7 +183,7 @@ class DockerModule extends NotchModule {
             if (line === null) {
                 // Docker cerró el flujo (se paró o se reinició).
                 l.close_async(GLib.PRIORITY_LOW, null, null);
-                this._dockerDown(cancellable, 'fin del flujo de eventos');
+                this._dockerDown(cancellable, 'end of the event stream');
                 return;
             }
             // No hace falta mirar qué evento es: cualquiera cambia la lista.
@@ -204,7 +204,7 @@ class DockerModule extends NotchModule {
     _dockerDown(cancellable, why) {
         if (cancellable !== this._events)
             return;   // ya se cerró o se volvió a abrir
-        console.log(`[agent-notch] Docker: no responde (${why})`);
+        console.log(`[agent-notch] Docker: not responding (${why})`);
         this._events = null;
         this._setMode('down');
     }
@@ -231,7 +231,7 @@ class DockerModule extends NotchModule {
         } catch (e) {
             if (isCancelled(e) || gen !== this._listGen || !this._cancellable)
                 return;
-            console.log(`[agent-notch] Docker: no se pudo leer la lista: ${e.message}`);
+            console.log(`[agent-notch] Docker: could not read the list: ${e.message}`);
             this._setMode('down');
             return;
         }
@@ -354,7 +354,7 @@ class DockerModule extends NotchModule {
         notice.add_child(noticeTitle);
         const retry = new St.Button({
             style_class: 'agent-notch-docker-retry',
-            label: 'Reintentar',
+            label: 'Retry',
             can_focus: true,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -386,7 +386,7 @@ class DockerModule extends NotchModule {
         page.scroll.visible = !notice;
         page.notice.visible = notice;
         page.retry.visible = this._mode === 'down';
-        page.noticeTitle.text = this._mode === 'down' ? 'Docker no responde' : 'No hay contenedores';
+        page.noticeTitle.text = this._mode === 'down' ? 'Docker is not responding' : 'No containers';
         this.emit('changed');
     }
 
@@ -399,7 +399,7 @@ class DockerModule extends NotchModule {
         });
         const header = new St.BoxLayout({style_class: 'agent-notch-docker-group-header', x_expand: true});
         g.title = makeLabel('agent-notch-docker-group-title', {
-            text: project || 'sin proyecto',
+            text: project || 'no project',
             y_align: Clutter.ActorAlign.CENTER,
         });
         g.count = new St.Label({
@@ -494,7 +494,7 @@ class DockerModule extends NotchModule {
                 const busy = this._busyGroups.has(group.project);
                 const action = groupAction(group.containers);
                 g.buttonIcon.icon_name = action === 'start' ? START_ICON : STOP_ICON;
-                g.buttonLabel.text = busy ? '…' : action === 'start' ? 'Iniciar todo' : 'Detener todo';
+                g.buttonLabel.text = busy ? '…' : action === 'start' ? 'Start all' : 'Stop all';
                 g.button.reactive = !busy;
                 g.button.accessible_name = `${g.buttonLabel.text} ${group.project}`;
             }
@@ -563,7 +563,7 @@ class DockerModule extends NotchModule {
         r.ports.visible = ports !== '';
         r.icon.icon_name = running ? STOP_ICON : START_ICON;
         r.button.reactive = !busy;
-        r.button.accessible_name = `${running ? 'Detener' : 'Iniciar'} ${c.name}`;
+        r.button.accessible_name = `${running ? 'Stop' : 'Start'} ${c.name}`;
     }
 
     destroy() {

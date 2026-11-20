@@ -45,21 +45,21 @@ def describe(tool, inp):
         inp = {}
 
     def name(p):
-        return os.path.basename(str(p or "").rstrip("/")) or "archivo"
+        return os.path.basename(str(p or "").rstrip("/")) or "file"
 
     if tool == "Read":
-        return "Leyendo " + name(inp.get("file_path"))
+        return "Reading " + name(inp.get("file_path"))
     if tool in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
-        return "Editando " + name(inp.get("file_path") or inp.get("notebook_path"))
+        return "Editing " + name(inp.get("file_path") or inp.get("notebook_path"))
     if tool == "Bash":
-        return "Ejecutando " + clip(inp.get("command"), MAX_COMMAND)
+        return "Running " + clip(inp.get("command"), MAX_COMMAND)
     if tool in ("Grep", "Glob"):
-        return 'Buscando "%s"' % clip(inp.get("pattern"), MAX_PATTERN)
+        return 'Searching "%s"' % clip(inp.get("pattern"), MAX_PATTERN)
     if tool in ("WebFetch", "WebSearch"):
-        return "Consultando la web"
+        return "Browsing the web"
     if tool in ("Task", "Agent"):
-        return "Delegando tarea"
-    return "Usando " + clip(tool or "herramienta", 40)
+        return "Delegating a task"
+    return "Using " + clip(tool or "tool", 40)
 
 
 def handle(ev):
@@ -80,21 +80,21 @@ def handle(ev):
     if event == "SessionStart":
         estado, accion, tool = "inactivo", None, None
     elif event == "UserPromptSubmit":
-        estado, accion, tool = "pensando", "Pensando…", None
+        estado, accion, tool = "pensando", "Thinking…", None
     elif event == "PreToolUse":
         tool = ev.get("tool_name")
         estado, accion = "trabajando", describe(tool, ev.get("tool_input"))
     elif event in ("PostToolUse", "PostToolUseFailure"):
-        estado, accion, tool = "pensando", "Pensando…", None
+        estado, accion, tool = "pensando", "Thinking…", None
     elif event == "Notification":
         if ev.get("notification_type") not in ATTENTION_NOTIFICATIONS:
             return
-        estado, accion = "atencion", clip(ev.get("message") or "Te necesita", MAX_ACTION)
+        estado, accion = "atencion", clip(ev.get("message") or "Needs you", MAX_ACTION)
     elif event == "PermissionRequest":
         tool = ev.get("tool_name")
-        estado, accion = "atencion", "Pide permiso: " + clip(tool or "herramienta", 40)
+        estado, accion = "atencion", "Asks permission: " + clip(tool or "tool", 40)
     elif event == "Stop":
-        estado, accion, tool = "terminado", "Listo", None
+        estado, accion, tool = "terminado", "Done", None
     elif event == "StopFailure":
         estado, tool = "error", None
         accion = clip(ev.get("last_assistant_message") or "Error", MAX_ACTION)

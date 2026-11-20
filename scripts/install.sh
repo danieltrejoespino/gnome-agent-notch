@@ -38,21 +38,21 @@ main() {
     die()  { printf '\033[1;31m[agent-notch] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
     # --- 1. Comprobar el equipo ------------------------------------------
-    command -v gnome-shell >/dev/null || die "No encuentro GNOME Shell. agent-notch es una extensión de GNOME."
+    command -v gnome-shell >/dev/null || die "GNOME Shell not found. agent-notch is a GNOME extension."
     local version major
     version="$(gnome-shell --version | grep -oE '[0-9]+(\.[0-9]+)*' | head -1)"
     major="${version%%.*}"
     [ "$major" = "$SHELL_VERSION" ] ||
-        die "Necesita GNOME Shell $SHELL_VERSION y aquí hay la $version."
+        die "Needs GNOME Shell $SHELL_VERSION and this is $version."
 
-    command -v python3 >/dev/null || die "Falta python3 (sudo apt install python3)."
+    command -v python3 >/dev/null || die "python3 is missing (sudo apt install python3)."
     python3 -c 'import gi; gi.require_version("Gio", "2.0")' 2>/dev/null ||
-        die "Falta PyGObject (sudo apt install python3-gi)."
+        die "PyGObject is missing (sudo apt install python3-gi)."
     command -v glib-compile-schemas >/dev/null ||
-        die "Falta glib-compile-schemas (sudo apt install libglib2.0-bin)."
+        die "glib-compile-schemas is missing (sudo apt install libglib2.0-bin)."
 
     if [ -L "$EXT_DIR" ]; then
-        die "$EXT_DIR es un enlace de desarrollo (scripts/dev-link.sh). Bórralo con: rm '$EXT_DIR'"
+        die "$EXT_DIR is a development link (scripts/dev-link.sh). Remove it with: rm '$EXT_DIR'"
     fi
 
     # --- 2. Conseguir el código ------------------------------------------
@@ -68,11 +68,11 @@ main() {
 
     if [ -n "$here" ] && [ -d "$here/extension/$UUID" ] && [ -z "${AGENT_NOTCH_REF:-}" ]; then
         src="$here"
-        ref="local ($(git -C "$here" describe --tags --always --dirty 2>/dev/null || echo 'sin git'))"
-        say "Instalando desde $src"
+        ref="local ($(git -C "$here" describe --tags --always --dirty 2>/dev/null || echo 'no git'))"
+        say "Installing from $src"
     else
-        command -v curl >/dev/null || die "Falta curl (sudo apt install curl)."
-        command -v tar  >/dev/null || die "Falta tar."
+        command -v curl >/dev/null || die "curl is missing (sudo apt install curl)."
+        command -v tar  >/dev/null || die "tar is missing."
         ref="${AGENT_NOTCH_REF:-}"
         if [ -z "$ref" ]; then
             # La última release, sin usar la API (que tiene límite de peticiones):
@@ -85,11 +85,11 @@ main() {
                 *) ref="main" ;;
             esac
         fi
-        say "Descargando $REPO ($ref)…"
+        say "Downloading $REPO ($ref)…"
         curl -fsSL "https://github.com/$REPO/archive/$ref.tar.gz" | tar -xz -C "$tmp" ||
-            die "No se pudo descargar la versión '$ref'."
+            die "Could not download version '$ref'."
         src="$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -1)"
-        [ -d "$src/extension/$UUID" ] || die "La descarga no contiene la extensión."
+        [ -d "$src/extension/$UUID" ] || die "The download does not contain the extension."
     fi
 
     # --- 3. Copiar la extensión ------------------------------------------
@@ -109,10 +109,10 @@ with open(p, "w", encoding="utf-8") as f:
     json.dump(d, f, ensure_ascii=False, indent=2)
     f.write("\n")' "$new_ext/metadata.json" "$ref"
     # Ajustes de la ventana de preferencias (docs/20).
-    glib-compile-schemas "$new_ext/schemas" || die "No se pudo compilar el esquema de ajustes."
+    glib-compile-schemas "$new_ext/schemas" || die "Could not compile the settings schema."
     rm -rf "$EXT_DIR"
     mv "$new_ext" "$EXT_DIR"
-    say "Extensión en $EXT_DIR"
+    say "Extension in $EXT_DIR"
 
     # --- 4. Servicios D-Bus ----------------------------------------------
     # Solo arrancan cuando la extensión los llama y se cierran solos.
@@ -147,7 +147,7 @@ with open(p, "w", encoding="utf-8") as f:
     # Botón «Actualizar» de la isla (docs/18): instala sin que la extensión
     # lance procesos. Sin release instalada, el servicio no hace nada.
     install_service dev.agentnotch.Updater "updater/update_check.py --servicio"
-    say "Servicios D-Bus en $APP_DIR/services"
+    say "D-Bus services in $APP_DIR/services"
 
     # --- 4b. Aviso de versión nueva ------------------------------------------
     # Una vez al día, fuera de GNOME Shell: una consulta a GitHub y, si hay
@@ -160,7 +160,7 @@ with open(p, "w", encoding="utf-8") as f:
         mkdir -p "$UNIT_DIR"
         printf '%s\n' \
             '[Unit]' \
-            'Description=agent-notch: comprobar si hay una versión nueva' \
+            'Description=agent-notch: check for a new version' \
             '' \
             '[Service]' \
             'Type=exec' \
@@ -168,7 +168,7 @@ with open(p, "w", encoding="utf-8") as f:
             > "$UNIT_DIR/agent-notch-update.service"
         printf '%s\n' \
             '[Unit]' \
-            'Description=agent-notch: aviso diario de versión nueva' \
+            'Description=agent-notch: daily new-version notice' \
             '' \
             '[Timer]' \
             'OnCalendar=daily' \
@@ -180,20 +180,20 @@ with open(p, "w", encoding="utf-8") as f:
             > "$UNIT_DIR/agent-notch-update.timer"
         if systemctl --user daemon-reload 2>/dev/null &&
            systemctl --user enable --now agent-notch-update.timer >/dev/null 2>&1; then
-            say "Aviso diario de versión nueva activado (desactivar: systemctl --user disable --now agent-notch-update.timer)"
+            say "Daily new-version notice enabled (to disable: systemctl --user disable --now agent-notch-update.timer)"
         else
-            warn "No se pudo activar el aviso de versión nueva (systemd del usuario no disponible)."
+            warn "Could not enable the new-version notice (user systemd not available)."
         fi
     fi
 
     # --- 5. Activar ------------------------------------------------------
-    local restart_hint="Cierra sesión y vuelve a entrar para cargarla."
+    local restart_hint="Log out and back in to load it."
     if [ "${AGENT_NOTCH_NO_ENABLE:-}" != "1" ]; then
         # gnome-extensions enable solo funciona si GNOME ya conoce la
         # extensión; si es nueva (Wayland no la ve hasta reiniciar la sesión),
         # se añade directamente a la lista de extensiones activas.
         if gnome-extensions enable "$UUID" 2>/dev/null; then
-            say "Extensión activada."
+            say "Extension enabled."
         elif command -v gsettings >/dev/null; then
             local list
             list="$(gsettings get org.gnome.shell enabled-extensions)"
@@ -204,32 +204,32 @@ with open(p, "w", encoding="utf-8") as f:
                 esac
                 gsettings set org.gnome.shell enabled-extensions "$list"
             fi
-            say "Extensión marcada para activarse al entrar en la sesión."
+            say "Extension set to be enabled when you log in."
         else
-            warn "No pude activarla: hazlo con 'gnome-extensions enable $UUID' tras volver a entrar."
+            warn "Could not enable it: run 'gnome-extensions enable $UUID' after logging back in."
         fi
         if [ "$(gsettings get org.gnome.shell disable-user-extensions 2>/dev/null)" = "true" ]; then
-            warn "Las extensiones de usuario están desactivadas en GNOME: actívalas en la app Extensiones."
+            warn "User extensions are disabled in GNOME: turn them on in an extensions app."
         fi
     fi
 
     # --- 6. Resumen ------------------------------------------------------
     echo
-    say "Instalada la versión $ref."
+    say "Installed version $ref."
     say "$restart_hint"
     local configure="$APP_DIR/adapters/claude-code/configure.py"
     if [ -f "$configure" ] && ! python3 -I "$configure" status >/dev/null 2>&1; then
-        say "Para ver Claude Code en la isla: python3 $configure install"
+        say "To see Claude Code on the island: python3 $configure install"
     fi
     configure="$APP_DIR/adapters/opencode/configure.py"
     if [ -f "$configure" ] && { command -v opencode >/dev/null || [ -x "$HOME/.opencode/bin/opencode" ]; } &&
        ! python3 -I "$configure" status >/dev/null 2>&1; then
-        say "Para ver OpenCode en la isla: python3 $configure install"
+        say "To see OpenCode on the island: python3 $configure install"
     fi
     if ! command -v ddcutil >/dev/null; then
-        say "Opcional, para el brillo del monitor externo: sudo apt install ddcutil (y volver a entrar)."
+        say "Optional, for external monitor brightness: sudo apt install ddcutil (and log back in)."
     fi
-    say "Para desinstalar: $APP_DIR/uninstall.sh"
+    say "To uninstall: $APP_DIR/uninstall.sh"
 }
 
 main "$@"

@@ -153,7 +153,7 @@ class AgentsModule extends NotchModule {
                 this._queue(other);
             }, this);
         } catch (e) {
-            console.error(`[agent-notch] Agentes: no se puede vigilar ${this._dir.get_path()}: ${e.message}`);
+            console.error(`[agent-notch] Agents: cannot watch ${this._dir.get_path()}: ${e.message}`);
             this._monitor = null;
         }
         this._loadAll();
@@ -198,7 +198,7 @@ class AgentsModule extends NotchModule {
     }
 
     get pageTitle() {
-        return 'Agentes';
+        return 'Agents';
     }
 
     get pageIcon() {
@@ -235,7 +235,7 @@ class AgentsModule extends NotchModule {
                     enumerator = dir.enumerate_children_finish(res);
                 } catch (e) {
                     if (!isCancelled(e))
-                        console.error(`[agent-notch] Agentes: no se puede leer la carpeta: ${e.message}`);
+                        console.error(`[agent-notch] Agents: cannot read the folder: ${e.message}`);
                     return;
                 }
                 this._nextFiles(enumerator);
@@ -502,9 +502,9 @@ class AgentsModule extends NotchModule {
         if (this._prefs?.get_boolean('sonido-atencion') ?? true) {
             try {
                 global.display.get_sound_player().play_from_theme(
-                    ATTENTION_SOUND, `${session.proyecto} te necesita`, null);
+                    ATTENTION_SOUND, `${session.proyecto} needs you`, null);
             } catch (e) {
-                console.error(`[agent-notch] Agentes: no se pudo reproducir el aviso: ${e.message}`);
+                console.error(`[agent-notch] Agents: could not play the alert sound: ${e.message}`);
             }
         }
         if (this._prefs?.get_boolean('banner-atencion') ?? true)
@@ -552,7 +552,7 @@ class AgentsModule extends NotchModule {
     _showBanner(name, session) {
         if (!this._banner)
             this._buildBanner();
-        this._bannerTitle.text = `${session.proyecto} te necesita`;
+        this._bannerTitle.text = `${session.proyecto} needs you`;
         this._bannerDetail.text = session.accion ?? stateText('atencion');
         this._banner.accessible_name = `${this._bannerTitle.text}: ${this._bannerDetail.text}`;
         this._bannerName = name;
@@ -640,12 +640,12 @@ class AgentsModule extends NotchModule {
         empty.add_child(new St.Icon({icon_name: ICON, style_class: 'agent-notch-agents-empty-icon'}));
         empty.add_child(new St.Label({
             style_class: 'agent-notch-agents-empty-title',
-            text: 'Ningún agente en marcha',
+            text: 'No agents running',
             x_align: Clutter.ActorAlign.CENTER,
         }));
         empty.add_child(new St.Label({
             style_class: 'agent-notch-agents-empty-hint',
-            text: 'Las sesiones de Claude Code aparecerán aquí',
+            text: 'Claude Code sessions will show up here',
             x_align: Clutter.ActorAlign.CENTER,
         }));
         actor.add_child(empty);
@@ -732,7 +732,7 @@ class AgentsModule extends NotchModule {
         const hidden = sorted.length - shown.length;
         list.more.visible = hidden > 0;
         if (hidden > 0)
-            list.more.text = `y ${hidden} más`;
+            list.more.text = `and ${hidden} more`;
     }
 
     _buildCard() {
@@ -753,7 +753,7 @@ class AgentsModule extends NotchModule {
             style_class: 'agent-notch-card agent-notch-agents-card',
             child: box,
             can_focus: true,
-            accessible_name: 'Agentes',
+            accessible_name: 'Agents',
         });
         actor.connect('clicked', () => this.emit('show-page'));
         const card = {actor, eyes, title, subtitle};

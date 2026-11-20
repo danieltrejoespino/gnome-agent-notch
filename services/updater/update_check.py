@@ -308,7 +308,7 @@ def logout_dialog():
             "org.gnome.SessionManager", "Logout", GLib.Variant("(u)", (0,)),
             None, Gio.DBusCallFlags.NONE, -1, None)
     except GLib.Error as e:
-        log("no se pudo abrir el diálogo de cerrar sesión: %s" % e.message)
+        log("could not open the log out dialog: %s" % e.message)
 
 
 def install(version, n=None):
@@ -316,13 +316,13 @@ def install(version, n=None):
     notificación, si la hay). Devuelve True si fue bien."""
     set_offer(disponible=version, instalada=installed_version(), estado="instalando", registro=None)
     if n:
-        n.notify("Actualizando agent-notch…", "Descargando la %s" % version, replaces=n.nid)
+        n.notify("Updating agent-notch…", "Downloading %s" % version, replaces=n.nid)
     try:
         ok, logfile = run_installer(version)
     except (OSError, subprocess.SubprocessError) as e:
         ok, logfile = False, str(e)
     set_offer(estado="instalada" if ok else "error", registro=logfile)
-    log("instalación de %s: %s" % (version, "bien" if ok else "falló"))
+    log("install of %s: %s" % (version, "ok" if ok else "failed"))
     return ok
 
 
@@ -339,7 +339,7 @@ def serve():
         version = load_state().get("disponible")
         installed = installed_version()
         if not is_newer(version, installed):
-            log("nada que instalar (%r; instalada %r)" % (version, installed))
+            log("nothing to install (%r; installed %r)" % (version, installed))
         else:
             install(version)
         loop.quit()
@@ -351,7 +351,7 @@ def serve():
 
     conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
     if not own_updater(conn, on_install):
-        log("otro proceso atiende %s" % BUS_NAME)
+        log("another process serves %s" % BUS_NAME)
         return 0
     GLib.timeout_add_seconds(SERVICE_IDLE_S, idle_exit)
     loop.run()
@@ -362,54 +362,54 @@ def main():
     if "--servicio" in sys.argv[1:]:
         return serve()
     if not updates_enabled():
-        log("aviso de actualizaciones apagado en las preferencias")
+        log("update notice turned off in the preferences")
         clear_offer()
         return 0
 
     installed = installed_version()
     if version_key(installed) is None:
-        log("versión instalada %r no es una release: no se comprueba" % installed)
+        log("installed version %r is not a release: not checking" % installed)
         return 0
     try:
         latest = latest_release()
     except OSError as e:
-        log("no se pudo consultar GitHub: %s" % e)
+        log("could not check GitHub: %s" % e)
         return 0
     if not is_newer(latest, installed):
-        log("al día (%s; última %s)" % (installed, latest))
+        log("up to date (%s; latest %s)" % (installed, latest))
         clear_offer()
         return 0
     # El botón de la isla sale aunque la notificación esté pospuesta.
     set_offer(disponible=latest, instalada=installed, estado="disponible", registro=None)
     if snoozed(latest, time.time()):
-        log("%s pospuesta" % latest)
+        log("%s postponed" % latest)
         return 0
 
     n = Notifier()
     # Mientras espera, el botón de la isla llega aquí (no a otro proceso).
     own_updater(n.bus, lambda: n.answer_with("update"))
-    n.notify("agent-notch %s disponible" % latest,
-             "Tienes la %s. Haz clic para actualizar." % installed,
-             actions=[("default", "Actualizar"), ("later", "Más tarde"), ("update", "Actualizar")])
+    n.notify("agent-notch %s available" % latest,
+             "You have %s. Click to update." % installed,
+             actions=[("default", "Update"), ("later", "Later"), ("update", "Update")])
     answer = n.wait(WAIT_S)
-    log("respuesta: %s" % answer)
+    log("answer: %s" % answer)
 
     if answer in ("default", "update"):
         ok = install(latest, n)
         logfile = load_state().get("registro") or LOG_FILE
         if ok:
-            n.notify("agent-notch %s instalada" % latest,
-                     "Cierra sesión y vuelve a entrar para aplicarla.",
-                     actions=[("logout", "Cerrar sesión")], urgency=2, replaces=n.nid)
+            n.notify("agent-notch %s installed" % latest,
+                     "Log out and back in to apply it.",
+                     actions=[("logout", "Log out")], urgency=2, replaces=n.nid)
             if n.wait(min(WAIT_S, 3600)) == "logout":
                 logout_dialog()
             else:
                 # Sin respuesta: el mismo aviso, sin un botón que ya nadie escucha.
-                n.notify("agent-notch %s instalada" % latest,
-                         "Cierra sesión y vuelve a entrar para aplicarla.", replaces=n.nid)
+                n.notify("agent-notch %s installed" % latest,
+                         "Log out and back in to apply it.", replaces=n.nid)
         else:
-            n.notify("No se pudo actualizar agent-notch",
-                     "Detalles en %s" % logfile, urgency=2, replaces=n.nid)
+            n.notify("Could not update agent-notch",
+                     "Details in %s" % logfile, urgency=2, replaces=n.nid)
         return 0 if ok else 1
 
     if answer == "later":

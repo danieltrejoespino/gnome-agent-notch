@@ -9,7 +9,7 @@ set -euo pipefail
 
 BUS_FILE="${AGENT_NOTCH_BUS_FILE:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/agent-notch-dev-bus}"
 if [ ! -f "$BUS_FILE" ]; then
-    echo "No encuentro el GNOME de prueba. Ábrelo antes con scripts/dev-shell.sh" >&2
+    echo "Cannot find the test GNOME. Open it first with scripts/dev-shell.sh" >&2
     exit 1
 fi
 export DBUS_SESSION_BUS_ADDRESS="$(cat "$BUS_FILE")"
@@ -20,14 +20,14 @@ send() {  # app icono título cuerpo [urgencia]
 
 case "${1:-tanda}" in
     critica)
-        send "Sistema" "dialog-warning" "Batería baja" "Queda un 5 %. Conecta el cargador." critical
+        send "System" "dialog-warning" "Battery low" "5 % left. Plug in the charger." critical
         ;;
     *)
-        send "Spotify" "spotify-client" "Mamá" "La cena está lista 🍲"
+        send "Spotify" "spotify-client" "Mom" "Dinner is ready 🍲"
         sleep 1
-        send "Firefox" "firefox" "Equipo · Proyecto" "¿Revisamos el notch esta noche?"
+        send "Firefox" "firefox" "Team · Project" "Shall we review the notch tonight?"
         sleep 1
-        send "Terminal" "utilities-terminal" "Compilación terminada" "Un texto bastante largo para comprobar que el mensaje se corta con puntos suspensivos sin romper la isla"
+        send "Terminal" "utilities-terminal" "Build finished" "A rather long text to check that the message is cut with an ellipsis without breaking the island"
         ;;
 esac
-echo "Enviadas. Deberían verse una tras otra en la isla (≈5 s cada una)."
+echo "Sent. They should show up one after another on the island (≈5 s each)."

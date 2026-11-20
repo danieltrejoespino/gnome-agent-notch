@@ -13,12 +13,12 @@ export const STATES = ['atencion', 'error', 'trabajando', 'pensando', 'terminado
 export const DONE_VISIBLE_S = 5;
 
 const STATE_TEXT = {
-    atencion: 'Te necesita',
+    atencion: 'Needs you',
     error: 'Error',
-    trabajando: 'Trabajando',
-    pensando: 'Pensando…',
-    terminado: 'Listo',
-    inactivo: 'Esperando',
+    trabajando: 'Working',
+    pensando: 'Thinking…',
+    terminado: 'Done',
+    inactivo: 'Waiting',
 };
 
 const rank = state => STATES.indexOf(state);
@@ -106,12 +106,12 @@ function plural(n, one, many) {
 
 function groupText(state, n) {
     switch (state) {
-    case 'atencion': return plural(n, 'te necesita', 'te necesitan');
-    case 'error': return plural(n, 'con error', 'con error');
-    case 'trabajando': return plural(n, 'trabajando', 'trabajando');
-    case 'pensando': return plural(n, 'pensando', 'pensando');
-    case 'terminado': return plural(n, 'listo', 'listos');
-    default: return plural(n, 'esperando', 'esperando');
+    case 'atencion': return plural(n, 'needs you', 'need you');
+    case 'error': return plural(n, 'with an error', 'with errors');
+    case 'trabajando': return plural(n, 'working', 'working');
+    case 'pensando': return plural(n, 'thinking', 'thinking');
+    case 'terminado': return plural(n, 'done', 'done');
+    default: return plural(n, 'waiting', 'waiting');
     }
 }
 
@@ -148,7 +148,7 @@ export function summarize(sessions, now) {
     const sameState = busy.filter(b => b.state === top.state).length;
     return {
         state: top.state,
-        title: `${busy.length} agentes`,
+        title: `${busy.length} agents`,
         detail: groupText(top.state, sameState),
     };
 }
@@ -156,21 +156,21 @@ export function summarize(sessions, now) {
 /**
  * Resumen de todas las sesiones, para la tarjeta de Home (título + detalle)
  * y la cabecera de la pestaña (`text`) (docs/09, revisión del 19-11-2026):
- *   ninguna: {state: null, title: 'Agentes', detail: 'Ninguno en marcha', text: 'Ninguno en marcha'}
+ *   ninguna: {state: null, title: 'Agents', detail: 'None running', text: 'None running'}
  *   una:     {state: 'trabajando', title: '1 agente', detail: 'trabajando', text: '1 agente · trabajando'}
  *   varias:  {state: 'atencion', title: '3 agentes', detail: '1 te necesita · 2 esperando', text: …}
  * `state` es el de mayor prioridad (da la expresión y el color de los ojos).
  */
 export function overview(sessions, now) {
     if (sessions.length === 0)
-        return {state: null, title: 'Agentes', detail: 'Ninguno en marcha', text: 'Ninguno en marcha'};
+        return {state: null, title: 'Agents', detail: 'None running', text: 'None running'};
     const counts = new Map();
     for (const s of sessions) {
         const state = shownState(s, now);
         counts.set(state, (counts.get(state) ?? 0) + 1);
     }
     const states = [...counts.keys()].sort((a, b) => rank(a) - rank(b));
-    const title = plural(sessions.length, 'agente', 'agentes');
+    const title = plural(sessions.length, 'agent', 'agents');
     const detail = sessions.length === 1
         ? groupText(states[0], 1).replace(/^1 /, '')
         : states.map(st => groupText(st, counts.get(st))).join(' · ');

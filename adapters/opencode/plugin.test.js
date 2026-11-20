@@ -28,11 +28,11 @@ test("recorrido de una sesión", () => {
   let d = read("ses_1");
   expect(d).toMatchObject({ v: 1, agente: "opencode", sesion: "ses_1", proyecto: "mi-app", cwd: "/home/u/mi-app", estado: "inactivo", pid: null });
   t.handle("session.execution.started", { sessionID: "ses_1" });
-  expect(read("ses_1")).toMatchObject({ estado: "pensando", accion: "Pensando…" });
+  expect(read("ses_1")).toMatchObject({ estado: "pensando", accion: "Thinking…" });
   t.handle("session.tool.input.started", { sessionID: "ses_1", id: "t1", name: "read" });
-  expect(read("ses_1")).toMatchObject({ estado: "trabajando", accion: "Leyendo archivo", herramienta: "read" });
+  expect(read("ses_1")).toMatchObject({ estado: "trabajando", accion: "Reading file", herramienta: "read" });
   t.handle("session.tool.called", { sessionID: "ses_1", id: "t1", input: { path: "/home/u/mi-app/src/main.py" } });
-  expect(read("ses_1").accion).toBe("Leyendo main.py");
+  expect(read("ses_1").accion).toBe("Reading main.py");
   t.handle("session.tool.success", { sessionID: "ses_1", id: "t1", content: "SECRETO" });
   d = read("ses_1");
   expect(d).toMatchObject({ estado: "pensando", herramienta: null });
@@ -40,7 +40,7 @@ test("recorrido de una sesión", () => {
   now += 5;
   t.handle("session.execution.succeeded", { sessionID: "ses_1" });
   d = read("ses_1");
-  expect(d).toMatchObject({ estado: "terminado", accion: "Listo", inicio: 1_800_000_000, actualizado: 1_800_000_005 });
+  expect(d).toMatchObject({ estado: "terminado", accion: "Done", inicio: 1_800_000_000, actualizado: 1_800_000_005 });
   t.handle("session.deleted", { sessionID: "ses_1" });
   expect(files()).toEqual([]);
 });
@@ -69,14 +69,14 @@ test("permisos y preguntas", () => {
   const t = tracker();
   created(t);
   t.handle("permission.asked", { sessionID: "ses_1", action: "bash", resources: ["rm x"] });
-  expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Pide permiso: bash" });
+  expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Asks permission: bash" });
   // Una herramienta que acaba mientras tanto no quita la atención.
   t.handle("session.tool.success", { sessionID: "ses_1", id: "zz" });
   expect(read("ses_1").estado).toBe("atencion");
   t.handle("permission.replied", { sessionID: "ses_1" });
   expect(read("ses_1").estado).toBe("pensando");
   t.handle("form.created", { sessionID: "ses_1", form: {} });
-  expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Tiene una pregunta" });
+  expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Has a question" });
   t.handle("form.cancelled", { sessionID: "ses_1" });
   expect(read("ses_1").estado).toBe("pensando");
 });
@@ -85,14 +85,14 @@ test("subagentes: no salen aparte y su atención sube a la principal", () => {
   const t = tracker();
   created(t);
   t.handle("session.tool.input.started", { sessionID: "ses_1", id: "s", name: "subagent" });
-  expect(read("ses_1").accion).toBe("Delegando tarea");
+  expect(read("ses_1").accion).toBe("Delegating a task");
   created(t, "ses_hijo", "/home/u/mi-app", { parentID: "ses_1" });
   t.handle("session.execution.started", { sessionID: "ses_hijo" });
   t.handle("session.tool.input.started", { sessionID: "ses_hijo", id: "r", name: "read" });
   expect(files()).toEqual(["opencode-ses_1.json"]);
-  expect(read("ses_1").accion).toBe("Delegando tarea");
+  expect(read("ses_1").accion).toBe("Delegating a task");
   t.handle("permission.asked", { sessionID: "ses_hijo", action: "edit" });
-  expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Pide permiso: edit" });
+  expect(read("ses_1")).toMatchObject({ estado: "atencion", accion: "Asks permission: edit" });
   t.handle("session.deleted", { sessionID: "ses_hijo" });
   expect(files()).toEqual(["opencode-ses_1.json"]);
 });
@@ -137,15 +137,15 @@ test("archivos privados y sin temporales", () => {
 });
 
 test("textos", () => {
-  expect(describe("bash", { command: "npm test\n  --watch" })).toBe("Ejecutando npm test --watch");
-  expect(describe("bash", { command: "echo " + "a".repeat(100) })).toBe("Ejecutando echo " + "a".repeat(34) + "…");
-  expect(describe("edit", { filePath: "/x/y/z.ts" })).toBe("Editando z.ts");
-  expect(describe("glob", { pattern: "**/*.js" })).toBe('Buscando "**/*.js"');
-  expect(describe("webfetch", {})).toBe("Consultando la web");
-  expect(describe("mcp_github_issues", {})).toBe("Usando mcp_github_issues");
-  expect(describe(undefined, null)).toBe("Usando herramienta");
-  expect(describe("bash", null)).toBe("Ejecutando un comando");
-  expect(describe("grep", {})).toBe("Buscando…");
+  expect(describe("bash", { command: "npm test\n  --watch" })).toBe("Running npm test --watch");
+  expect(describe("bash", { command: "echo " + "a".repeat(100) })).toBe("Running echo " + "a".repeat(34) + "…");
+  expect(describe("edit", { filePath: "/x/y/z.ts" })).toBe("Editing z.ts");
+  expect(describe("glob", { pattern: "**/*.js" })).toBe('Searching "**/*.js"');
+  expect(describe("webfetch", {})).toBe("Browsing the web");
+  expect(describe("mcp_github_issues", {})).toBe("Using mcp_github_issues");
+  expect(describe(undefined, null)).toBe("Using tool");
+  expect(describe("bash", null)).toBe("Running a command");
+  expect(describe("grep", {})).toBe("Searching…");
   expect(safeName("")).toBe("desconocida");
 });
 

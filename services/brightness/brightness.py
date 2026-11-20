@@ -66,7 +66,7 @@ class DdcError(Exception):
 def ddcutil(*args):
     exe = shutil.which('ddcutil')
     if not exe:
-        raise DdcError('ddcutil no está instalado')
+        raise DdcError('ddcutil is not installed')
     try:
         result = subprocess.run([exe, *args], capture_output=True, text=True,
                                 timeout=DDCUTIL_TIMEOUT_S, check=False)
@@ -84,7 +84,7 @@ def read_brightness(bus):
         m = VCP_RE.match(line.strip())
         if m:
             return int(m.group(1)), int(m.group(2))
-    raise DdcError(f'respuesta inesperada de getvcp: {out.strip()!r}')
+    raise DdcError(f'unexpected getvcp answer: {out.strip()!r}')
 
 
 def detect():
@@ -191,7 +191,7 @@ class Service:
     def _on_name_lost(self, _conn, _name):
         # Si ya era nuestro, es que el bus se ha cerrado (fin de la sesión).
         if not self._owned:
-            log('no se pudo tomar el nombre en el bus (¿ya hay otro?)')
+            log('could not take the bus name (is another one running?)')
         self._loop.quit()
 
     def _on_method_call(self, _conn, _sender, _path, _iface, method, params, invocation):
@@ -220,7 +220,7 @@ class Service:
             except DdcError as e:
                 result, error = None, str(e)
             except Exception as e:  # noqa: BLE001 - cualquier fallo se devuelve
-                log(f'fallo: {e!r}')
+                log(f'failed: {e!r}')
                 result, error = None, repr(e)
             GLib.idle_add(reply, result, error)
 

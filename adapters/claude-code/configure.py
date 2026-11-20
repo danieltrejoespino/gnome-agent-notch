@@ -75,9 +75,9 @@ def load(path):
     except FileNotFoundError:
         return {}
     except ValueError as e:
-        sys.exit("agent-notch: %s no es JSON válido (%s); no lo toco." % (path, e))
+        sys.exit("agent-notch: %s is not valid JSON (%s); leaving it alone." % (path, e))
     if not isinstance(data, dict):
-        sys.exit("agent-notch: %s no contiene un objeto JSON; no lo toco." % path)
+        sys.exit("agent-notch: %s does not contain a JSON object; leaving it alone." % path)
     return data
 
 
@@ -144,7 +144,7 @@ def with_ours(data, hook):
     if hooks is None:
         hooks = {}
     elif not isinstance(hooks, dict):
-        sys.exit("agent-notch: \"hooks\" en settings.json no es un objeto; no lo toco.")
+        sys.exit("agent-notch: \"hooks\" in settings.json is not an object; leaving it alone.")
     hooks = dict(hooks)
     entry = {"hooks": [{"type": "command", "command": hook_command(hook), "timeout": TIMEOUT_S}]}
     for event in EVENTS:
@@ -152,7 +152,7 @@ def with_ours(data, hook):
         if groups is None:
             groups = []
         elif not isinstance(groups, list):
-            sys.exit("agent-notch: hooks.%s en settings.json no es una lista; no lo toco." % event)
+            sys.exit("agent-notch: hooks.%s in settings.json is not a list; leaving it alone." % event)
         hooks[event] = groups + [entry]
     data = dict(data)
     data["hooks"] = hooks
@@ -175,10 +175,10 @@ def is_installed(data, hook):
 
 def main(argv=None):
     here = os.path.dirname(os.path.abspath(__file__))
-    parser = argparse.ArgumentParser(description="Hook de agent-notch para Claude Code.")
+    parser = argparse.ArgumentParser(description="agent-notch hook for Claude Code.")
     parser.add_argument("action", choices=("install", "uninstall", "status"))
     parser.add_argument("--hook", default=os.path.join(here, "hook.py"),
-                        help="hook.py a usar (por defecto, el de esta carpeta)")
+                        help="hook.py to use (by default, the one in this folder)")
     args = parser.parse_args(argv)
     hook = os.path.abspath(args.hook)
     path = settings_path()
@@ -186,20 +186,20 @@ def main(argv=None):
 
     if args.action == "status":
         if is_installed(data, hook):
-            print("agent-notch: el hook está configurado en %s" % path)
+            print("agent-notch: the hook is set up in %s" % path)
             return 0
-        print("agent-notch: el hook no está configurado en %s" % path)
+        print("agent-notch: the hook is not set up in %s" % path)
         return 1
 
     if args.action == "install":
         if not os.path.isfile(hook):
-            sys.exit("agent-notch: no existe %s" % hook)
+            sys.exit("agent-notch: %s does not exist" % hook)
         if is_installed(data, hook):
-            print("agent-notch: el hook ya estaba configurado en %s" % path)
+            print("agent-notch: the hook was already set up in %s" % path)
             return 0
         save(path, with_ours(data, hook))
-        print("agent-notch: hook configurado en %s" % path)
-        print("agent-notch: las sesiones de Claude Code ya abiertas lo cargan solas o al reiniciarlas.")
+        print("agent-notch: hook set up in %s" % path)
+        print("agent-notch: Claude Code sessions already open pick it up on their own or when restarted.")
         return 0
 
     new, removed = without_ours(data, hook)
@@ -210,12 +210,12 @@ def main(argv=None):
         bak = backup_path(path)
         if os.path.exists(bak) and not without_ours(load(bak))[0]:
             os.unlink(bak)
-        print("agent-notch: hook quitado; %s solo tenía el hook y se ha borrado" % path)
+        print("agent-notch: hook removed; %s only had the hook and was deleted" % path)
     elif removed:
         save(path, new)
-        print("agent-notch: hook quitado de %s" % path)
+        print("agent-notch: hook removed from %s" % path)
     else:
-        print("agent-notch: el hook no estaba en %s" % path)
+        print("agent-notch: the hook was not in %s" % path)
     return 0
 
 

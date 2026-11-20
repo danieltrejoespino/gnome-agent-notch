@@ -30,9 +30,9 @@ const ICON = 'alarm-symbolic';
 const STATE_FILE = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'agent-notch', 'focus.json']);
 
 const STATUS_TEXT = {
-    idle: 'Concentración, listo',
-    running: 'Concentrado',
-    paused: 'En pausa',
+    idle: 'Focus, ready',
+    running: 'Focusing',
+    paused: 'Paused',
 };
 
 const nowSeconds = () => GLib.get_real_time() / 1e6;
@@ -87,7 +87,7 @@ class FocusModule extends NotchModule {
     }
 
     get pageTitle() {
-        return 'Concentración';
+        return 'Focus';
     }
 
     get pageIcon() {
@@ -184,13 +184,13 @@ class FocusModule extends NotchModule {
             const source = MessageTray.getSystemSource();
             source.addNotification(new MessageTray.Notification({
                 source,
-                title: 'Concentración terminada',
-                body: `${Math.round(this._duration / 60)} min completados. ¡Tómate un descanso!`,
+                title: 'Focus session done',
+                body: `${Math.round(this._duration / 60)} min done. Take a break!`,
                 iconName: ICON,
                 urgency: MessageTray.Urgency.HIGH,
             }));
         } catch (e) {
-            console.error('[agent-notch] No se pudo avisar del fin del temporizador:', e.message);
+            console.error('[agent-notch] Could not announce the end of the timer:', e.message);
         }
     }
 
@@ -210,7 +210,7 @@ class FocusModule extends NotchModule {
                 remaining: this._remaining,
             }));
         } catch (e) {
-            console.error('[agent-notch] No se pudo guardar el temporizador:', e.message);
+            console.error('[agent-notch] Could not save the timer:', e.message);
         }
     }
 

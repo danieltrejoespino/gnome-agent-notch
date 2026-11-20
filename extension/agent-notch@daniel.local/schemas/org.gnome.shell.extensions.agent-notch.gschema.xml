@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Ajustes de agent-notch (docs/20-preferencias.md). Los edita prefs.js. -->
+<!-- agent-notch settings (docs/20-preferencias.md). Edited by prefs.js. -->
 <schemalist gettext-domain="agent-notch">
   <schema id="org.gnome.shell.extensions.agent-notch" path="/org/gnome/shell/extensions/agent-notch/">
 
-    <!-- Pestañas: un módulo apagado no se crea. -->
+    <!-- Tabs: a module that is turned off is not created. -->
     <key name="modulo-musica" type="b">
       <default>true</default>
-      <summary>Música</summary>
+      <summary>Music</summary>
     </key>
     <key name="modulo-sistema" type="b">
       <default>true</default>
-      <summary>Sistema</summary>
+      <summary>System</summary>
     </key>
     <key name="modulo-agentes" type="b">
       <default>true</default>
-      <summary>Agentes</summary>
+      <summary>Agents</summary>
     </key>
     <key name="modulo-docker" type="b">
       <default>true</default>
@@ -22,46 +22,46 @@
     </key>
     <key name="modulo-portapapeles" type="b">
       <default>true</default>
-      <summary>Portapapeles</summary>
+      <summary>Clipboard</summary>
     </key>
     <key name="modulo-concentracion" type="b">
       <default>true</default>
-      <summary>Concentración</summary>
+      <summary>Focus</summary>
     </key>
 
-    <!-- Avisos de agentes: se leen en el momento del aviso. -->
+    <!-- Agent alerts: read at the moment of the alert. -->
     <key name="sonido-atencion" type="b">
       <default>true</default>
-      <summary>Sonido cuando un agente te necesita</summary>
+      <summary>Sound when an agent needs you</summary>
     </key>
     <key name="banner-atencion" type="b">
       <default>true</default>
-      <summary>Banner cuando un agente te necesita</summary>
+      <summary>Banner when an agent needs you</summary>
     </key>
     <key name="banner-segundos" type="i">
       <range min="2" max="30"/>
       <default>5</default>
-      <summary>Segundos que dura el banner</summary>
+      <summary>Seconds the banner stays</summary>
     </key>
 
-    <!-- Aspecto. -->
+    <!-- Appearance. -->
     <key name="agentes-dos-lineas" type="b">
       <default>true</default>
-      <summary>Agentes en dos líneas (ojos arriba, texto debajo)</summary>
+      <summary>Agents on two lines (eyes on top, text below)</summary>
     </key>
     <key name="animar-ojos" type="b">
       <default>true</default>
-      <summary>Parpadeo, pulso y destello de los ojos</summary>
+      <summary>Blink, pulse and flash of the eyes</summary>
     </key>
 
-    <!-- Atajos y actualizaciones. -->
+    <!-- Shortcuts and updates. -->
     <key name="atajo-portapapeles" type="b">
       <default>true</default>
-      <summary>Super+V abre el Portapapeles</summary>
+      <summary>Super+V opens the Clipboard</summary>
     </key>
     <key name="aviso-actualizaciones" type="b">
       <default>true</default>
-      <summary>Aviso diario y botón de versión nueva</summary>
+      <summary>Daily notice and button for new versions</summary>
     </key>
   </schema>
 </schemalist>

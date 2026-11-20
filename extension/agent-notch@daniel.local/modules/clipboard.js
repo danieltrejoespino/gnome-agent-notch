@@ -51,7 +51,7 @@ const TERMINAL_HINTS = ['terminal', 'ptyxis', 'console', 'kgx', 'kitty', 'alacri
 
 const PINNED_FILE = GLib.build_filenamev([GLib.get_user_data_dir(), 'agent-notch', 'clipboard-pinned.json']);
 
-const log = msg => console.log(`[agent-notch] portapapeles: ${msg}`);
+const log = msg => console.log(`[agent-notch] clipboard: ${msg}`);
 
 function preview(text) {
     return text.slice(0, PREVIEW_LENGTH)
@@ -102,7 +102,7 @@ class ClipboardModule extends NotchModule {
     }
 
     get pageTitle() {
-        return 'Portapapeles';
+        return 'Clipboard';
     }
 
     get pageIcon() {
@@ -215,7 +215,7 @@ class ClipboardModule extends NotchModule {
             } catch (e) {
                 if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND) &&
                     !e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                    log(`no se pudieron leer los fijados: ${e.message}`);
+                    log(`could not read pinned items: ${e.message}`);
             }
         });
     }
@@ -246,7 +246,7 @@ class ClipboardModule extends NotchModule {
                     try {
                         file.replace_contents_finish(res);
                     } catch (e) {
-                        log(`no se pudieron guardar los fijados: ${e.message}`);
+                        log(`could not save pinned items: ${e.message}`);
                     }
                     done();
                 });
@@ -257,7 +257,7 @@ class ClipboardModule extends NotchModule {
                 dir.make_directory_finish(res);
             } catch (e) {
                 if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS)) {
-                    log(`no se pudo crear ${dir.get_path()}: ${e.message}`);
+                    log(`could not create ${dir.get_path()}: ${e.message}`);
                     done();
                     return;
                 }
@@ -306,7 +306,7 @@ class ClipboardModule extends NotchModule {
 
         this._entry = new St.Entry({
             style_class: 'agent-notch-clipboard-search',
-            hint_text: 'Buscar…',
+            hint_text: 'Search…',
             can_focus: true,
             x_expand: true,
             primary_icon: new St.Icon({icon_name: 'edit-find-symbolic', style_class: 'agent-notch-clipboard-search-icon'}),
@@ -324,7 +324,7 @@ class ClipboardModule extends NotchModule {
             style_class: 'agent-notch-clipboard-clear',
             can_focus: true,
             y_align: Clutter.ActorAlign.CENTER,
-            accessible_name: 'Limpiar historial (los fijados se quedan)',
+            accessible_name: 'Clear history (pinned items stay)',
             child: new St.Icon({icon_name: 'edit-clear-all-symbolic', style_class: 'agent-notch-clipboard-clear-icon'}),
         });
         this._clearButton.connect('clicked', () => this._clearHistory());
@@ -348,7 +348,7 @@ class ClipboardModule extends NotchModule {
 
         this._empty = new St.Label({
             style_class: 'agent-notch-clipboard-empty',
-            text: 'Copia algo y aparecerá aquí',
+            text: 'Copy something and it will show up here',
             x_align: Clutter.ActorAlign.CENTER,
         });
         page.add_child(this._empty);
@@ -446,7 +446,7 @@ class ClipboardModule extends NotchModule {
                 row.label.text = preview(item.text);
             }
             row.pinIcon.icon_name = item.pinned ? 'starred-symbolic' : 'non-starred-symbolic';
-            row.pin.accessible_name = item.pinned ? 'Desfijar' : 'Fijar';
+            row.pin.accessible_name = item.pinned ? 'Unpin' : 'Pin';
             if (item.pinned)
                 row.pin.add_style_pseudo_class('checked');
             else
@@ -475,8 +475,8 @@ class ClipboardModule extends NotchModule {
         this._scroll.visible = !empty;
         this._empty.visible = empty;
         this._empty.text = this._history.length + this._pinned.length === 0
-            ? 'Copia algo y aparecerá aquí'
-            : 'Nada coincide con la búsqueda';
+            ? 'Copy something and it will show up here'
+            : 'Nothing matches your search';
     }
 
     _syncSelection() {

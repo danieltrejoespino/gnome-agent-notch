@@ -150,15 +150,15 @@ const PENDING_CHARGE = 5;
 export function formatBattery({percentage, state, timeToEmpty, timeToFull}) {
     const parts = [`${Math.round(percentage)} %`];
     if (state === FULLY_CHARGED || (state === CHARGING && percentage >= 100)) {
-        parts.push('cargada');
+        parts.push('charged');
     } else if (state === CHARGING) {
-        parts.push('cargando');
+        parts.push('charging');
         if (timeToFull > 0)
-            parts.push(`${formatDuration(timeToFull)} para llenarse`);
+            parts.push(`${formatDuration(timeToFull)} until full`);
     } else if (state === PENDING_CHARGE) {
-        parts.push('enchufada, sin cargar');
+        parts.push('plugged in, not charging');
     } else if (state === DISCHARGING && timeToEmpty > 0) {
-        parts.push(`${formatDuration(timeToEmpty)} restantes`);
+        parts.push(`${formatDuration(timeToEmpty)} left`);
     }
     return parts.join(' · ');
 }
@@ -169,8 +169,8 @@ const CONNECTION_TYPES = {
     '802-3-ethernet': 'Ethernet',
     'vpn': 'VPN',
     'wireguard': 'VPN',
-    'gsm': 'Móvil',
-    'cdma': 'Móvil',
+    'gsm': 'Mobile',
+    'cdma': 'Mobile',
     'bluetooth': 'Bluetooth',
 };
 

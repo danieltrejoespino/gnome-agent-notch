@@ -86,7 +86,7 @@ class UpdateModule extends NotchModule {
                     this._queueRead();
             }, this);
         } catch (e) {
-            console.error(`[agent-notch] Actualización: no se puede vigilar ${this._stateDir}: ${e.message}`);
+            console.error(`[agent-notch] Update: cannot watch ${this._stateDir}: ${e.message}`);
             return;
         }
         this._read();
@@ -201,8 +201,8 @@ class UpdateModule extends NotchModule {
         if (!view)
             return;
         row.title.text = view.state === 'error' && view.log
-            ? `Detalles en ${view.log}`
-            : `agent-notch ${view.version} disponible`;
+            ? `Details in ${view.log}`
+            : `agent-notch ${view.version} available`;
         row.button.label = buttonText(view);
         row.button.reactive = view.state !== 'instalando';
         setStateClass(row.actor, view.state);
@@ -227,7 +227,7 @@ class UpdateModule extends NotchModule {
                 } catch (e) {
                     if (isCancelled(e))
                         return;
-                    console.error(`[agent-notch] Actualización: no se pudo pedir la instalación: ${e.message}`);
+                    console.error(`[agent-notch] Update: could not request the install: ${e.message}`);
                     this._starting = false;
                     this._render();
                 }
@@ -241,7 +241,7 @@ class UpdateModule extends NotchModule {
         try {
             SystemActions.getDefault().activateLogout();
         } catch (e) {
-            console.error(`[agent-notch] Actualización: no se pudo abrir el diálogo de cerrar sesión: ${e.message}`);
+            console.error(`[agent-notch] Update: could not open the log out dialog: ${e.message}`);
         }
     }
 
