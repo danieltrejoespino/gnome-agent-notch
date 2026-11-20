@@ -1329,3 +1329,16 @@
 .agent-notch-settings-button {
   margin-left: 4px;
 }
+
+/* ── Panel tweaks (docs/09) ───────────────────────── */
+
+/* Tab name bubble, over the icon on hover. */
+.agent-notch-tab-hint {
+  padding: 4px 10px;
+  border-radius: 99px;
+  background-color: rgba(22, 22, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f5f5f5;
+  font-size: 8.5pt;
+  font-weight: bold;
+}

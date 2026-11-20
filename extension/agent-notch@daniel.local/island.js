@@ -493,11 +493,14 @@ class Island extends St.Widget {
         this._capturedId = this.connect('captured-event', (_actor, event) => {
             const type = event.type();
 
-            // Esc: close.
-            if (type === Clutter.EventType.KEY_PRESS &&
-                event.get_key_symbol() === Clutter.KEY_Escape) {
-                this._closePanel();
-                return Clutter.EVENT_STOP;
+            // Esc: close. Other keys: switching tabs (panel.handleKey, docs/09).
+            if (type === Clutter.EventType.KEY_PRESS) {
+                if (event.get_key_symbol() === Clutter.KEY_Escape) {
+                    this._closePanel();
+                    return Clutter.EVENT_STOP;
+                }
+                if (this._panel?.handleKey(event))
+                    return Clutter.EVENT_STOP;
             }
 
             const inside = this.contains(global.stage.get_event_actor(event));
