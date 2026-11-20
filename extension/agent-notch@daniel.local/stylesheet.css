@@ -409,7 +409,7 @@
 
 .agent-notch-panel {
   spacing: 10px;
-  min-width: 460px;
+  width: 520px;   /* fijo en todas las pestañas (docs/09, revisión del 19-11-2026) */
 }
 
 .agent-notch-panel-date {
@@ -472,6 +472,11 @@
 }
 
 .agent-notch-home-cards {
+  spacing: 10px;
+}
+
+/* Filas de la cuadrícula 2 × 2 de Home. */
+.agent-notch-home-row {
   spacing: 10px;
 }
 
@@ -727,6 +732,7 @@
 
 .agent-notch-clipboard-search:focus {
   border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: none;   /* sin el anillo de acento de GNOME (naranja en Ubuntu) */
 }
 
 .agent-notch-clipboard-search StLabel.hint-text {
@@ -1256,4 +1262,49 @@
   height: 6px;
   border-radius: 3px;
   background-color: #60a5fa;
+}
+
+/* ── Revisión de diseño del 19-11-2026 (docs/09) ─── */
+
+/* Línea entre las secciones del hover. */
+.agent-notch-section-separator {
+  height: 1px;
+  margin: 6px 4px;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Tarjeta de Agentes en Home: ojos + «Agentes» + resumen. */
+.agent-notch-agents-card-box {
+  spacing: 12px;
+}
+
+.agent-notch-agents-card:hover,
+.agent-notch-agents-card:focus {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.agent-notch-agents-card .agent-notch-face { color: #dbeafe; }
+.agent-notch-agents-card.estado-inactivo   .agent-notch-face { color: #8a8a8a; }
+.agent-notch-agents-card.estado-pensando   .agent-notch-face { color: #a78bfa; }
+.agent-notch-agents-card.estado-trabajando .agent-notch-face { color: #60a5fa; }
+.agent-notch-agents-card.estado-atencion   .agent-notch-face { color: #fbbf24; }
+.agent-notch-agents-card.estado-terminado  .agent-notch-face { color: #34d399; }
+.agent-notch-agents-card.estado-error      .agent-notch-face { color: #f87171; }
+
+/* Pestaña Agentes: cabecera con el resumen y filas en dos líneas. */
+.agent-notch-agents-header {
+  font-size: 9pt;
+  color: #c8c8c8;
+  padding: 0 10px 6px;
+}
+
+.agent-notch-agents-row-two {
+  spacing: 2px;
+}
+
+.agent-notch-agents-row-path {
+  font-family: monospace;
+  font-size: 8.5pt;
+  color: #8a8a8a;
+  padding-left: 15px;   /* alineada con el proyecto, después del punto */
 }

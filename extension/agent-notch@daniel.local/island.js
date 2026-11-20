@@ -75,6 +75,7 @@ class Island extends St.Widget {
         this._panelOpen = false;
         this._compactBaseHeight = 0;   // alto de la barra + lo que sobresale
         this._compactTall = false;     // el módulo mostrado pide dos líneas
+        this._separators = [];         // líneas entre secciones del hover (se reutilizan)
         this._tallExtra = 0;           // px de más en ese caso (CSS)
 
         // Capa de abajo: el fondo dibujado, ocupa toda la isla.
@@ -384,16 +385,28 @@ class Island extends St.Widget {
                 section.hide();
         }
         this._expandedBox.remove_all_children();
-        for (const section of wanted) {
+        wanted.forEach((section, i) => {
+            // Una línea sutil entre las secciones del hover (docs/09).
+            if (i > 0 && section.fromHover)
+                this._expandedBox.add_child(this._separator(i - 1));
             // Un actor puede venir de otra vista (p. ej. del panel).
             section.actor.get_parent()?.remove_child(section.actor);
             this._expandedBox.add_child(section.actor);
-        }
+        });
         for (const section of wanted) {
             if (!shownActors.includes(section.actor))
                 section.show();
         }
         this._sections = wanted;
+    }
+
+    // Separador n.º i: se crea la primera vez y se reutiliza.
+    _separator(i) {
+        this._separators[i] ??= new St.Widget({
+            style_class: 'agent-notch-section-separator',
+            x_expand: true,
+        });
+        return this._separators[i];
     }
 
     _hideSections() {
@@ -677,6 +690,9 @@ class Island extends St.Widget {
 
         this._compactBin.set_child(null);
         this._shownCompact = null;
+        for (const separator of this._separators)
+            separator.destroy();
+        this._separators = [];
 
         for (const module of this._modules) {
             module.disconnectObject(this);

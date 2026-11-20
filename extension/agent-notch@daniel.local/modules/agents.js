@@ -55,7 +55,7 @@ import {readText, isCancelled} from './sysinfo.js';
 import {Eyes, makeLabel} from './widgets.js';
 import {
     AGENT_TINTS, STATES, agentLabel, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession,
-    eyesFor, pickWindow, sameSummary, shownState, sortSessions, stateText, summarize,
+    eyesFor, overview, pickWindow, sameSummary, shortPath, shownState, sortSessions, stateText, summarize,
 } from './agentstate.js';
 
 // Compacta: con algo en marcha gana a la música (10) pero no al
@@ -123,6 +123,7 @@ class AgentsModule extends NotchModule {
         this._rowCount = 0;           // sesiones en las listas (para reajustar la isla)
         this._exp = null;             // lista del hover, al primer uso
         this._page = null;            // pestaña del panel, al primer uso
+        this._card = null;            // tarjeta de Home, al primer uso
         this._cancellable = new Gio.Cancellable();
         this._pulseMs = 0;            // duración del pulso en marcha (0 = parado)
         this._banner = null;          // se crea con el primer aviso
@@ -178,6 +179,13 @@ class AgentsModule extends NotchModule {
     get expandedActor() {
         this._exp ??= this._newList(MAX_ROWS);
         return this._exp.actor;
+    }
+
+    // Tarjeta de Home (docs/09, revisión del 19-11-2026): siempre, con los
+    // ojos y el resumen; clic → pestaña Agentes.
+    get homeCard() {
+        this._card ??= this._buildCard();
+        return this._card.actor;
     }
 
     get pageActor() {
@@ -368,10 +376,16 @@ class AgentsModule extends NotchModule {
             if (list)
                 this._renderList(list, sorted, now);
         }
+        const ov = overview(sessions, now);
         if (this._page) {
             this._page.scroll.visible = sessions.length > 0;
+            this._page.header.visible = sessions.length > 0;
             this._page.empty.visible = sessions.length === 0;
+            if (this._page.header.text !== ov.text)
+                this._page.header.text = ov.text;
         }
+        if (this._card)
+            this._renderCard(ov);
 
         const before = this._summary;
         if (!sameSummary(summary, before)) {
@@ -565,7 +579,8 @@ class AgentsModule extends NotchModule {
 
     // Una lista reutilizable: filas que se crean al hacer falta y se
     // reutilizan; como mucho `maxRows`, y «y N más» si no caben.
-    _newList(maxRows) {
+    // detailed: filas en dos líneas, con la carpeta debajo (pestaña).
+    _newList(maxRows, {detailed = false} = {}) {
         const actor = new St.BoxLayout({
             style_class: 'agent-notch-agents-list',
             orientation: Clutter.Orientation.VERTICAL,
@@ -573,7 +588,7 @@ class AgentsModule extends NotchModule {
         });
         const more = makeLabel('agent-notch-agents-more', {visible: false});
         actor.add_child(more);
-        const list = {actor, more, rows: [], maxRows};
+        const list = {actor, more, rows: [], maxRows, detailed};
         const now = nowSeconds();
         this._renderList(list, sortSessions([...this._sessions.values()], now), now);
         return list;
@@ -588,7 +603,10 @@ class AgentsModule extends NotchModule {
             y_expand: true,
             y_align: Clutter.ActorAlign.START,
         });
-        const list = this._newList(MAX_PAGE_ROWS);
+        // Cabecera con el resumen (docs/09, revisión del 19-11-2026).
+        const header = makeLabel('agent-notch-agents-header', {visible: this._sessions.size > 0});
+        actor.add_child(header);
+        const list = this._newList(MAX_PAGE_ROWS, {detailed: true});
         const scroll = new St.ScrollView({
             style_class: 'agent-notch-agents-scroll',
             hscrollbar_policy: St.PolicyType.NEVER,
@@ -618,15 +636,27 @@ class AgentsModule extends NotchModule {
             x_align: Clutter.ActorAlign.CENTER,
         }));
         actor.add_child(empty);
-        return {actor, list, scroll, empty};
+        return {actor, list, scroll, empty, header};
     }
 
     _newRow(list) {
         const row = {};
         const box = new St.BoxLayout({style_class: 'agent-notch-agents-row-box', x_expand: true});
+        let child = box;
+        row.path = null;
+        if (list.detailed) {
+            child = new St.BoxLayout({
+                style_class: 'agent-notch-agents-row-two',
+                orientation: Clutter.Orientation.VERTICAL,
+                x_expand: true,
+            });
+            row.path = makeLabel('agent-notch-agents-row-path');
+            child.add_child(box);
+            child.add_child(row.path);
+        }
         row.button = new St.Button({
             style_class: 'agent-notch-agents-row',
-            child: box,
+            child,
             x_expand: true,
             can_focus: true,
         });
@@ -677,6 +707,12 @@ class AgentsModule extends NotchModule {
             const age = formatAge(now - s.inicio);
             if (row.age.text !== age)
                 row.age.text = age;
+            if (row.path) {
+                const path = shortPath(s.cwd, GLib.get_home_dir());
+                if (row.path.text !== path)
+                    row.path.text = path;
+                row.path.visible = path !== '';
+            }
             row.button.accessible_name = `${s.proyecto} (${agent.name}): ${action}`;
         });
 
@@ -684,6 +720,42 @@ class AgentsModule extends NotchModule {
         list.more.visible = hidden > 0;
         if (hidden > 0)
             list.more.text = `y ${hidden} más`;
+    }
+
+    _buildCard() {
+        const eyes = new Eyes();
+        const title = makeLabel('agent-notch-card-title');
+        const subtitle = makeLabel('agent-notch-card-subtitle');
+        const text = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+        });
+        text.add_child(title);
+        text.add_child(subtitle);
+        const box = new St.BoxLayout({style_class: 'agent-notch-agents-card-box', x_expand: true});
+        box.add_child(eyes);
+        box.add_child(text);
+        const actor = new St.Button({
+            style_class: 'agent-notch-card agent-notch-agents-card',
+            child: box,
+            can_focus: true,
+            accessible_name: 'Agentes',
+        });
+        actor.connect('clicked', () => this.emit('show-page'));
+        const card = {actor, eyes, title, subtitle};
+        this._renderCard(overview([...this._sessions.values()], nowSeconds()), card);
+        return card;
+    }
+
+    _renderCard(ov, card = this._card) {
+        setStateClass(card.actor, ov.state ?? 'ninguno');
+        card.eyes.setExpression(ov.state ? eyesFor(ov.state) : 'abiertos',
+            {animate: this.visibleViews.has('home')});
+        if (card.title.text !== ov.title)
+            card.title.text = ov.title;
+        if (card.subtitle.text !== ov.detail)
+            card.subtitle.text = ov.detail;
     }
 
     // Los tiempos («12 min») solo se refrescan con alguna lista a la vista.
@@ -757,7 +829,8 @@ class AgentsModule extends NotchModule {
         this._compact = this._eyes = this._title = this._separator = this._detail = null;
         this._exp?.actor.destroy();
         this._page?.actor.destroy();
-        this._exp = this._page = null;
+        this._card?.actor.destroy();
+        this._exp = this._page = this._card = null;
         this._dir = null;
     }
 });

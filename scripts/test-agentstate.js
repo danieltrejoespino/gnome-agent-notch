@@ -4,7 +4,7 @@
 import System from 'system';
 
 import {
-    AGENT_TINTS, EYE_EXPRESSIONS, STATES, agentLabel, eyesFor, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
+    AGENT_TINTS, EYE_EXPRESSIONS, STATES, agentLabel, eyesFor, overview, shortPath, formatAge, isDead, isSessionFile, nextChangeIn, parentPid, parseSession, pickWindow,
     sameSummary, shownState, sortSessions, summarize,
 } from '../extension/agent-notch@daniel.local/modules/agentstate.js';
 
@@ -156,6 +156,23 @@ eq(eyesFor('inactivo'), 'abiertos', 'inactivo: abiertos');
 eq(eyesFor('raro'), 'abiertos', 'desconocido: abiertos');
 eq(eyesFor('toString'), 'abiertos', 'no confunde propiedades heredadas');
 eq(STATES.every(s => EYE_EXPRESSIONS.includes(eyesFor(s))), true, 'cada estado tiene una expresión dibujable');
+
+// --- resumen y carpeta (revisión de diseño, docs/09) ---------------------------
+eq(overview([], NOW), {state: null, title: 'Agentes', detail: 'Ninguno en marcha', text: 'Ninguno en marcha'}, 'resumen: ninguna');
+eq(overview([base], NOW), {state: 'trabajando', title: '1 agente', detail: 'trabajando', text: '1 agente · trabajando'}, 'resumen: una');
+eq(overview([{...base, estado: 'inactivo'}], NOW).text, '1 agente · esperando', 'resumen: una esperando');
+eq(overview([base, {...base, sesion: 's2', estado: 'inactivo'}, {...base, sesion: 's3', estado: 'atencion'}], NOW),
+    {state: 'atencion', title: '3 agentes', detail: '1 te necesita · 1 trabajando · 1 esperando',
+        text: '3 agentes · 1 te necesita · 1 trabajando · 1 esperando'}, 'resumen: varias, por prioridad');
+eq(overview([base, {...base, sesion: 's2'}], NOW).text, '2 agentes · 2 trabajando', 'resumen: mismo estado');
+eq(overview([{...base, estado: 'terminado', actualizado: NOW - 60}], NOW).state, 'inactivo', 'resumen: terminado hace rato cuenta como esperando');
+eq(parseSession(JSON.stringify(base)).cwd, '/x/mi-app', 'la sesión conserva la carpeta');
+eq(parseSession(JSON.stringify({...base, cwd: 3})).cwd, null, 'carpeta que no es texto');
+eq(shortPath('/home/ana/proyectos/x', '/home/ana'), '~/proyectos/x', 'carpeta bajo home');
+eq(shortPath('/home/ana', '/home/ana/'), '~', 'la propia home');
+eq(shortPath('/home/anabel/x', '/home/ana'), '/home/anabel/x', 'no confunde prefijos');
+eq(shortPath('/srv/x', '/home/ana'), '/srv/x', 'fuera de home');
+eq(shortPath(null, '/home/ana'), '', 'sin carpeta');
 
 print(`${passed} pruebas OK, ${failed} fallos`);
 if (failed)

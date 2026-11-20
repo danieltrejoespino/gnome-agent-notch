@@ -66,6 +66,7 @@ export function parseSession(raw) {
         agente: d.agente,
         sesion: d.sesion,
         proyecto: text(d.proyecto, 40) ?? '?',
+        cwd: text(d.cwd, 200),   // carpeta, en la pestaña Agentes (docs/09)
         estado: d.estado,
         accion: text(d.accion, 80),
         herramienta: text(d.herramienta, 40),
@@ -150,6 +151,42 @@ export function summarize(sessions, now) {
         title: `${busy.length} agentes`,
         detail: groupText(top.state, sameState),
     };
+}
+
+/**
+ * Resumen de todas las sesiones, para la tarjeta de Home (título + detalle)
+ * y la cabecera de la pestaña (`text`) (docs/09, revisión del 19-11-2026):
+ *   ninguna: {state: null, title: 'Agentes', detail: 'Ninguno en marcha', text: 'Ninguno en marcha'}
+ *   una:     {state: 'trabajando', title: '1 agente', detail: 'trabajando', text: '1 agente · trabajando'}
+ *   varias:  {state: 'atencion', title: '3 agentes', detail: '1 te necesita · 2 esperando', text: …}
+ * `state` es el de mayor prioridad (da la expresión y el color de los ojos).
+ */
+export function overview(sessions, now) {
+    if (sessions.length === 0)
+        return {state: null, title: 'Agentes', detail: 'Ninguno en marcha', text: 'Ninguno en marcha'};
+    const counts = new Map();
+    for (const s of sessions) {
+        const state = shownState(s, now);
+        counts.set(state, (counts.get(state) ?? 0) + 1);
+    }
+    const states = [...counts.keys()].sort((a, b) => rank(a) - rank(b));
+    const title = plural(sessions.length, 'agente', 'agentes');
+    const detail = sessions.length === 1
+        ? groupText(states[0], 1).replace(/^1 /, '')
+        : states.map(st => groupText(st, counts.get(st))).join(' · ');
+    return {state: states[0], title, detail, text: `${title} · ${detail}`};
+}
+
+/** '/home/ana/proyectos/x' con home '/home/ana' → '~/proyectos/x'. */
+export function shortPath(cwd, home) {
+    if (typeof cwd !== 'string' || !cwd)
+        return '';
+    const h = typeof home === 'string' ? home.replace(/\/+$/, '') : '';
+    if (h && cwd === h)
+        return '~';
+    if (h && cwd.startsWith(`${h}/`))
+        return `~${cwd.slice(h.length)}`;
+    return cwd;
 }
 
 export function sameSummary(a, b) {

@@ -20,6 +20,7 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 const HOME = 'home';
+const HOME_COLUMNS = 2;   // tarjetas de Home por fila (docs/09)
 
 const byPriority = (a, b) => b.priority - a.priority;
 
@@ -206,7 +207,15 @@ export const NotchPanel = GObject.registerClass({
         });
         home.add_child(this._bigClock);
 
-        this._cards = new St.BoxLayout({style_class: 'agent-notch-home-cards', x_expand: true});
+        // Cuadrícula de 2 columnas iguales (docs/09, revisión del 19-11-2026):
+        // con el ancho fijo del panel no caben 4 tarjetas en una fila. Filas
+        // con `homogeneous` (columnas alineadas); se crean una vez.
+        this._cards = new St.BoxLayout({
+            style_class: 'agent-notch-home-cards',
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+        });
+        this._cardRows = [];
         home.add_child(this._cards);
         return home;
     }
@@ -219,15 +228,34 @@ export const NotchPanel = GObject.registerClass({
 
         // Tarjetas de los módulos, por prioridad (los actores son de los
         // módulos: se reutilizan, no se recrean).
-        this._cards.remove_all_children();
+        this._clearCards();
         this._homeModules = this._modules.filter(m => m.homeCard).sort(byPriority);
-        for (const module of this._homeModules) {
+        this._homeModules.forEach((module, i) => {
             const card = module.homeCard;
             detach(card);
             card.x_expand = true;
-            this._cards.add_child(card);
+            this._cardRow(Math.floor(i / HOME_COLUMNS)).add_child(card);
             module.setHomeVisible(true);
+        });
+    }
+
+    _cardRow(i) {
+        if (!this._cardRows[i]) {
+            const row = new St.BoxLayout({style_class: 'agent-notch-home-row', x_expand: true});
+            row.layout_manager.homogeneous = true;
+            this._cardRows[i] = row;
         }
+        const row = this._cardRows[i];
+        if (!row.get_parent())
+            this._cards.add_child(row);
+        return row;
+    }
+
+    // Suelta las tarjetas (son de los módulos) y quita las filas del panel.
+    _clearCards() {
+        for (const row of this._cardRows ?? [])
+            row.remove_all_children();
+        this._cards?.remove_all_children();
     }
 
     // --- Reloj y fecha ----------------------------------------------------------
@@ -251,7 +279,10 @@ export const NotchPanel = GObject.registerClass({
         for (const actor of this._extraActors ?? [])
             this._tabBar.remove_child(actor);
         this._extraActors = null;
-        this._cards?.remove_all_children();
+        this._clearCards();
+        for (const row of this._cardRows ?? [])
+            row.destroy();
+        this._cardRows = [];
         this._home?.destroy();
         this._home = this._bigClock = this._cards = null;
     }

@@ -420,7 +420,7 @@ class SystemModule extends NotchModule {
         this._pageCancellable = new Gio.Cancellable();
         this._ticks = 0;
         this._cpuPrev = null;
-        this._page.cpu.setText('…', 0);
+        this._page.cpu.setText('midiendo…', 0);
 
         // Velocidad medida en otra red: ya no vale.
         if (!this._speedProxy && this._speedText && this._speedNetwork !== currentNetworkId())
@@ -474,7 +474,8 @@ class SystemModule extends NotchModule {
             const cur = Info.parseCpuStat(stat);
             const usage = Info.cpuUsage(this._cpuPrev, cur);
             this._cpuPrev = cur;
-            const parts = [usage === null ? '…' : `${Math.round(usage * 100)} %`];
+            // Hasta la segunda lectura no hay uso (docs/09: «…» parecía «_»).
+            const parts = [usage === null ? 'midiendo…' : `${Math.round(usage * 100)} %`];
             if (temp !== null)
                 parts.push(`${Math.round(Number(temp) / 1000)} °C`);
             page.cpu.setText(parts.join('  ·  '), usage ?? 0);
