@@ -14,6 +14,7 @@ import {MascotModule} from './modules/mascot.js';
 import {MusicModule} from './modules/music.js';
 import {NotificationsModule} from './modules/notifications.js';
 import {SystemModule} from './modules/system.js';
+import {TailscaleModule} from './modules/tailscale.js';
 import {SettingsModule} from './modules/settings.js';
 import {UpdateModule} from './modules/update.js';
 import {setEyeAnimations} from './modules/widgets.js';
@@ -103,6 +104,8 @@ export default class AgentNotchExtension extends Extension {
         }
         if (on('modulo-docker'))
             this._island.addModule(new DockerModule());
+        if (on('modulo-tailscale'))
+            this._island.addModule(new TailscaleModule());
         // The version of the loaded code (version-name, written by install.sh);
         // with the update notice off, the module watches nothing.
         const running = on('aviso-actualizaciones') ? this.metadata['version-name'] ?? null : null;

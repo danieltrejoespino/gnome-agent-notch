@@ -226,6 +226,11 @@ with open(p, "w", encoding="utf-8") as f:
        ! python3 -I "$configure" status >/dev/null 2>&1; then
         say "To see OpenCode on the island: python3 $configure install"
     fi
+    # The Tailscale tab can only turn it on or off if this user is its operator.
+    if command -v tailscale >/dev/null &&
+       ! tailscale debug prefs 2>/dev/null | grep -q "\"OperatorUser\": \"$(id -un)\""; then
+        say 'For the Tailscale tab to turn it on or off: sudo tailscale set --operator=$USER'
+    fi
     if ! command -v ddcutil >/dev/null; then
         say "Optional, for external monitor brightness: sudo apt install ddcutil (and log back in)."
     fi

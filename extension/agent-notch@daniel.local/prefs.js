@@ -15,6 +15,7 @@ const TABS = [
     ['modulo-musica', 'Music', 'What is playing and its controls'],
     ['modulo-sistema', 'System', 'RAM, CPU, network and internet speed'],
     ['modulo-docker', 'Docker', 'Containers; only shown if Docker is installed'],
+    ['modulo-tailscale', 'Tailscale', 'Turn it on or off, devices and exit node; only shown if Tailscale is installed'],
     ['modulo-portapapeles', 'Clipboard', 'History with search and pinned items'],
     ['modulo-concentracion', 'Focus', 'Work timer'],
 ];

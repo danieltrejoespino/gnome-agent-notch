@@ -20,6 +20,10 @@
       <default>true</default>
       <summary>Docker</summary>
     </key>
+    <key name="modulo-tailscale" type="b">
+      <default>true</default>
+      <summary>Tailscale</summary>
+    </key>
     <key name="modulo-portapapeles" type="b">
       <default>true</default>
       <summary>Clipboard</summary>

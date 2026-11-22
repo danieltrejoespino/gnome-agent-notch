@@ -7,9 +7,10 @@ A notch-style "island" at the top center of GNOME Shell, written as a GJS extens
 - **AI agents:** live status of every Claude Code and OpenCode session. A pair of eyes reacts to what the agents do: they look up while thinking, look at the text while working, open wide when an agent needs you, smile `^ ^` when done and show `× ×` on errors. When an agent needs you the island opens with a banner and a short sound; click it to jump to that agent's terminal.
 - **Music:** what is playing (any MPRIS player) on the island, with animated bars; on hover, cover art, progress and ⏮ ⏯ ⏭ controls.
 - **Notifications:** shown on the island with a glow in the app's color.
-- **Panel with tabs** (click the island): Home with the clock and cards, plus Agents, Music, System, Docker, Clipboard and Focus.
+- **Panel with tabs** (click the island): Home with the clock and cards, plus Agents, Music, System, Docker, Tailscale, Clipboard and Focus.
 - **System:** RAM and swap, CPU and temperature, disk, battery, network, local and public IP (on demand), uptime and an on-demand speed test.
 - **Docker:** containers grouped by Compose project; start or stop one, or a whole project. Only shown if Docker is installed and you can use its socket.
+- **Tailscale:** turn it on or off, see this device and the others in your tailnet (click one to copy its IP) and pick an exit node. Only shown if Tailscale is installed; turning it on or off needs a one-time permission (see below).
 - **Clipboard:** text history with search and pinned items; **Super+V** opens it and picking an item pastes it.
 - **Focus:** a work timer, from Home or from the island.
 - **External monitor brightness:** a slider in Quick Settings, below the laptop's, over DDC/CI.
@@ -83,6 +84,16 @@ python3 ~/.local/share/agent-notch/adapters/opencode/configure.py install
 
 It leaves a small plugin in `~/.config/opencode/plugins/agent-notch.js` without touching your other plugins. OpenCode loads it on its own; if you do not see it, close its background service (`pkill -f 'opencode serve'`) and open OpenCode again. `configure.py status` tells you whether it is set up, `configure.py uninstall` removes it, and the agent-notch uninstaller removes it too.
 
+### Tailscale (optional)
+
+The Tailscale tab shows up on its own if Tailscale is installed, and it can always show the state and your devices. To **turn Tailscale on or off and pick an exit node** from the island, Tailscale has to let your user change its settings. Run this once:
+
+```bash
+sudo tailscale set --operator=$USER
+```
+
+Without it, the tab shows that same command and its buttons stay disabled. The installer reminds you of it if Tailscale is installed and the permission is missing. The island talks to Tailscale's local socket; it does not run `tailscale` or use `sudo`. To take the permission back: `sudo tailscale set --operator=` (the agent-notch uninstaller does not touch it, since it does not use `sudo`).
+
 ### External monitor brightness (optional)
 
 ```bash
@@ -120,6 +131,7 @@ Tests:
 ```bash
 gjs -m scripts/test-agentstate.js
 gjs -m scripts/test-dockerstate.js
+gjs -m scripts/test-tailscalestate.js
 gjs -m scripts/test-updatestate.js
 python3 -m unittest discover -s adapters/claude-code
 python3 -m unittest discover -s adapters/common

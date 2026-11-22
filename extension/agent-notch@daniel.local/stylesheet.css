@@ -1163,6 +1163,157 @@
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+/* The panel's "Tailscale" tab (docs/21-modulo-tailscale.md): this device with
+   Turn on/off, the other devices (click → copy the IP) and the exit node.
+   "Not responding" reuses the Docker notice. */
+.agent-notch-tailscale-page {
+  min-width: 420px;
+}
+
+.agent-notch-tailscale-body {
+  spacing: 8px;
+}
+
+.agent-notch-tailscale-header {
+  spacing: 8px;
+}
+
+.agent-notch-tailscale-self,
+.agent-notch-tailscale-row-copy {
+  border-radius: 10px;
+  padding: 4px 8px;
+}
+
+.agent-notch-tailscale-self:hover,
+.agent-notch-tailscale-self:focus,
+.agent-notch-tailscale-row-copy:hover,
+.agent-notch-tailscale-row-copy:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-tailscale-self-box,
+.agent-notch-tailscale-row-box {
+  spacing: 8px;
+}
+
+.agent-notch-tailscale-header.en-marcha .agent-notch-dot,
+.agent-notch-tailscale-row.en-marcha .agent-notch-dot { background-color: #34d399; }
+.agent-notch-tailscale-header.cambiando .agent-notch-dot { background-color: #fbbf24; }
+
+.agent-notch-tailscale-title {
+  font-weight: bold;
+}
+
+.agent-notch-tailscale-detail,
+.agent-notch-tailscale-row-detail {
+  font-size: 9pt;
+  color: #8a8a8a;
+}
+
+.agent-notch-tailscale-header.con-error .agent-notch-tailscale-detail,
+.agent-notch-tailscale-row.con-error .agent-notch-tailscale-row-detail {
+  color: #f87171;
+}
+
+.agent-notch-tailscale-suffix {
+  font-family: monospace;
+  font-size: 9pt;
+  color: #c8c8c8;
+}
+
+.agent-notch-tailscale-power,
+.agent-notch-tailscale-exit {
+  border-radius: 99px;
+  padding: 4px 14px;
+  font-size: 9pt;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.agent-notch-tailscale-exit {
+  padding: 3px 10px;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-tailscale-power:hover,
+.agent-notch-tailscale-power:focus,
+.agent-notch-tailscale-exit:hover,
+.agent-notch-tailscale-exit:focus {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.agent-notch-tailscale-exit.en-uso {
+  color: #0b1a12;
+  background-color: #34d399;
+}
+
+.agent-notch-tailscale-power:insensitive,
+.agent-notch-tailscale-exit:insensitive,
+.agent-notch-tailscale-lan:insensitive {
+  color: #8a8a8a;
+}
+
+.agent-notch-tailscale-hint {
+  spacing: 2px;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background-color: rgba(251, 191, 36, 0.12);
+}
+
+.agent-notch-tailscale-hint-text {
+  font-size: 9pt;
+}
+
+.agent-notch-tailscale-hint-command {
+  font-family: monospace;
+  font-size: 9pt;
+  color: #fbbf24;
+}
+
+.agent-notch-tailscale-lan {
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 9pt;
+}
+
+.agent-notch-tailscale-lan:hover,
+.agent-notch-tailscale-lan:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.agent-notch-tailscale-lan-box {
+  spacing: 6px;
+}
+
+.agent-notch-tailscale-lan-icon {
+  icon-size: 14px;
+}
+
+.agent-notch-tailscale-devices-title {
+  font-weight: bold;
+  padding: 4px 8px 0 8px;
+}
+
+.agent-notch-tailscale-scroll {
+  max-height: 280px;
+}
+
+.agent-notch-tailscale-list {
+  spacing: 2px;
+}
+
+.agent-notch-tailscale-row {
+  spacing: 8px;
+}
+
+.agent-notch-tailscale-row-name {
+  font-weight: bold;
+}
+
+.agent-notch-tailscale-empty {
+  padding: 16px 0;
+  color: #8a8a8a;
+}
+
 /* ── Update (docs/18) ─────────────────────── */
 
 /* Button at the end of the tab bar, only with a new version. */
