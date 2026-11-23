@@ -934,6 +934,11 @@
   background-color: rgba(45, 212, 191, 0.14);
 }
 
+.agent-notch-agents-row-tag.agente-antigravity {
+  color: #9ab8f8;
+  background-color: rgba(66, 133, 244, 0.18);
+}
+
 .agent-notch-agents-row-action {
   font-family: monospace;
   font-size: 9pt;

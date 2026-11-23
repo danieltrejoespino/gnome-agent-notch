@@ -50,6 +50,12 @@ main() {
         python3 -I "$configure" uninstall ||
             say "Could not remove the OpenCode plugin: check ~/.config/opencode/plugins/agent-notch.js"
     fi
+    # Antigravity CLI hook (only the one that points to this copy).
+    configure="$APP_DIR/adapters/antigravity/configure.py"
+    if [ -f "$configure" ]; then
+        python3 -I "$configure" uninstall ||
+            say "Could not remove the Antigravity hook: check ~/.gemini/config/hooks.json"
+    fi
 
     # New-version notice (user systemd).
     local UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"

@@ -204,10 +204,11 @@ export const STALE_S = 30 * 60;
 const AGENT_LABELS = {
     'claude-code': {name: 'Claude', tint: 'claude'},
     'opencode': {name: 'OpenCode', tint: 'opencode'},
+    'antigravity': {name: 'Antigravity', tint: 'antigravity'},
     'codex': {name: 'Codex', tint: 'otro'},
     'gemini-cli': {name: 'Gemini', tint: 'otro'},
 };
-export const AGENT_TINTS = ['claude', 'opencode', 'otro'];
+export const AGENT_TINTS = ['claude', 'opencode', 'antigravity', 'otro'];
 const AGENT_NAME_MAX = 12;
 
 /** 'claude-code' → {name: 'Claude', tint: 'claude'}; unknown → its name, tint 'otro'. */

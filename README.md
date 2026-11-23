@@ -4,7 +4,7 @@ A notch-style "island" at the top center of GNOME Shell, written as a GJS extens
 
 ## What it does
 
-- **AI agents:** live status of every Claude Code and OpenCode session. A pair of eyes reacts to what the agents do: they look up while thinking, look at the text while working, open wide when an agent needs you, smile `^ ^` when done and show `× ×` on errors. When an agent needs you the island opens with a banner and a short sound; click it to jump to that agent's terminal.
+- **AI agents:** live status of every Claude Code, OpenCode and Antigravity CLI session. A pair of eyes reacts to what the agents do: they look up while thinking, look at the text while working, open wide when an agent needs you, smile `^ ^` when done and show `× ×` on errors. When an agent needs you the island opens with a banner and a short sound; click it to jump to that agent's terminal.
 - **Music:** what is playing (any MPRIS player) on the island, with animated bars; on hover, cover art, progress and ⏮ ⏯ ⏭ controls.
 - **Notifications:** shown on the island with a glow in the app's color.
 - **Panel with tabs** (click the island): Home with the clock and cards, plus Agents, Music, System, Docker, Tailscale, Clipboard and Focus.
@@ -84,6 +84,16 @@ python3 ~/.local/share/agent-notch/adapters/opencode/configure.py install
 
 It leaves a small plugin in `~/.config/opencode/plugins/agent-notch.js` without touching your other plugins. OpenCode loads it on its own; if you do not see it, close its background service (`pkill -f 'opencode serve'`) and open OpenCode again. `configure.py status` tells you whether it is set up, `configure.py uninstall` removes it, and the agent-notch uninstaller removes it too.
 
+### Antigravity CLI (optional)
+
+To see your Antigravity CLI (`agy`) sessions on the island:
+
+```bash
+python3 ~/.local/share/agent-notch/adapters/antigravity/configure.py install
+```
+
+It adds a hook named `agent-notch` to `~/.gemini/config/hooks.json` without touching your other hooks, and first saves a copy in `hooks.json.agent-notch.bak`. New `agy` sessions pick it up (check with `/hooks`). The hook never answers Antigravity, so it never approves or blocks a tool. Antigravity has no hook for permission prompts, so the island cannot tell when `agy` is waiting for your approval; it does open when the agent asks you a question. `configure.py status` tells you whether it is set up, `configure.py uninstall` removes it, and the agent-notch uninstaller removes it too.
+
 ### Tailscale (optional)
 
 The Tailscale tab shows up on its own if Tailscale is installed, and it can always show the state and your devices. To **turn Tailscale on or off and pick an exit node** from the island, Tailscale has to let your user change its settings. Run this once:
@@ -108,7 +118,7 @@ Then log back in so its udev rule gives you access to `/dev/i2c-*`. The monitor 
 ~/.local/share/agent-notch/uninstall.sh
 ```
 
-It leaves everything as it was before installing: it also removes the Claude Code hook, the OpenCode plugin, the settings and the clipboard's pinned items.
+It leaves everything as it was before installing: it also removes the Claude Code and Antigravity hooks, the OpenCode plugin, the settings and the clipboard's pinned items.
 
 ## Development
 
@@ -134,6 +144,7 @@ gjs -m scripts/test-dockerstate.js
 gjs -m scripts/test-tailscalestate.js
 gjs -m scripts/test-updatestate.js
 python3 -m unittest discover -s adapters/claude-code
+python3 -m unittest discover -s adapters/antigravity
 python3 -m unittest discover -s adapters/common
 ```
 
@@ -147,7 +158,7 @@ journalctl -f -o cat /usr/bin/gnome-shell | grep agent-notch
 
 ```
 extension/agent-notch@daniel.local/   the extension (island.js, panel.js, prefs.js, modules/…)
-adapters/                             turn agent events into the island's format (Claude Code, OpenCode)
+adapters/                             turn agent events into the island's format (Claude Code, OpenCode, Antigravity)
 services/speedtest/                   speed test, a separate D-Bus service
 services/brightness/                  DDC/CI brightness, a separate D-Bus service
 services/updater/                     daily new-version check and the island's "Update" button

@@ -226,6 +226,11 @@ with open(p, "w", encoding="utf-8") as f:
        ! python3 -I "$configure" status >/dev/null 2>&1; then
         say "To see OpenCode on the island: python3 $configure install"
     fi
+    configure="$APP_DIR/adapters/antigravity/configure.py"
+    if [ -f "$configure" ] && { command -v agy >/dev/null || [ -x "$HOME/.local/bin/agy" ]; } &&
+       ! python3 -I "$configure" status >/dev/null 2>&1; then
+        say "To see Antigravity on the island: python3 $configure install"
+    fi
     # The Tailscale tab can only turn it on or off if this user is its operator.
     if command -v tailscale >/dev/null &&
        ! tailscale debug prefs 2>/dev/null | grep -q "\"OperatorUser\": \"$(id -un)\""; then

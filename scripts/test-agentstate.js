@@ -139,6 +139,7 @@ eq(pickWindow([300], [W(1, 'a', 'x'), W(1, 'b', 'y')], '?'), null, 'no project')
 // --- agent label (step 15) -----------------------------------------
 eq(agentLabel('claude-code'), {name: 'Claude', tint: 'claude'}, 'Claude Code');
 eq(agentLabel('opencode'), {name: 'OpenCode', tint: 'opencode'}, 'OpenCode');
+eq(agentLabel('antigravity'), {name: 'Antigravity', tint: 'antigravity'}, 'Antigravity');
 eq(agentLabel('gemini-cli'), {name: 'Gemini', tint: 'otro'}, 'known without its own tint');
 eq(agentLabel('simulador'), {name: 'simulador', tint: 'otro'}, 'unknown: its name');
 eq(agentLabel('un-agente-muy-largo'), {name: 'un-agente-m…', tint: 'otro'}, 'long name trimmed');
