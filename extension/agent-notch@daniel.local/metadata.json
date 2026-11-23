@@ -1,7 +1,7 @@
 {
   "uuid": "agent-notch@daniel.local",
   "name": "Agent Notch",
-  "description": "Isla estilo notch arriba al centro: música y estado de tus agentes de IA.",
+  "description": "A notch-style island at the top center: live status of your AI coding agents, music, notifications and more.",
   "shell-version": [
     "50"
   ],
